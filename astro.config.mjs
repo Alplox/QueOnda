@@ -18,7 +18,7 @@ export default defineConfig({
     }),
   ],
   output: 'server',
-  adapter: cloudflare(),
+  adapter: cloudflare({ mode: 'directory' }),
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {
