@@ -1,0 +1,41 @@
+{
+  "name": "queonda",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "update-feeds": "node scripts/update-feeds-db.mjs",
+    "update-stops": "node scripts/update-stops-db.mjs",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.1.1",
+    "@astrojs/react": "^6.0.1",
+    "@mozilla/readability": "^0.6.0",
+    "@playform/compress": "^0.2.3",
+    "@tailwindcss/vite": "^4.0.0",
+    "astro": "^7.0.6",
+    "astro-critters": "^2.2.1",
+    "cheerio": "^1.2.0",
+    "daisyui": "^5.5.23",
+    "fast-xml-parser": "^5.0.0",
+    "hls.js": "^1.5.0",
+    "leaflet": "^1.9.4",
+    "linkedom": "^0.18.12",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-leaflet": "^5.0.0",
+    "tailwindcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.21",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "adm-zip": "^0.5.18",
+    "typescript": "^5.8.0",
+    "yauzl": "^3.4.0"
+  }
+}

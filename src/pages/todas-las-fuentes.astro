@@ -1,0 +1,48 @@
+---
+import '../styles/global.css';
+import { AllSourcesPage } from '../components/news/AllSourcesPage';
+---
+<!doctype html>
+<html lang="es-CL" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todas las fuentes - ¿Qué Onda?</title>
+    <meta name="description" content="Explora, selecciona y carga fuentes de noticias chilenas. Agrupación por tema y búsqueda en todas las fuentes." />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="canonical" href="https://queonda.pages.dev/todas-las-fuentes" />
+    <meta property="og:title" content="Todas las fuentes - ¿Qué Onda?" />
+    <meta property="og:description" content="Explora, selecciona y carga fuentes de noticias chilenas. Agrupación por tema y búsqueda en todas las fuentes." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://queonda.pages.dev/todas-las-fuentes" />
+    <meta property="og:image" content="https://queonda.pages.dev/og-image.png" />
+    <meta property="og:locale" content="es_CL" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Todas las fuentes - ¿Qué Onda?" />
+    <meta name="twitter:description" content="Explora, selecciona y carga fuentes de noticias chilenas." />
+    <meta name="twitter:image" content="https://queonda.pages.dev/og-image.png" />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"¿Qué Onda?","url":"https://queonda.pages.dev","description":"Explora, selecciona y carga fuentes de noticias chilenas.","inLanguage":"es-CL"}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap" />
+    </noscript>
+    <script>
+      (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
+    </script>
+  </head>
+  <body class="bg-base-100 text-base-content min-h-screen">
+    <AllSourcesPage client:load />
+  </body>
+</html>

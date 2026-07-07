@@ -1,0 +1,267 @@
+---
+import { Header } from '../components/layout/Header';
+import { SideIndex } from '../components/layout/SideIndex';
+import { Footer } from '../components/layout/Footer';
+import { Section } from '../components/layout/Section';
+import { FinanceWidget } from '../components/widgets/FinanceWidget';
+import { FiestasCountdown } from '../components/widgets/FiestasCountdown';
+import { YouTubeTrends } from '../components/widgets/YouTubeTrends';
+import { SpotifyChart } from '../components/widgets/SpotifyChart';
+import { GoogleTrendsWidget } from '../components/widgets/GoogleTrendsWidget';
+import { WeatherWidget } from '../components/widgets/WeatherWidget';
+import { TransportWidget } from '../components/widgets/TransportWidget';
+import { FootballTable } from '../components/widgets/FootballTable';
+import { JobList } from '../components/widgets/JobList';
+import { EmergencyWidget } from '../components/widgets/EmergencyWidget';
+import { HolidaysWidget } from '../components/widgets/HolidaysWidget';
+import { ClientNewsFeed } from '../components/news/ClientNewsFeed';
+import { ClientTV } from '../components/tv/ClientTV';
+import { ClientRadios } from '../components/radio/ClientRadios';
+import '../styles/global.css';
+import { getTodayBg } from '../lib/backgrounds';
+import { getTodayFestivity } from '../lib/festivities';
+
+const hour = new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Santiago' });
+const todayBg = getTodayBg();
+const festivity = getTodayFestivity();
+const greeting = festivity?.message ?? (Number(hour) < 12 ? 'Buenos días' : Number(hour) < 19 ? 'Buenas tardes' : 'Buenas noches');
+
+const SITE_TITLE = '¿Qué Onda? - Chile en una sola página';
+const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más de Chile en un solo lugar. Sin anuncios, sin ruido.';
+---
+
+<!doctype html>
+<html lang="es-CL" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{SITE_TITLE}</title>
+    <meta name="description" content={SITE_DESCRIPTION} />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="canonical" href="https://queonda.pages.dev" />
+    <meta property="og:title" content="¿Qué Onda? - Chile en una sola página" />
+    <meta property="og:description" content="Noticias, TV en vivo, radios, finanzas, clima y más de Chile en un solo lugar. Sin anuncios, sin ruido." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://queonda.pages.dev" />
+    <meta property="og:image" content="https://queonda.pages.dev/og-image.png" />
+    <meta property="og:locale" content="es_CL" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="¿Qué Onda? - Chile en una sola página" />
+    <meta name="twitter:description" content="Noticias, TV en vivo, radios, finanzas, clima y más de Chile en un solo lugar. Sin anuncios, sin ruido." />
+    <meta name="twitter:image" content="https://queonda.pages.dev/og-image.png" />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"¿Qué Onda?","url":"https://queonda.pages.dev","description":"Noticias, TV en vivo, radios, finanzas, clima y más de Chile en un solo lugar.","inLanguage":"es-CL"}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <style>@font-face{font-family:'Figtree Fallback';src:local('Arial');size-adjust:107%;ascent-override:91%;descent-override:22%;line-gap-override:0%}</style>
+    <link rel="preload" as="image" href={todayBg.url} fetchpriority="high" />
+    <link rel="preload" as="fetch" href="/api/news?mode=inventory" crossorigin="anonymous" />
+    <link rel="preload" as="fetch" href="/api/emergency" crossorigin="anonymous" />
+    <link rel="preload" as="fetch" href="/api/weather?city=santiago" crossorigin="anonymous" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap" />
+    </noscript>
+    <script>
+      (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
+    </script>
+  </head>
+  <body class="bg-base-100 text-base-content min-h-screen pt-14">
+    <Header client:load />
+
+    <SideIndex client:load />
+
+    <EmergencyWidget client:load />
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-8 md:space-y-12">
+      <!-- Hero -->
+      <section class="relative overflow-hidden text-center py-32 md:py-40 rounded-t-2xl">
+        <div class="absolute inset-0 animate-[heroBgIn_0.8s_ease-out]">
+          <img
+            src={todayBg.url}
+            alt=""
+            class="w-full h-full object-cover"
+            style={`object-position: ${todayBg.focalPoint ?? 'center'}`}
+            loading="eager"
+          />
+          <div class="absolute inset-0 bg-gradient-to-b from-base-100/30 via-base-100/50 to-base-100/80" />
+        </div>
+        <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-base-100 to-transparent" />
+        <div class="relative z-10 max-w-2xl mx-auto px-4">
+          <div class={`backdrop-blur-sm bg-base-100/40 rounded-2xl p-8 md:p-12 shadow-xl border border-base-300/20 ${festivity?.theme ?? ''}`}>
+            <div class="flex justify-center mb-5 animate-[fadeSlideIn_0.5s_ease-out_0.3s_both]">
+              <div class="bg-base-100/80 backdrop-blur-sm text-base-content text-sm font-semibold px-4 py-1.5 rounded-xl whitespace-nowrap">
+                {festivity?.flagSvg ? <img src={festivity.flagSvg} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : festivity?.emoji ? `${festivity.emoji} ` : ''}{greeting}
+              </div>
+            </div>
+<h1 class="hero-title text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tighter leading-none text-base-content mb-4 whitespace-nowrap animate-[heroScaleIn_0.6s_cubic-bezier(0.16,1,0.3,1)_0.5s_both]">
+  <span class="text-primary inline-block animate-[float_3s_ease-in-out_infinite]">¿</span>
+  Qué Onda
+  <span class="text-primary inline-block animate-[float_3s_ease-in-out_infinite_0.5s]">?</span>
+</h1>
+            <p class="text-base md:text-lg max-w-lg mx-auto text-base-content/80 animate-[heroFadeUp_0.6s_ease-out_0.7s_both]">
+              Chile en una sola página.
+            </p>
+            <p class="text-sm mt-3 max-w-lg mx-auto text-base-content/60 animate-[heroFadeUp_0.6s_ease-out_0.85s_both]">
+              Noticias, TV, radios, tendencias y más.
+            </p>
+          </div>
+        </div>
+        <div class="absolute bottom-3 right-4 z-10 animate-[heroFadeUp_0.5s_ease-out_1s_both]">
+          <span class="backdrop-blur-sm bg-base-100/30 rounded-lg px-2.5 py-1 text-[10px] text-base-content/50">
+            Foto:{' '}
+            <a href={todayBg.photoUrl} target="_blank" rel="noopener noreferrer" class="hover:text-base-content underline underline-offset-2 transition-colors">{todayBg.author}</a>
+          </span>
+        </div>
+      </section>
+
+      <!-- Noticias -->
+      <Section id="noticias" title="Noticias" subtitle="Agrupadas por tema y medio">
+        <ClientNewsFeed client:idle />
+      </Section>
+
+      <!-- TV en Vivo -->
+      <Section id="tv" title="TV en Vivo" subtitle="Canales chilenos en tiempo real">
+        <ClientTV client:idle />
+      </Section>
+
+      <!-- Radios -->
+      <Section id="radios" title="Radios" subtitle="Radios chilenas en vivo">
+        <ClientRadios client:idle />
+      </Section>
+
+      <!-- Finanzas -->
+      <Section id="finanzas" title="Finanzas" subtitle="Indicadores económicos">
+        <FinanceWidget client:visible />
+      </Section>
+
+      <!-- YouTube Trends -->
+      <Section id="youtube" title="YouTube Chile" subtitle="Últimos videos de canales chilenos">
+        <YouTubeTrends client:visible />
+      </Section>
+
+      <!-- Spotify -->
+      <Section id="spotify" title="Spotify Top 50" subtitle="Lo más escuchado en Chile">
+        <SpotifyChart client:visible />
+      </Section>
+
+      <!-- Google Trends -->
+      <Section id="tendencias-web" title="Google Trends" subtitle="Búsquedas del momento en Chile">
+        <GoogleTrendsWidget client:visible />
+      </Section>
+
+      <!-- Clima -->
+      <Section id="clima" title="Clima" subtitle="Pronóstico para Chile">
+        <WeatherWidget client:visible />
+      </Section>
+
+      <!-- Transporte -->
+      <Section id="transporte" title="Transporte" subtitle="Metro y buses en tiempo real (Santiago)">
+        <TransportWidget client:visible />
+      </Section>
+
+      <!-- Deportes -->
+      <Section id="deportes" title="Deportes" subtitle="Noticias del fútbol chileno">
+        <FootballTable client:visible />
+      </Section>
+
+      <!-- Trabajos -->
+      <Section id="trabajos" title="Trabajos" subtitle="Ofertas laborales en Chile">
+        <JobList client:visible />
+      </Section>
+
+      <!-- Feriados -->
+      <Section id="feriados" title="Feriados" subtitle="Calendario de feriados en Chile">
+        <HolidaysWidget client:visible />
+      </Section>
+
+      <!-- Fiestas Patrias -->
+      <Section id="fiestas-patrias" title="Fiestas Patrias" subtitle="Cuenta regresiva para el 18 de septiembre">
+        <FiestasCountdown client:visible />
+      </Section>
+    </main>
+
+    <Footer client:visible />
+
+    <script>
+      // Smooth scroll for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', (e) => {
+          e.preventDefault();
+          const href = anchor.getAttribute('href');
+          if (!href) return;
+          const target = document.querySelector(href);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+    </script>
+
+    <script>
+      // Section entrance animation — one-shot data-visible on scroll
+      (function() {
+        var observer = new IntersectionObserver(function(entries) {
+          for (var i = 0; i < entries.length; i++) {
+            if (entries[i].isIntersecting) {
+              entries[i].target.setAttribute('data-visible', 'true');
+              observer.unobserve(entries[i].target);
+            }
+          }
+        }, { rootMargin: '-80px 0px -20% 0px' });
+        document.querySelectorAll('section[id]').forEach(function(s) { observer.observe(s); });
+      })();
+    </script>
+
+    <script>
+      // Pre-warm server cache in two phases:
+      // Phase 1 (immediate): above-fold APIs so data arrives before widgets hydrate.
+      // Phase 2 (idle): below-fold APIs without saturating the network.
+      (function() {
+        var critical = [
+          '/api/news?mode=inventory',
+          '/api/emergency',
+          '/api/weather?city=santiago',
+          '/api/radio-stations',
+        ];
+        var deferred = [
+          '/api/channels',
+          '/api/finance',
+          '/api/youtube',
+          '/api/trends',
+          '/api/transport',
+          '/api/futbol',
+          '/api/sports',
+          '/api/holidays',
+          '/api/jobs',
+        ];
+        function warm(list: string[]) {
+          for (var i = 0; i < list.length; i++) {
+            try { fetch(list[i]); } catch(e) {}
+          }
+        }
+        // Phase 1: fire critical fetches as soon as the browser can (after paint)
+        if ('requestAnimationFrame' in window) {
+          requestAnimationFrame(function() { warm(critical); });
+        } else {
+          setTimeout(function() { warm(critical); }, 100);
+        }
+        // Phase 2: defer non-critical to idle
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(function() { warm(deferred); }, { timeout: 5000 });
+        } else {
+          setTimeout(function() { warm(deferred); }, 2000);
+        }
+      })();
+    </script>
+  </body>
+</html>

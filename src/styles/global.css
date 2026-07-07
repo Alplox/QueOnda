@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: dark --default, light, cupcake, bumblebee, emerald, corporate, synthwave, retro, cyberpunk, valentine, halloween, garden, forest, aqua, lofi, pastel, fantasy, wireframe, black, luxury, dracula, cmyk, autumn, business, acid, lemonade, night, coffee, winter, dim, nord, sunset, caramellatte, abyss, silk;
+  logs: false;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Figtree', 'Figtree Fallback', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures contextual;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 600;
+}
+
+.hero-title {
+  font-family: Figtree, 'Figtree Fallback', system-ui, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-base-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-base-300);
+  border-radius: 3px;
+}
+
+.festive-patrias {
+  border-top: 3px solid rgba(220, 38, 38, 0.25);
+  border-bottom: 3px solid rgba(37, 99, 235, 0.25);
+}
+
+.festive-navidad {
+  border-top: 3px solid rgba(220, 38, 38, 0.2);
+  border-bottom: 3px solid rgba(22, 163, 74, 0.2);
+}
+
+.festive-ano-nuevo {
+  border-top: 3px solid rgba(234, 179, 8, 0.25);
+  border-bottom: 3px solid rgba(234, 179, 8, 0.25);
+}
+
+@keyframes heroBgIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes heroScaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loadingSlide {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(200%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes titlePulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; color: var(--color-primary); }
+  100% { opacity: 1; }
+}
+
+html {
+  transition: background-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+section:target h2 {
+  animation: titlePulse 1.2s ease-out;
+}
+
+section[id] h2 .letter {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  display: inline-block;
+}
+section[id][data-visible] h2 .letter {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* daisyui badge base class fallback — dropped by TW v4 CSS processing */
+/* NOTE: --badge-fg intentionally NOT set here to avoid un-layered override of variant classes */
+.badge {
+  border-radius: var(--radius-selector);
+  vertical-align: middle;
+  color: var(--badge-fg, var(--color-base-content));
+  border: var(--border) solid var(--badge-color, var(--color-base-200));
+  background-size: auto, calc(var(--noise) * 100%);
+  background-image: none, var(--fx-noise);
+  background-color: var(--badge-bg);
+  --badge-bg: var(--badge-color, var(--color-base-100));
+  --size: calc(var(--size-selector, 0.25rem) * 6);
+  width: fit-content;
+  height: var(--size);
+  padding-inline: calc(var(--size) / 2 - var(--border));
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  display: inline-flex;
+}
+
+@media (max-width: 639px) {
+  .scrollbar-hide-mobile::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide-mobile {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* range input thumb */
+input[type="range"].range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-base-100);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+input[type="range"].range-thumb::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-base-100);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}

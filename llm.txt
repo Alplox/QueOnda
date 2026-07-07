@@ -1,0 +1,91 @@
+# ¿Qué Onda?
+
+Chilean news aggregator + live TV/radio streaming in a single-page, ad-free dashboard.
+
+## Stack
+
+Astro 7 (SSR) + React 19 + TypeScript + Tailwind CSS 4 + DaisyUI 5
+Deployed on Cloudflare Workers with KV cache.
+
+## Key Files
+
+```
+src/
+  pages/api/            # All API endpoints (news, channels, weather, transport, etc.)
+  components/layout/    # Header, Footer, Section
+  components/news/      # ClientNewsFeed, NewsFeed, NewsClusterCard, NewsSourceCard, SlotCard, ArticleReader
+  components/tv/        # ClientTV, ChannelSelector, ChannelGrid, UnifiedPlayer
+  components/radio/     # ClientRadios, RadioPlayer
+  components/widgets/   # Weather, Transport, Finance, YouTube, Trends, Football, Sports, etc.
+  lib/                  # Shared utils: cache, rss, clustering, sound, transport, radios
+  pages/index.astro     # Main page shell (no SSR data — all client-fetched)
+```
+
+## Architecture Notes
+
+- All data is fetched client-side via `fetch('/api/...')` — Astro SSR serves only the shell.
+- Inline script pre-warms server cache via `requestIdleCallback` on page load.
+- React components hydrate at different priorities: `client:load` (header), `client:idle` (news, TV, radio), `client:visible` (widgets).
+- **clustering.ts** is code-split via dynamic `import()` in ClientNewsFeed.
+- **hls.js** is loaded lazily per-play via `import('hls.js')`.
+
+## Theme System
+
+- 35 DaisyUI themes configured in `src/styles/global.css`.
+- Theme persisted in `localStorage.theme`, applied via `data-theme` on `<html>`.
+- Only `primary` for UI emphasis (never `accent`).
+- Text hierarchy: `text-base-content` (primary), `text-base-content/70` (secondary), `text-base-content/50` (tertiary).
+
+## API Endpoints
+
+All return JSON. No CORS needed (same-origin). Cache durations in parens.
+
+- `GET /api/news?mode=inventory` — OPML source list (15m)
+- `POST /api/news/batch` — fetch specific RSS sources (15m)
+- `GET /api/news/source?url=&name=` — retry single source (15m)
+- `POST /api/news/analyze` — full fetch + clustering (deprecated)
+- `GET /api/channels?category=` — TV channels JSON (1h)
+- `GET /api/finance` — UF, USD, EUR, IPC, UTM (30m)
+- `GET /api/youtube` — YouTube Chile RSS (30m)
+- `GET /api/trends` — Google Trends Chile (30m)
+- `GET /api/weather?city=&cities=&q=` — multi-source weather (10m)
+- `GET /api/transport?city=&stop=&route=&mode=route-names` — Metro + RED (5m)
+- `GET /api/sports` — sports RSS (10m)
+- `GET /api/futbol` — standings + matches + news (10m)
+- `GET /api/emergency` — sismos (5m)
+- `GET /api/holidays` — Chilean holidays (30m)
+- `GET /api/radio-stations` — radio stations (1h)
+- `GET /api/article?url=` — article proxy via cheerio (10m per URL)
+
+## Data Sources
+
+- RSS: awesome-chilean-rss DB (local feeds-database.json)
+- Weather: Open-Meteo → Gael Cloud → Boostr
+- Transport: Metro.cl + Red.cl + xor.cl
+- Finance: mindicador.cl
+- TV: Alplox/json-teles
+- Radio: radio-browser.info → json-teles
+- Sports: ESPN public API + La Tercera RSS
+- Earthquakes: Gael Cloud → Boostr → USGS
+- Trends: Google Trends RSS
+- YouTube: channel RSS feeds from json-teles
+
+## Sound System
+
+Web Audio API singleton (`src/lib/sound.ts`). Exports `play(role)`, `setMuted()`, `setVolume()`, `getConfig()`, `toggleMuted()`, `cleanup()`. AudioContext created lazily on first `play()`. Triangle wave + bandpass-filtered noise synthesis.
+
+## TV System
+
+Single `<video>` + hls.js instance, shared between inline and PiP modes. FLIP animation on mode switch. Auto-PiP via IntersectionObserver. Channel favorites persisted to localStorage.
+
+## News System
+
+6 slots with source dropdowns. Sources persisted to `localStorage['news-slots']`. Pinned sources in `localStorage['news-pins']`. Clustering runs client-side with Jaccard similarity (>0.25 threshold). Trending tags computed from active slot articles. Clicking a tag sets `?tag=` URL param and filters news.
+
+## Conventions
+
+- Named exports (no default exports) for React components.
+- Source attribution at bottom of every section: `Fuente:` / `Fuentes:` with links.
+- No animation library — CSS transitions + `active:scale` for tactile feedback.
+- Icons: inline SVGs (no icon library).
+- Font: Inter (Google Fonts, non-blocking).

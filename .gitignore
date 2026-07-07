@@ -1,0 +1,30 @@
+node_modules/
+dist/
+meta.json
+.env
+.env.*
+!.env.example
+wrangler.jsonc
+.DS_Store
+*.log
+.cache/
+.astro
+.vscode
+
+# LLMs
+.agents
+.claude
+.cursor
+.gemini
+.kiro
+.wrangler
+PRODUCT.md
+DESIGN.md
+DESIGN.json
+
+# OS
+Thumbs.db
+desktop.ini
+
+# TypeScript incremental
+*.tsbuildinfo
