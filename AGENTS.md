@@ -321,7 +321,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 
 - Built with `@astrojs/cloudflare` adapter, deployed as Cloudflare Pages Functions (SSR)
 - KV bindings (`KV_CACHE`, `SESSION`) configuradas en dashboard de Cloudflare Pages
-- `wrangler.jsonc` en `.gitignore` (contiene IDs sensibles); usar `wrangler.jsonc.example` como template
+- `wrangler.jsonc` contiene configuración del proyecto (KV namespaces, etc.); `wrangler.jsonc.example` es copia template de ejemplo
 
 ---
 

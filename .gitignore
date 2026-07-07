@@ -4,7 +4,6 @@ meta.json
 .env
 .env.*
 !.env.example
-wrangler.jsonc
 .DS_Store
 *.log
 .cache/
