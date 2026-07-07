@@ -42,4 +42,10 @@ if (existsSync(wranglerJson)) {
   rmSync(wranglerJson);
 }
 
+// Remove .wrangler/ deploy config (points to server/wrangler.json which no longer exists)
+const dotWrangler = join(dist, '..', '.wrangler');
+if (existsSync(dotWrangler)) {
+  rmSync(dotWrangler, { recursive: true });
+}
+
 console.log('✓ Restructured dist/ for Cloudflare Pages');
