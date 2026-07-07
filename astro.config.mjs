@@ -3,14 +3,12 @@ import react from '@astrojs/react';
 import cloudflare from '@astrojs/cloudflare';
 import tailwindcss from '@tailwindcss/vite';
 import compress from '@playform/compress';
-import critters from 'astro-critters';
 
 export default defineConfig({
   integrations: [
     react(),
-    critters(),
     compress({
-      CSS: true,
+      CSS: false, // critters/compress strips responsive @media queries
       HTML: true,
       JavaScript: true,
       Image: false,
