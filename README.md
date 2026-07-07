@@ -2,6 +2,8 @@
 
 Agregador de noticias chileno + TV/radio en vivo en un dashboard de una sola página, sin anuncios ni distracciones.
 
+🔗 **[https://queonda.pages.dev/](https://queonda.pages.dev/)**
+
 ![Captura completa del sitio](public/screenshot.jpeg)
 
 ## Stack
