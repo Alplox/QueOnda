@@ -319,9 +319,31 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 
 ## Deployment
 
-- Built with `@astrojs/cloudflare` adapter, deployed as Cloudflare Pages Functions (SSR)
-- KV bindings (`KV_CACHE`, `SESSION`) configuradas en dashboard de Cloudflare Pages
-- `wrangler.jsonc` contiene configuración del proyecto (KV namespaces, etc.); `wrangler.jsonc.example` es copia template de ejemplo
+- **Plataforma**: Cloudflare Pages Functions (SSR), deploy automático via Git integration
+- **Build command**: `npm run build && node scripts/post-build-pages.mjs`
+- **Adapter**: `@astrojs/cloudflare` v14+, `mode: 'directory'`, `output: 'server'`
+- **`nodejs_compat`** flag activado en dashboard de Pages (requerido para KV)
+
+### Post-build (`scripts/post-build-pages.mjs`)
+
+El build de Astro genera `dist/server/` + `dist/client/`. El script reestructura para Pages:
+
+1. `dist/server/` → `dist/_worker.js/`
+2. `entry.mjs` → `index.js` (Pages espera `_worker.js/index.js`)
+3. `client/*` → `dist/` (merge de assets estáticos)
+4. Elimina `dist/_worker.js/wrangler.json` (conflicto con ASSETS binding de Pages)
+5. Elimina `.wrangler/` (apunta al `server/` eliminado)
+
+### KV Bindings (dashboard de Pages)
+
+| Binding | Nombre KV |
+|---------|-----------|
+| `KV_CACHE` | Cache de API routes |
+| `SESSION` | `queonda-session` |
+
+### Notas
+
+- `wrangler.jsonc` fue eliminado del repo — el CI de Pages lo detectaba y causaba conflictos con el build command personalizado. Solo existe `wrangler.jsonc.example` como template de referencia.
 
 ---
 
