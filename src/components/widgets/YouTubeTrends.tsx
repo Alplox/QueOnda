@@ -16,6 +16,7 @@ interface ChannelStatus {
   name: string;
   status: 'ok' | 'error' | 'empty';
   count: number;
+  errorMessage?: string;
 }
 
 const STORAGE_KEY = 'youtube-channels';
@@ -124,6 +125,8 @@ export function YouTubeTrends() {
   const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [expandedErrors, setExpandedErrors] = useState<Set<string>>(new Set());
+  const [retryingChannel, setRetryingChannel] = useState<string | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -188,6 +191,26 @@ export function YouTubeTrends() {
     saveJSON(PER_CHANNEL_KEY, val);
   }, []);
 
+  const handleRetryChannel = useCallback(async (ch: ChannelStatus) => {
+    setRetryingChannel(ch.id);
+    try {
+      const res = await fetch(`/api/youtube/source?channelId=${encodeURIComponent(ch.id)}&name=${encodeURIComponent(ch.name)}`);
+      const data = await res.json();
+      setChannels(prev => prev.map(c => c.id === ch.id ? { ...c, status: data.status, count: data.count || 0, errorMessage: data.status === 'error' ? (data.errorMessage || 'Error desconocido') : undefined } : c));
+      if (data.status === 'ok' && data.videos) {
+        setVideos(prev => {
+          const existing = new Set(prev.map(v => v.videoId));
+          const newVids = data.videos.filter((v: any) => !existing.has(v.videoId));
+          return [...newVids, ...prev];
+        });
+      }
+    } catch {
+      setChannels(prev => prev.map(c => c.id === ch.id ? { ...c, status: 'error', errorMessage: 'Error de conexión al reintentar' } : c));
+    } finally {
+      setRetryingChannel(null);
+    }
+  }, []);
+
   const filteredChannels = useMemo(() => {
     const sorted = [...channels].sort((a, b) => a.name.localeCompare(b.name));
     if (!search) return sorted;
@@ -228,6 +251,7 @@ export function YouTubeTrends() {
   const hasMore = gridLimit < displayVideos.length;
   const activeCount = selectedIds ? selectedIds.size : channels.length;
   const errorCount = channels.filter((c) => c.status === 'error').length;
+  const emptyCount = channels.filter((c) => c.status === 'empty').length;
 
   return (
     <div>
@@ -242,7 +266,8 @@ export function YouTubeTrends() {
               Mostrando {Math.min(gridLimit, displayVideos.length)} de {activeCount} canal{activeCount !== 1 ? 'es' : ''}
             </>
           )}
-          {errorCount > 0 && <span className="text-warning"> · {errorCount} con error</span>}
+          {errorCount > 0 && <span className="text-warning"> · {errorCount} con error{emptyCount > 0 && <> · {emptyCount} sin videos hoy</>}</span>}
+          {errorCount === 0 && emptyCount > 0 && <span className="text-base-content/30"> · {emptyCount} sin videos hoy</span>}
         </span>
 
         {(!selectedIds || selectedIds.size !== 1) && (
@@ -279,31 +304,58 @@ export function YouTubeTrends() {
               <div className="max-h-60 overflow-y-auto p-1 space-y-0.5">
                 {filteredChannels.map((ch) => {
                   const on = !selectedIds || selectedIds.has(ch.id);
+                  const isError = ch.status === 'error';
+                  const expanded = expandedErrors.has(ch.id);
                   return (
-                    <button key={ch.id} onClick={() => toggleChannel(ch.id)}
-                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer ${
-                        on ? 'bg-primary/10 text-primary' : 'text-base-content/50 hover:text-base-content hover:bg-base-300'
+                    <div key={ch.id} className={isError ? 'bg-base-300/50 rounded-lg' : ''}>
+                      <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                        on ? 'bg-primary/10 text-primary' : ''
                       }`}>
-                      <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                        on ? 'bg-primary border-primary text-primary-content' : 'border-base-content/30'
-                      }`}>
-                        {on && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m4 12 5 5 11-11" /></svg>}
-                      </span>
-                      <span className="truncate flex-1">{ch.name}</span>
-                      {ch.status === 'ok' && ch.count > 0 && (
-                        <span className="text-[10px] text-primary/60 shrink-0 ml-1">{ch.count}</span>
+                        <button onClick={() => toggleChannel(ch.id)}
+                          className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                            on ? 'bg-primary border-primary text-primary-content' : 'border-base-content/30 hover:border-base-content'
+                          }`}>
+                          {on && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m4 12 5 5 11-11" /></svg>}
+                        </button>
+                        <button onClick={() => { if (isError) { setExpandedErrors(prev => { const n = new Set(prev); if (n.has(ch.id)) n.delete(ch.id); else n.add(ch.id); return n; }); } else { toggleChannel(ch.id); } }}
+                          className={`flex-1 flex items-center gap-2 min-w-0 text-left transition-colors cursor-pointer ${
+                            on ? 'text-primary' : 'text-base-content/50 hover:text-base-content'
+                          }`}>
+                          <span className="truncate flex-1">{ch.name}</span>
+                          {ch.status === 'ok' && ch.count > 0 && (
+                            <span className="text-[10px] text-primary/60 shrink-0 ml-1">{ch.count}</span>
+                          )}
+                          {ch.status === 'empty' && (
+                            <span className="shrink-0 ml-1" title="Sin videos hoy">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-base-content/30"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+                            </span>
+                          )}
+                          {ch.status === 'error' && (
+                            <span className="shrink-0 ml-1 flex items-center gap-1" title="Error al cargar">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-warning"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+                              <svg className={`w-3 h-3 text-base-content/30 transition-transform ${expanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                      {isError && expanded && (
+                        <div className="px-4 pb-2 space-y-1.5">
+                          <p className="text-[10px] text-warning/80 leading-relaxed break-words">{ch.errorMessage || 'Error desconocido'}</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => { navigator.clipboard.writeText(ch.errorMessage || ''); play('interaction.confirm'); }}
+                              className="px-2 py-1 text-[10px] font-medium bg-base-100 border border-base-300 rounded-lg text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer active:scale-[0.97]" title="Copiar error">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline mr-0.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                              Copiar
+                            </button>
+                            <button onClick={() => { play('interaction.subtle'); handleRetryChannel(ch); }}
+                              disabled={retryingChannel === ch.id}
+                              className="px-2 py-1 text-[10px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all cursor-pointer active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed">
+                              {retryingChannel === ch.id ? 'Reintentando...' : 'Reintentar'}
+                            </button>
+                          </div>
+                        </div>
                       )}
-                      {ch.status === 'empty' && (
-                        <span className="shrink-0 ml-1" title="Sin videos hoy">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-base-content/30"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
-                        </span>
-                      )}
-                      {ch.status === 'error' && (
-                        <span className="shrink-0 ml-1" title="Error al cargar">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-warning"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
-                        </span>
-                      )}
-                    </button>
+                    </div>
                   );
                 })}
                 {filteredChannels.length === 0 && (

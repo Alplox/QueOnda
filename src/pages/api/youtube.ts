@@ -31,7 +31,7 @@ export const GET: APIRoute = async () => {
       return 0;
     });
 
-  const statusMap = new Map<string, { status: string; count: number }>();
+  const statusMap = new Map<string, { status: string; count: number; errorMessage?: string }>();
   for (const t of targets) {
     statusMap.set(t.youtube!, { status: 'error', count: 0 });
   }
@@ -43,7 +43,7 @@ export const GET: APIRoute = async () => {
         signal: AbortSignal.timeout(8000),
         headers: { 'User-Agent': BROWSER_UA },
       })
-        .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
+        .then((r) => (r.ok ? r.text() : Promise.reject({ type: 'http', status: r.status })))
         .then((xml) => ({ name: ch.name, channelId: ch.youtube!, xml })),
     ),
   );
@@ -55,7 +55,11 @@ export const GET: APIRoute = async () => {
     const yt = youtube!;
 
     if (result.status !== 'fulfilled') {
-      statusMap.set(yt, { status: 'error', count: 0 });
+      const reason = result.reason;
+      let msg = 'Error de conexión';
+      if (reason instanceof DOMException && reason.name === 'AbortError') msg = 'Timeout al conectar con YouTube';
+      else if (reason?.type === 'http') msg = `YouTube respondió con código HTTP ${reason.status}`;
+      statusMap.set(yt, { status: 'error', count: 0, errorMessage: msg });
       continue;
     }
 
@@ -93,8 +97,9 @@ export const GET: APIRoute = async () => {
           published: entry.published || '',
         });
       }
-    } catch {
-      statusMap.set(yt, { status: 'error', count: 0 });
+    } catch (e) {
+      const msg = e instanceof Error ? `Error al procesar feed: ${e.message}` : 'Error desconocido al procesar feed';
+      statusMap.set(yt, { status: 'error', count: 0, errorMessage: msg });
     }
   }
 
@@ -102,7 +107,7 @@ export const GET: APIRoute = async () => {
 
   const channelStatuses = targets.map((t) => {
     const s = statusMap.get(t.youtube!)!;
-    return { id: t.youtube!, name: t.name, status: s.status, count: s.count };
+    return { id: t.youtube!, name: t.name, status: s.status, count: s.count, errorMessage: s.errorMessage };
   });
 
   const result = { videos, channelStatuses };
