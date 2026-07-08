@@ -127,7 +127,47 @@ export function YouTubeTrends() {
   const [search, setSearch] = useState('');
   const [expandedErrors, setExpandedErrors] = useState<Set<string>>(new Set());
   const [retryingChannel, setRetryingChannel] = useState<string | null>(null);
+  const [isRetryingAll, setIsRetryingAll] = useState(false);
   const configRef = useRef<HTMLDivElement>(null);
+
+  const retryChannels = useCallback(async (chs: ChannelStatus[]) => {
+    if (chs.length === 0) return;
+    setIsRetryingAll(true);
+    const results = await Promise.allSettled(
+      chs.map(ch =>
+        fetch(`/api/youtube/source?channelId=${encodeURIComponent(ch.id)}&name=${encodeURIComponent(ch.name)}`)
+          .then(r => r.json())
+          .then(data => ({ id: ch.id, data })),
+      ),
+    );
+    setChannels(prev => prev.map(c => {
+      const r = results.find(rr => rr.status === 'fulfilled' && rr.value.id === c.id);
+      if (r?.status === 'fulfilled') {
+        const d = r.value.data;
+        return { ...c, status: d.status, count: d.count || 0, errorMessage: d.status === 'error' ? (d.errorMessage || 'Error desconocido') : undefined };
+      }
+      return c;
+    }));
+    setVideos(prev => {
+      const existing = new Set(prev.map(v => v.videoId));
+      const newVids: any[] = [];
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value.data.status === 'ok' && r.value.data.videos) {
+          for (const v of r.value.data.videos) {
+            if (!existing.has(v.videoId)) { newVids.push(v); existing.add(v.videoId); }
+          }
+        }
+      }
+      return newVids.length > 0 ? [...newVids, ...prev] : prev;
+    });
+    setIsRetryingAll(false);
+  }, []);
+
+  const handleRetryAllErrors = useCallback(() => {
+    const errorChs = channels.filter(c => c.status === 'error');
+    play('interaction.subtle');
+    retryChannels(errorChs);
+  }, [channels, retryChannels]);
 
   useEffect(() => {
     fetch('/api/youtube')
@@ -135,13 +175,15 @@ export function YouTubeTrends() {
       .then((data) => {
         setVideos(data.videos || []);
         setChannels(data.channelStatuses || []);
+        const errorChs = (data.channelStatuses || []).filter((c: ChannelStatus) => c.status === 'error');
+        if (errorChs.length > 0) retryChannels(errorChs);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
 
     const saved = loadJSON<string[] | null>(STORAGE_KEY, null);
     if (saved && saved.length > 0) setSelectedIds(new Set(saved));
-  }, []);
+  }, [retryChannels]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -268,7 +310,20 @@ export function YouTubeTrends() {
           )}
           {errorCount > 0 && <span className="text-warning"> · {errorCount} con error{emptyCount > 0 && <> · {emptyCount} sin videos hoy</>}</span>}
           {errorCount === 0 && emptyCount > 0 && <span className="text-base-content/30"> · {emptyCount} sin videos hoy</span>}
+          {isRetryingAll && (
+            <span className="inline-flex items-center gap-1 ml-1">
+              <span className="w-3 h-3 rounded-full border-2 border-warning border-t-transparent animate-spin" />
+              <span className="text-warning">Reintentando...</span>
+            </span>
+          )}
         </span>
+
+        {!isRetryingAll && errorCount > 0 && (
+          <button onClick={handleRetryAllErrors}
+            className="px-2 py-1 text-[10px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.97] cursor-pointer">
+            Reintentar todos ({errorCount})
+          </button>
+        )}
 
         {(!selectedIds || selectedIds.size !== 1) && (
           <select value={perChannel} onChange={(e) => handlePerChannel(Number(e.target.value))}
