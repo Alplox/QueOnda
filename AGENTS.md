@@ -25,10 +25,13 @@ src/
       news/
         index.ts             # GET /api/news?mode=inventory — OPML source list (server-cached 15 min)
         batch.ts             # POST /api/news/batch — fetch specific sources (server-cached 15 min)
-        analyze.ts           # POST /api/news/analyze — full fetch + clustering (unused, kept for compat)
-        source.ts            # GET /api/news/source?url=&name= — retry individual source (server-cached 15 min)
+      youtube/
+        source.ts            # GET /api/youtube/source?channelId=&name= — retry single channel (server-cached 5 min)
+      jobs/
+        index.ts             # GET /api/jobs — job listings proxy
       channels.ts            # Proxy for channels JSON with cache
       finance.ts             # mindicador.cl proxy (server-cached 30 min)
+      spotify.ts             # Spotify Chile top tracks proxy (server-cached 30 min)
       youtube.ts             # YouTube Chile trending (server-cached 30 min)
       trends.ts              # Google Trends Chile (server-cached 30 min)
       weather.ts             # Open-Meteo fallback chain (server-cached 10 min)
@@ -42,15 +45,18 @@ src/
   components/
     layout/
       Header.tsx             # Fixed nav bar with section scroll links (client:load)
+      SideIndex.tsx          # Side navigation index (client:load)
       Footer.tsx
       Section.tsx            # Reusable section wrapper
     news/
       ClientNewsFeed.tsx      # Client wrapper — 6-slot orchestrator (client:idle; clustering code-split via dynamic import)
       NewsFeed.tsx            # Slot grid + clusters + trending (presentational)
       NewsClusterCard.tsx     # Single news cluster card
-      NewsSourceCard.tsx      # Source card with headlines (clickeable → ArticleReader)
       SlotCard.tsx            # Card with source dropdown selector + articles
       ArticleReader.tsx       # Modal lector de artículos vía /api/article
+      FaviconImg.tsx          # Favicon image helper
+      ChileMap.tsx            # Chile region map for source filtering
+      AllSourcesPage.tsx      # Full sources list page
     tv/
       ClientTV.tsx            # TV orchestrator (state management, client:load)
       ChannelSelector.tsx     # Category filter bar
@@ -71,9 +77,13 @@ src/
       TransportWidget.tsx      # Metro grid + estaciones + llegada de buses (client:visible)
       FootballTable.tsx        # Chilean football standings + matches + news feed (client:visible)
       JobList.tsx              # Job listings placeholder (client:visible)
+      ClientJobList.tsx        # Client job listings widget (client:visible)
       EmergencyWidget.tsx      # Sismos recientes widget (client:load)
       EmergencyAlertBar.tsx    # Auto-scrolling alert ticker bar
       HolidaysWidget.tsx       # Chilean holidays calendar (client:visible)
+      FiestasCountdown.tsx     # Fiestas Patrias countdown (client:visible)
+      RouteMap.tsx             # Transit route map component (client:visible)
+      ChileFlag.tsx            # Static Chile flag SVG
   lib/
     cache.ts                 # Shared server-side in-memory cache utility
     channels.ts              # Channel fetch + cache logic
@@ -98,10 +108,10 @@ All routes return JSON. CORS is not needed (same-origin).
 | ------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/news?mode=inventory`        | 15 min | `{ allSources }` — OPML source list                                                                                     |
 | `POST /api/news/batch`                | 15 min | `{ articles, sourceResults }` for given sources                                                                         |
-| `POST /api/news/analyze`              | 5 min  | `{ articles, clusters, trending, sourceResults, ... }` (unused, kept for compat)                                        |
 | `GET /api/channels?category=`         | 1 hour | `{ channels, categories }`                                                                                              |
 | `GET /api/finance`                    | 30 min | `{ uf, dolar, euro, ipc, utm }`                                                                                         |
-| `GET /api/youtube`                    | 30 min | `{ videos }` — YouTube Chile trending via RSS                                                                           |
+| `GET /api/youtube`                    | 30 min | `{ videos, channelStatuses }` — YouTube Chile trending via RSS                                                          |
+| `GET /api/youtube/source?channelId=&name=` | 5 min | `{ videos, status }` — retry single channel                                                                        |
 | `GET /api/trends`                     | 30 min | `{ trends }` — Google Trends Chile RSS                                                                                  |
 | `GET /api/weather?city=`              | 10 min | `{ weather }` — Open-Meteo → Gael Cloud → Boostr fallback chain                                                         |
 | `GET /api/transport?city=&stop=`      | 5 min  | `{ city, metro, stations, stopInfo }` — Metro lines + estaciones + llegada de buses RED                                 |
@@ -112,17 +122,18 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/emergency`                  | 5 min  | `{ items }` — Gael Cloud → Boostr → USGS fallback chain                                                                 |
 | `GET /api/holidays`                   | 30 min | `{ holidays }` — Chilean holidays from Boostr API                                                                       |
 | `GET /api/article?url=`               | 10 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
-| `GET /api/news/source?url=&name=`     | 15 min | `{ articles, sourceResult }` — retry single source                                                                      |
 | `GET /api/radio-stations`             | 1 hour | `{ stations }` — Radio stations from radio-browser.info → json-teles → FALLBACK_RADIOS                                  |
+| `GET /api/jobs`                       | 1 hour | `{ jobs }` — Job listings from multiple sources                                                                         |
+| `GET /api/spotify`                    | 30 min | `{ tracks }` — Spotify Chile top tracks                                                                                 |
 
 ## Architecture & Conventions
 
 ### Hydration strategy
 
 - Components use Astro `client:*` directives for partial hydration
-- **Above-fold** (load eagerly): `Header`, `EmergencyWidget` — `client:load`
+- **Above-fold** (load eagerly): `Header`, `SideIndex`, `EmergencyWidget` — `client:load`
 - **Mid-fold** (load at idle): `ClientNewsFeed`, `ClientTV`, `ClientRadios` — all `client:idle` (hydrate via `requestIdleCallback` when browser is free)
-- **Below-fold** widgets: `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `NewsletterForm` — all `client:visible` (hydrate when scrolled into view)
+- **Below-fold** widgets: `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `FiestasCountdown` — all `client:visible` (hydrate when scrolled into view)
 - **hls.js** is loaded lazily via `import('hls.js')` only when a user plays an m3u8 stream, not at hydration time
 - **clustering.ts** is code-split via dynamic `import()` in ClientNewsFeed (not in main bundle)
 
@@ -204,7 +215,7 @@ All routes return JSON. CORS is not needed (same-origin).
 
 ### Styling
 
-- Font: Inter (via Google Fonts `<link>` in `index.astro`)
+- Font: Figtree (headings + body) + DM Serif Display (hero) via Google Fonts `<link>` in `index.astro`
 - No animation library — all interactions use CSS transitions + `active:scale` for tactile feedback
 - Icons: inline SVG components (no icon library dependency)
 - Tailwind v4 configured in `src/styles/global.css` (`@import "tailwindcss"`) — no `tailwind.config.*` file
@@ -282,7 +293,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 | Sección | Fuente | URL |
 |---------|--------|-----|
 | TV | [json-teles](https://github.com/Alplox/json-teles) | `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` |
-| YouTube | YouTube RSS (canales chilenos) | `www.youtube.com/feeds/videos.xml?channel_id={id}` (16 canales desde json-teles) |
+| YouTube | YouTube RSS (canales chilenos) | `www.youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) |
 | Google Trends | [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` |
 | Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GRJmY7SUz` (Top 50 Chile) |
 | Sports RSS | awesome-chilean-rss DB (categoría `sports`) | múltiples fuentes RSS deportivas chilenas |
@@ -297,7 +308,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 
 ### Implementation
 
-- `src/lib/sound.ts` — Self-contained ~80 lines: oscillator + noise synthesis, no external imports
+- `src/lib/sound.ts` — Self-contained ~140 lines: oscillator + noise synthesis, no external imports, 17 sound roles (tap, toggle, confirm, overlay open/close, navigation, notifications, hero effects, etc.)
 - AudioContext created lazily on first `play()` call (browser policy)
 - Default volume: 0.5
 - Triangle wave + bandpass-filtered noise for crisp, tactile feedback (same character as old crisp pack)
@@ -310,7 +321,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 
 ## Performance
 
-- **`@playform/compress`** minifies CSS, HTML, and JS in the build pipeline (`astro.config.mjs`)
+- **`@playform/compress`** minifies HTML and JS in the build pipeline (`astro.config.mjs`; CSS compression disabled — was stripping responsive `@media` rules)
 - **Google Fonts** loaded non-blocking via `media="print" onload="this.media='all'"` (`index.astro`)
 - **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)

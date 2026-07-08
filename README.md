@@ -25,15 +25,17 @@ npm run update-stops    # regenera src/lib/stops-database.json (RED)
 
 ## Secciones
 
-- **Noticias**: RSS feeds de ~2056 fuentes chilenas, clustering client-side por palabras clave
+- **Noticias**: RSS feeds de fuentes chilenas, clustering client-side por palabras clave
 - **TV en vivo**: canales chilenos con HLS/iframe, modo PiP automático
 - **Radio**: streaming de radios chilenas vía HLS
 - **Clima**: Open-Meteo + Gael Cloud + Boostr (fallback chain)
 - **Transporte**: Metro de Santiago + RED (buses) con predicciones
-- **Finanzas**: UF, USD, EUR, IPC, UTM vía mindicador.cl
-- **YouTube**: últimos videos de canales chilenos vía RSS
+- **Finanzas**: UF, USD, EUR, IPC, UTM vía mindicador.cl + 4 fallbacks
+- **YouTube**: últimos videos de canales chilenos vía RSS (reintento automático por canal)
 - **Google Trends**: tendencias Chile
+- **Spotify**: Top 50 Chile vía proxy server-side
 - **Deportes**: RSS deportivo + tabla de posiciones fútbol chileno (ESPN API)
+- **Trabajos**: ofertas laborales desde múltiples fuentes
 - **Sismos**: emergencias sísmicas vía Gael Cloud → USGS
 - **Feríados**: calendario de feriados chilenos
 
@@ -59,7 +61,8 @@ npm run update-stops    # regenera src/lib/stops-database.json (RED)
 | [red.cl](https://www.red.cl) | `red.cl/planifica-tu-viaje/cuando-llega/` → `predictorPlus/prediccion` | Transporte (buses) | Único |
 | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` | Transporte (rutas RED, build-time) | Único |
 | [Spotify](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GRJmY7SUz` | Spotify Top 50 Chile | Único |
-| [YouTube RSS](https://www.youtube.com/feeds/videos.xml) | `youtube.com/feeds/videos.xml?channel_id={id}` (16 canales chilenos) | YouTube | Único |
+| [YouTube RSS](https://www.youtube.com/) | `youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) | YouTube | Único |
+| [GetOnBoard](https://www.getonbrd.com) + [Remotive](https://remotive.com) + [WorkAnywhere](https://workanywhere.com) | múltiples APIs | Trabajos | Agregado vía proxy |
 | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` | Geolocalización clima | Único |
 | [cheerio](https://cheerio.js.org) | scraping vía `/api/article?url=` | Lector de artículos | Único |
 
