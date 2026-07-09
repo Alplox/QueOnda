@@ -85,7 +85,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     <main class="max-w-7xl mx-auto px-4 py-6 space-y-8 md:space-y-12">
       <!-- Hero -->
       <section class="relative overflow-hidden text-center py-32 md:py-40 rounded-t-2xl">
-        <div class="absolute inset-0 animate-[heroBgIn_0.8s_ease-out]">
+        <div class="absolute inset-0 animate-[heroBgIn_0.8s_ease-out] will-animate">
           <img
             src={todayBg.url}
             alt=""
@@ -97,21 +97,21 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
         </div>
         <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-base-100 to-transparent" />
         <div class="relative z-10 max-w-2xl mx-auto px-4">
-          <div class={`backdrop-blur-sm bg-base-100/40 rounded-2xl p-8 md:p-12 shadow-xl border border-base-300/20 ${festivity?.theme ?? ''}`}>
-            <div class="flex justify-center mb-5 animate-[fadeSlideIn_0.5s_ease-out_0.3s_both]">
+          <div class={`overflow-hidden backdrop-blur-sm bg-base-100/40 rounded-2xl p-8 md:p-12 shadow-xl border border-base-300/20 ${festivity?.theme ?? ''}`}>
+            <div class="flex justify-center mb-5 animate-[fadeSlideIn_0.5s_ease-out_0.3s_both] will-animate">
               <div class="bg-base-100/80 backdrop-blur-sm text-base-content text-sm font-semibold px-4 py-1.5 rounded-xl whitespace-nowrap">
                 {festivity?.flagSvg ? <img src={festivity.flagSvg} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : festivity?.emoji ? `${festivity.emoji} ` : ''}{greeting}
               </div>
             </div>
-<h1 class="hero-title text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tighter leading-none text-base-content mb-4 whitespace-nowrap animate-[heroScaleIn_0.6s_cubic-bezier(0.16,1,0.3,1)_0.5s_both]">
+<h1 class="hero-title text-[clamp(2rem,8vw,3rem)] md:text-[clamp(2.5rem,6vw,4.5rem)] lg:text-[clamp(3rem,5vw,6rem)] font-extrabold tracking-tighter leading-none text-base-content mb-4 text-nowrap animate-[heroScaleIn_0.6s_cubic-bezier(0.16,1,0.3,1)_0.5s_both] will-animate">
   <span class="text-primary inline-block animate-[float_3s_ease-in-out_infinite]">¿</span>
   Qué Onda
   <span class="text-primary inline-block animate-[float_3s_ease-in-out_infinite_0.5s]">?</span>
 </h1>
-            <p class="text-base md:text-lg max-w-lg mx-auto text-base-content/80 animate-[heroFadeUp_0.6s_ease-out_0.7s_both]">
+            <p class="text-base md:text-lg max-w-lg mx-auto text-base-content/80 animate-[heroFadeUp_0.6s_ease-out_0.7s_both] will-animate">
               Chile en una sola página.
             </p>
-            <p class="text-sm mt-3 max-w-lg mx-auto text-base-content/60 animate-[heroFadeUp_0.6s_ease-out_0.85s_both]">
+            <p class="text-sm mt-3 max-w-lg mx-auto text-base-content/60 animate-[heroFadeUp_0.6s_ease-out_0.85s_both] will-animate">
               Noticias, TV, radios, tendencias y más.
             </p>
           </div>

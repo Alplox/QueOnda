@@ -464,7 +464,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/70 
             {selectedRegion && (
               <button
                 onClick={() => { play('interaction.tap'); setSelectedRegion(null); }}
-                className="px-3 py-1.5 text-[11px] font-medium bg-base-300 text-red-500/80 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-[11px] font-medium bg-base-300 text-error/80 hover:text-error rounded-lg transition-colors cursor-pointer"
               >
                 Limpiar región
               </button>
@@ -572,7 +572,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/70 
               <p className="text-[10px] text-base-content/40">Resultados cacheados desde las {cachedTimestamp}</p>
             )}
             {failedSources.length > 0 && (
-              <p className="text-[10px] text-red-500/70 mt-0.5">
+              <p className="text-[10px] text-error/70 mt-0.5">
                 {failedSources.length} {failedSources.length === 1 ? 'fuente falló' : 'fuentes fallaron'}
               </p>
             )}
@@ -795,7 +795,7 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
         <span className="shrink-0 text-[10px] text-base-content/40 ml-auto">{articles.length} artículos</span>
         <button
           onClick={() => { play('interaction.tap'); onRemove(sourceResult.name); }}
-          className="shrink-0 p-1 rounded-md text-base-content/30 hover:text-red-500 hover:bg-base-300 transition-colors cursor-pointer"
+          className="shrink-0 p-1 rounded-md text-base-content/30 hover:text-error hover:bg-base-300 transition-colors cursor-pointer"
           title="Quitar fuente"
           aria-label={`Quitar ${sourceResult.name}`}
         >

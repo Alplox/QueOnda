@@ -3,7 +3,8 @@ export type SoundRole =
   | "overlay.open" | "overlay.close" | "overlay.expand" | "overlay.collapse"
   | "navigation.forward" | "navigation.backward" | "navigation.tab"
   | "notification.info" | "notification.success" | "notification.warning" | "notification.error"
-  | "hero.complete" | "hero.milestone";
+  | "hero.complete" | "hero.milestone"
+  | "media.volume" | "media.play" | "media.stop";
 
 const SOUNDS: Record<string, (c: AudioContext, t: number, v: number) => void> = {
   "interaction.tap": chipClick(3800, 0.008, 1.0),
@@ -23,6 +24,9 @@ const SOUNDS: Record<string, (c: AudioContext, t: number, v: number) => void> = 
   "overlay.collapse": chipSweep(500, 380, 0.13, 0.45),
   "hero.complete": chipTone(523.25, 0.5, 0.6),
   "hero.milestone": chipTone(392, 0.4, 0.5),
+  "media.volume": chipPop(400, 600, 0.04, 0.25),
+  "media.play": chipClick(2800, 0.015, 0.6),
+  "media.stop": chipSweep(400, 200, 0.12, 0.4),
 };
 
 function chipClick(freq: number, dur: number, vol: number) {

@@ -75,11 +75,22 @@ h1, h2, h3, h4 {
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-8px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
   }
 }
 
@@ -160,6 +171,32 @@ section[id][data-visible] h2 .letter {
   .scrollbar-hide-mobile {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+/* Timing scale */
+:root {
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+  --duration-slow: 500ms;
+  --stagger-step: 40ms;
+}
+
+/* will-change hints for animated elements */
+.will-animate {
+  will-change: transform, opacity;
+}
+
+/* Reduced transparency */
+@media (prefers-reduced-transparency: reduce) {
+  .backdrop-blur-sm,
+  .backdrop-blur,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl {
+    background: var(--color-base-100) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }
 

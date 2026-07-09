@@ -80,15 +80,18 @@ export const SlotCard = memo(function SlotCard({
   isFallback,
 }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [closingDropdown, setClosingDropdown] = useState(false);
   const [readerArticle, setReaderArticle] = useState<Article | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
   const [showGradient, setShowGradient] = useState(false);
   const [portalPos, setPortalPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
+  const [portalOrigin, setPortalOrigin] = useState<string>('top');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement | null>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   function buildPortalPos(el: HTMLElement): { top: number; left: number; width: number; maxHeight: number } {
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
@@ -124,19 +127,37 @@ export const SlotCard = memo(function SlotCard({
   }
 
   function openDropdown(el: HTMLElement) {
+    if (closeTimeoutRef.current) { clearTimeout(closeTimeoutRef.current); closeTimeoutRef.current = null; }
+    if (closingDropdown) {
+      setClosingDropdown(false);
+      anchorRef.current = el;
+      const pos = buildPortalPos(el);
+      setPortalPos(pos);
+      setPortalOrigin(pos.top > el.getBoundingClientRect().bottom ? 'top' : 'bottom');
+      return;
+    }
+    if (dropdownOpen) { closeDropdown(); return; }
     play('overlay.open');
     anchorRef.current = el;
-    setPortalPos(buildPortalPos(el));
+    const pos = buildPortalPos(el);
+    setPortalPos(pos);
+    setPortalOrigin(pos.top > el.getBoundingClientRect().bottom ? 'top' : 'bottom');
     setDropdownOpen(true);
     setSearchQuery('');
     setRegionFilter(null);
   }
 
   function closeDropdown() {
-    setDropdownOpen(false);
-    setPortalPos(null);
-    setSearchQuery('');
-    anchorRef.current = null;
+    if (closingDropdown) return;
+    setClosingDropdown(true);
+    closeTimeoutRef.current = setTimeout(() => {
+      closeTimeoutRef.current = null;
+      setDropdownOpen(false);
+      setPortalPos(null);
+      setClosingDropdown(false);
+      setSearchQuery('');
+      anchorRef.current = null;
+    }, 120);
   }
 
   useEffect(() => {
@@ -171,7 +192,13 @@ export const SlotCard = memo(function SlotCard({
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const trigger = anchorRef.current;
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target) &&
+        (!trigger || !trigger.contains(target))
+      ) {
         closeDropdown();
       }
     }
@@ -267,7 +294,16 @@ export const SlotCard = memo(function SlotCard({
             allPinnedSources={allPinnedSources}
             currentSlotIndex={slotIndex}
             onTogglePin={onTogglePin}
-            style={{ position: 'fixed', top: portalPos.top, left: portalPos.left, width: portalPos.width, maxHeight: portalPos.maxHeight, zIndex: 9999 }}
+            closing={closingDropdown}
+            style={{
+            position: 'fixed',
+            top: portalPos.top,
+            left: portalPos.left,
+            width: portalPos.width,
+            maxHeight: portalPos.maxHeight,
+            zIndex: 9999,
+            transformOrigin: portalOrigin === 'top' ? 'top center' : 'bottom center',
+          }}
           />,
           document.body
         )}
@@ -280,9 +316,9 @@ export const SlotCard = memo(function SlotCard({
 
   return (
     <>
-      <div className={`rounded-xl bg-base-200 border overflow-hidden h-full flex flex-col shadow-sm transition-colors ${error ? 'border-red-500/30' : 'border-base-300'}`}>
+      <div className={`rounded-xl bg-base-200 border overflow-hidden h-full flex flex-col shadow-sm transition-colors ${error ? 'border-error/30' : 'border-base-300'}`}>
         <div className="px-3 py-2.5 border-b border-base-300 flex items-center gap-1.5 flex-shrink-0 relative">
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${error ? 'bg-red-500' : loading ? 'bg-warning animate-pulse' : 'bg-primary'}`} />
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${error ? 'bg-error' : loading ? 'bg-warning animate-pulse' : 'bg-primary'}`} />
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <FaviconImg domain={extractHost(selectedSource.url)} />
             <button
@@ -290,7 +326,7 @@ export const SlotCard = memo(function SlotCard({
               className="text-sm font-semibold text-left text-balance text-base-content cursor-pointer hover:text-base-content/80 transition-colors inline-flex items-center gap-1 min-w-0"
             >
               <span className="truncate">{selectedSource.name}</span>
-              <svg className={`shrink-0 w-3 h-3 mt-0.5 text-base-content/40 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className={`shrink-0 w-3 h-3 mt-0.5 text-base-content/40 transition-transform duration-200 ${dropdownOpen || closingDropdown ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
@@ -369,12 +405,12 @@ export const SlotCard = memo(function SlotCard({
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center h-full py-8 px-4 text-center">
-              <svg className="w-8 h-8 text-red-500/40 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-8 h-8 text-error/40 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <p className="text-xs text-red-500/60 mb-1">Error al cargar</p>
+              <p className="text-xs text-error/60 mb-1">Error al cargar</p>
               {error && (
                 <p className="text-[10px] text-base-content/40 mb-3 max-w-[200px] truncate">{error}</p>
               )}
@@ -494,7 +530,16 @@ export const SlotCard = memo(function SlotCard({
           allPinnedSources={allPinnedSources}
           currentSlotIndex={slotIndex}
           onTogglePin={onTogglePin}
-          style={{ position: 'fixed', top: portalPos.top, left: portalPos.left, width: portalPos.width, maxHeight: portalPos.maxHeight, zIndex: 9999 }}
+          closing={closingDropdown}
+          style={{
+            position: 'fixed',
+            top: portalPos.top,
+            left: portalPos.left,
+            width: portalPos.width,
+            maxHeight: portalPos.maxHeight,
+            zIndex: 9999,
+            transformOrigin: portalOrigin === 'top' ? 'top center' : 'bottom center',
+          }}
         />,
         document.body
       )}
@@ -521,6 +566,7 @@ interface DropdownProps {
   currentSlotIndex: number;
   onTogglePin: (slotIndex: number, source: SourceFeed) => void;
   style: CSSProperties;
+  closing?: boolean;
 }
 
 const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function SourceDropdown({
@@ -530,6 +576,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
   selectedSource, onSelect, onClear,
   pinnedSource, allPinnedSources, currentSlotIndex, onTogglePin,
   style,
+  closing,
 }, ref) {
   const slotIndexesBySource = useMemo(() => {
     const map = new Map<string, number>();
@@ -553,7 +600,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
   }, [filteredSources, slotIndexesBySource]);
 
   return (
-    <div ref={ref} style={style} className="bg-base-300 border border-base-300 rounded-xl shadow-xl overflow-hidden animate-[fadeSlideIn_0.15s_ease-out]">
+    <div ref={ref} style={style} className={`bg-base-300 border border-base-300 rounded-xl shadow-xl overflow-hidden ${closing ? 'animate-[fadeSlideOut_0.12s_ease-in_forwards]' : 'animate-[fadeSlideIn_0.15s_ease-out]'}`}>
       <div className="p-2 border-b border-base-300 space-y-1.5">
         <input
           ref={searchRef}
