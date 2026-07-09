@@ -1,6 +1,7 @@
 import { getCached, setCache } from './cache';
 
 const CHANNELS_URL = 'https://raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json';
+const IPTV_ORG_URL = 'https://iptv-org.github.io/iptv/countries/cl.m3u';
 const CACHE_TTL = 60 * 60 * 1000;
 
 export interface Signal {
@@ -71,4 +72,67 @@ export function getChannelsByCategory(channels: Channel[], category?: string): C
 export function getCategories(channels: Channel[]): string[] {
   const cats = new Set(channels.map((ch) => ch.category).filter(Boolean));
   return ['todas', ...Array.from(cats)];
+}
+
+export function parseM3U(m3uText: string): Channel[] {
+  const channels: Channel[] = [];
+  const lines = m3uText.split('\n');
+  const seen = new Set<string>();
+  let idx = 0;
+  let current: Partial<Channel> | null = null;
+
+  function uniqueId(raw: string): string {
+    let id = raw, i = 1;
+    while (seen.has(id)) id = `${raw}-${i++}`;
+    seen.add(id);
+    return id;
+  }
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith('#EXTINF:')) {
+      const rawId = t.match(/tvg-id="([^"]*)"/)?.[1] || `m3u-${idx}`;
+      current = {
+        id: uniqueId(rawId),
+        name: t.match(/,([^,]+)$/)?.[1]?.trim() || 'Unknown',
+        logo: t.match(/tvg-logo="([^"]*)"/)?.[1] || null,
+        category: t.match(/group-title="([^"]*)"/)?.[1] || 'general',
+        signals: [],
+        youtube: null,
+        twitch: null,
+        website: '',
+      };
+    } else if (t && !t.startsWith('#') && current) {
+      current.signals = [{ type: 'm3u8', url: t }];
+      channels.push({
+        id: current.id || `m3u-${channels.length}`,
+        name: current.name || 'Unknown',
+        logo: current.logo || null,
+        signals: current.signals,
+        youtube: null,
+        twitch: null,
+        website: '',
+        category: current.category || 'general',
+      });
+      current = null;
+      idx++;
+    }
+  }
+  return channels;
+}
+
+export async function fetchIPTVChannels(): Promise<ChannelsData> {
+  const cacheKey = 'channels:iptv-org';
+  const cached = await getCached<ChannelsData>(cacheKey);
+  if (cached) return cached;
+
+  const res = await fetch(IPTV_ORG_URL);
+  if (!res.ok) throw new Error(`Failed to fetch iptv-org channels: ${res.status}`);
+
+  const m3uText = await res.text();
+  const channels = parseM3U(m3uText);
+
+  const result = { country: 'cl', channels };
+  await setCache(cacheKey, result, CACHE_TTL);
+  return result;
 }

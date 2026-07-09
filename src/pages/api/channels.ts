@@ -1,11 +1,13 @@
 import type { APIRoute } from 'astro';
-import { fetchChannels } from '../../lib/channels';
+import { fetchChannels, fetchIPTVChannels } from '../../lib/channels';
 
 export const GET: APIRoute = async ({ request }) => {
   try {
-    const data = await fetchChannels();
     const url = new URL(request.url);
+    const source = url.searchParams.get('source') || 'json-teles';
     const category = url.searchParams.get('category') || undefined;
+
+    const data = source === 'iptv-org' ? await fetchIPTVChannels() : await fetchChannels();
 
     let channels = data.channels;
     if (category && category !== 'todas') {
