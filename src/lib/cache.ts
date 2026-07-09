@@ -26,6 +26,9 @@ async function getKV(): Promise<any> {
 }
 
 export async function getCached<T>(key: string): Promise<T | null> {
+  const entry = store.get(key);
+  if (entry && Date.now() < entry.expiry) return entry.data as T;
+
   const kv = await getKV();
   if (kv) {
     try {
@@ -35,17 +38,16 @@ export async function getCached<T>(key: string): Promise<T | null> {
         return val.data as T;
       }
       if (val) store.delete(key);
-    } catch { /* fall through to in-memory */ }
+    } catch { /* fall through */ }
   }
-  const entry = store.get(key);
-  if (!entry || Date.now() > entry.expiry) {
-    if (entry) store.delete(key);
-    return null;
-  }
-  return entry.data as T;
+  if (entry) store.delete(key);
+  return null;
 }
 
 export async function getStaleCached<T>(key: string): Promise<T | null> {
+  const entry = store.get(key);
+  if (entry) return entry.data as T;
+
   const kv = await getKV();
   if (kv) {
     try {
@@ -56,9 +58,7 @@ export async function getStaleCached<T>(key: string): Promise<T | null> {
       }
     } catch { /* fall through */ }
   }
-  const entry = store.get(key);
-  if (!entry) return null;
-  return entry.data as T;
+  return null;
 }
 
 export async function setCache<T>(key: string, data: T, ttlMs: number): Promise<void> {
