@@ -6,6 +6,8 @@ import { play } from '@/lib/sound';
 interface Props {
   stations: RadioStation[];
   tags: string[];
+  states: string[];
+  stateCounts: Record<string, number>;
   favorites: Record<string, true>;
   onToggleFavorite: (id: string) => void;
 }
@@ -269,7 +271,7 @@ function StationCard({
 }
 
 
-export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Props) {
+export function RadioPlayer({ stations, tags, states, stateCounts, favorites, onToggleFavorite }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const hlsRef = useRef<any>(null);
@@ -286,6 +288,7 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
   const [showSticky, setShowSticky] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [activeState, setActiveState] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [favExpanded, setFavExpanded] = useState(true);
   const [sortAZ, setSortAZ] = useState(true);
@@ -501,8 +504,11 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
     if (activeTags.length > 0) {
       result = result.filter((s) => activeTags.some((tag) => s.tags?.includes(tag)));
     }
+    if (activeState) {
+      result = result.filter((s) => s.state === activeState);
+    }
     return result;
-  }, [stations, searchQuery, activeTags]);
+  }, [stations, searchQuery, activeTags, activeState]);
 
   const favoriteStations = useMemo(() => {
     const list = filteredStations.filter((s) => favorites[s.id]);
@@ -712,6 +718,28 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
                     <button
                       onClick={() => { play('interaction.confirm'); setActiveTags([]); }}
                       className="text-[10px] px-2 py-1 rounded-full border border-transparent text-base-content/30 hover:text-base-content/70 transition-colors"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+              )}
+              {states.length > 0 && (
+                <div className="mt-2">
+                  <select
+                    value={activeState}
+                    onChange={(e) => { play('interaction.tap'); setActiveState(e.target.value); }}
+                    className="w-full text-xs bg-base-100 border border-base-300 rounded-lg px-2 py-1.5 text-base-content focus:outline-none focus:border-primary/50 transition-colors"
+                  >
+                    <option value="">Todas las ciudades ({states.reduce((s, c) => s + (stateCounts[c] || 0), 0)})</option>
+                    {states.map((s) => (
+                      <option key={s} value={s}>{s} ({stateCounts[s] || 0})</option>
+                    ))}
+                  </select>
+                  {activeState && (
+                    <button
+                      onClick={() => { play('interaction.confirm'); setActiveState(''); }}
+                      className="text-[10px] text-base-content/30 hover:text-base-content/70 ml-2 transition-colors"
                     >
                       Limpiar
                     </button>

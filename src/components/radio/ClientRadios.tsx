@@ -19,6 +19,8 @@ function saveFavorites(fav: Record<string, true>) {
 export function ClientRadios() {
   const [stations, setStations] = useState<RadioStation[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [states, setStates] = useState<string[]>([]);
+  const [stateCounts, setStateCounts] = useState<Record<string, number>>({});
   const [favorites, setFavorites] = useState<Record<string, true>>(loadFavorites);
 
   useEffect(() => {
@@ -27,6 +29,8 @@ export function ClientRadios() {
       .then((data) => {
         setStations(data.stations || []);
         setTags(data.tags || []);
+        setStates(data.states || []);
+        setStateCounts(data.stateCounts || {});
       })
       .catch(() => {});
   }, []);
@@ -48,6 +52,8 @@ export function ClientRadios() {
     <RadioPlayer
       stations={stations}
       tags={tags}
+      states={states}
+      stateCounts={stateCounts}
       favorites={favorites}
       onToggleFavorite={handleToggleFavorite}
     />

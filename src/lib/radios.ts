@@ -14,6 +14,7 @@ export interface RadioStation {
   streamUrl: string;
   website: string;
   tags: string[];
+  state?: string;
 }
 
 export function extractRadios(channels: any[]): RadioStation[] {
@@ -93,6 +94,63 @@ interface RadioBrowserStation {
   clickcount: number;
 }
 
+const STATE_NORMALIZE: Record<string, string> = {
+  'santiago': 'Santiago',
+  'santiago de chile': 'Santiago',
+  'santiago, región metropolitana': 'Santiago',
+  'viña del mar': 'Viña del Mar',
+  'concepción': 'Concepción',
+  'temuco': 'Temuco',
+  'temuco, araucanía': 'Temuco',
+  'chillán': 'Chillán',
+  'chillán, ñuble': 'Chillán',
+  'región del maule': 'Maule',
+  'biobío': 'Biobío',
+  'tarapaca': 'Tarapacá',
+  'ohiggins': "O'Higgins",
+  'región de los ríos': 'Los Ríos',
+  'aysén': 'Aysén',
+  'la araucanía': 'Araucanía',
+  'araucanía': 'Araucanía',
+  'valparaíso': 'Valparaíso',
+  'atacama': 'Atacama',
+  'antofagasta': 'Antofagasta',
+  'arica': 'Arica',
+  'coquimbo': 'Coquimbo',
+  'iquique': 'Iquique',
+  'talca': 'Talca',
+  'curicó': 'Curicó',
+  'oval': 'Ovalle',
+  'lautaro': 'Lautaro',
+  'san felipe': 'San Felipe',
+  'quillota': 'Quillota',
+};
+
+const STATE_ORDER: string[] = [
+  'Arica', 'Tarapacá', 'Iquique', 'Antofagasta', 'Atacama', 'Coquimbo',
+  'Valparaíso', 'Viña del Mar', 'Quillota', 'San Felipe',
+  'Santiago',
+  "O'Higgins",
+  'Maule', 'Curicó', 'Talca',
+  'Ñuble', 'Chillán',
+  'Biobío', 'Concepción',
+  'Araucanía', 'Temuco', 'Lautaro',
+  'Los Ríos',
+  'Aysén',
+];
+
+const STATE_ORDER_IDX = Object.fromEntries(STATE_ORDER.map((s, i) => [s, i]));
+
+function stateSortKey(state: string): [number, string] {
+  const idx = STATE_ORDER_IDX[state];
+  return idx !== undefined ? [0, String(idx).padStart(2, '0')] : [1, state];
+}
+
+function normalizeState(state: string): string {
+  const key = state.trim().toLowerCase();
+  return STATE_NORMALIZE[key] || state.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export async function fetchRadioBrowserStations(): Promise<{ stations: RadioStation[]; tags: string[]; states: string[] }> {
   const url = `${RADIO_BROWSER_API}/json/stations/search?limit=500&countrycode=CL&lastcheckok=1&hidebroken=true&order=clickcount&reverse=true`;
   const res = await fetch(url, {
@@ -115,6 +173,7 @@ export async function fetchRadioBrowserStations(): Promise<{ stations: RadioStat
         streamUrl: s.url_resolved,
         website: s.homepage || '',
         tags,
+        state: s.state ? normalizeState(s.state) : undefined,
       };
     });
 
@@ -128,7 +187,7 @@ export async function fetchRadioBrowserStations(): Promise<{ stations: RadioStat
       }
     }
     if (s.state) {
-      const st = s.state.trim();
+      const st = normalizeState(s.state);
       if (st) {
         stateCount.set(st, (stateCount.get(st) || 0) + 1);
       }
@@ -143,10 +202,18 @@ export async function fetchRadioBrowserStations(): Promise<{ stations: RadioStat
 
   const states = [...stateCount.entries()]
     .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1])
-    .map(([state]) => state);
+    .sort((a, b) => {
+      const ka = stateSortKey(a[0]);
+      const kb = stateSortKey(b[0]);
+      return ka[0] - kb[0] || ka[1].localeCompare(kb[1]);
+    });
 
-  return { stations, tags, states };
+  const stateCounts: Record<string, number> = {};
+  for (const [state, count] of states) {
+    stateCounts[state] = count;
+  }
+
+  return { stations, tags, states: states.map(([state]) => state), stateCounts };
 }
 
 export const FALLBACK_RADIOS: RadioStation[] = [

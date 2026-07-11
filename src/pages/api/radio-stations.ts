@@ -11,6 +11,7 @@ interface CacheData {
   stations: RadioStation[];
   tags: string[];
   states: string[];
+  stateCounts: Record<string, number>;
 }
 
 export const GET: APIRoute = async () => {
@@ -24,12 +25,14 @@ export const GET: APIRoute = async () => {
   let stations: RadioStation[] = [];
   let tags: string[] = [];
   let states: string[] = [];
+  let stateCounts: Record<string, number> = {};
 
   try {
     const result = await fetchRadioBrowserStations();
     stations = result.stations;
     tags = result.tags;
     states = result.states;
+    stateCounts = result.stateCounts;
   } catch {
     stations = [];
   }
@@ -47,9 +50,9 @@ export const GET: APIRoute = async () => {
     stations = FALLBACK_RADIOS;
   }
 
-  await setCache(CACHE_KEY, { stations, tags, states }, CACHE_TTL);
+  await setCache(CACHE_KEY, { stations, tags, states, stateCounts }, CACHE_TTL);
 
-  return new Response(JSON.stringify({ stations, tags, states, total: stations.length }), {
+  return new Response(JSON.stringify({ stations, tags, states, stateCounts, total: stations.length }), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'public, max-age=3600',
