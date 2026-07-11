@@ -274,6 +274,11 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 2. **[json-teles](https://github.com/Alplox/json-teles)** (secundario) — `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` → filtrado a `category === 'music'`
 3. **`FALLBACK_RADIOS`** (terciario, hardcoded) — Cooperativa, Duna, ADN
 
+#### CD disc images (radio player animation)
+- `public/cd-disc-1.png`–`cd-disc-5.png` — PNGImg (CC BY-NC 4.0)
+  - [cd_dvd_PNG9081](https://pngimg.com/image/9081), [cd_dvd_PNG9079](https://pngimg.com/image/9079), [cd_dvd_PNG9075](https://pngimg.com/image/9075), [cd_dvd_PNG9080](https://pngimg.com/image/9080), [cd_dvd_PNG9065](https://pngimg.com/image/9065)
+- Randomly picked per station in `BoomboxDisplay` component
+
 ### Football / Fútbol (`/api/futbol`) — paths paralelos
 - **Standings + Matches**: [ESPN Deportes API](https://github.com/pseudo-r/Public-ESPN-API) — `site.web.api.espn.com/apis/v2/sports/soccer/chi.1/standings` + `site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard` — timeout 8s. Sin fallback: si ESPN falla → `standings: [], matches: [], source: 'rss'`
 - **Artículos**: RSS sports feeds (desde `awesome-chilean-rss` DB, categoría sports) — siempre se carga, independiente de ESPN

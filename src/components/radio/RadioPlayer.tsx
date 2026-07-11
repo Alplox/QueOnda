@@ -59,18 +59,67 @@ const STAR_EMPTY = (
   </svg>
 );
 
-function BoomboxDisplay({ station, playing }: { station: RadioStation; playing: boolean }) {
+function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; playing: boolean; loading: boolean }) {
+  const cdRef = useRef<HTMLDivElement>(null);
+  const rotRef = useRef({ angle: 0, speed: 0, aid: 0, did: 0 });
+  const CDs = ['/cd-disc-1.png', '/cd-disc-2.png', '/cd-disc-3.png', '/cd-disc-4.png', '/cd-disc-5.png'];
+  const cdSrc = useMemo(() => CDs[Math.floor(Math.random() * CDs.length)], [station.id]);
+
+  useEffect(() => {
+    const r = rotRef.current;
+    clearInterval(r.aid);
+    clearInterval(r.did);
+    if (playing) {
+      r.aid = window.setInterval(() => {
+        r.speed += (0.5 - r.speed) * 0.05;
+        r.angle += r.speed;
+        if (cdRef.current) cdRef.current.style.transform = `rotate(${r.angle}deg)`;
+      }, 16);
+    } else {
+      r.did = window.setInterval(() => {
+        r.speed *= 0.95;
+        if (r.speed < 0.01) { r.speed = 0; clearInterval(r.did); return; }
+        r.angle += r.speed;
+        if (cdRef.current) cdRef.current.style.transform = `rotate(${r.angle}deg)`;
+      }, 16);
+    }
+    return () => { clearInterval(r.aid); clearInterval(r.did); };
+  }, [playing]);
+
   return (
     <div className="flex flex-col items-center justify-center flex-1 w-full px-6">
-      <div className={[
-        'w-24 h-24 rounded-full overflow-hidden bg-base-100 ring-2 transition-all duration-500',
-        playing ? 'ring-primary shadow-[0_0_30px_-8px_var(--color-primary)]' : 'ring-base-content/10',
-      ].join(' ')}>
-        {station.logo ? (
-          <img src={station.logo} alt={station.name} className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf') as HTMLElement)?.classList.remove('hidden'); }} />
-        ) : null}
-        <div className={`w-full h-full flex items-center justify-center text-3xl font-bold text-base-content rf ${station.logo ? 'hidden' : ''}`}>
-          {station.name.charAt(0)}
+      <div className="relative w-24 h-24">
+        {/* CD disc — expands from logo when playing, spins via JS */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            transform: playing ? 'scale(1.35)' : 'scale(1)',
+            transition: 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)',
+          }}
+        >
+          <div ref={cdRef} className="w-full h-full">
+            <img
+              src={cdSrc}
+              alt=""
+              className="w-full h-full object-contain"
+            />
+          </div>
+        </div>
+        {/* Loading spinner — between CD and logo */}
+        {loading && (
+          <div className="absolute -inset-1.5 z-[5] rounded-full border-[3px] border-base-content/10 border-t-primary animate-spin pointer-events-none" />
+        )}
+        {/* Station logo (on top) */}
+        <div className={[
+          'relative w-24 h-24 rounded-full overflow-hidden bg-base-100 ring-2 transition-all duration-500 z-10',
+          playing ? 'ring-primary shadow-[0_0_30px_-8px_var(--color-primary)]' : 'ring-base-content/10',
+        ].join(' ')}>
+          {station.logo ? (
+            <img src={station.logo} alt={station.name} className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf') as HTMLElement)?.classList.remove('hidden'); }} />
+          ) : null}
+          <div className={`w-full h-full flex items-center justify-center text-3xl font-bold text-base-content rf ${station.logo ? 'hidden' : ''}`}>
+            {station.name.charAt(0)}
+          </div>
         </div>
       </div>
       <h3 className="text-lg font-semibold text-balance text-base-content mt-4 text-center">{station.name}</h3>
@@ -89,21 +138,6 @@ function BoomboxDisplay({ station, playing }: { station: RadioStation; playing: 
           </svg>
           <span>Sitio web</span>
         </a>
-      )}
-      {playing && (
-        <div className="flex items-center gap-0.5 mt-2 h-4">
-          {[1,2,3,4,5].map((i) => (
-            <div
-              key={i}
-              className="w-0.5 bg-primary rounded-full animate-pulse"
-              style={{
-                height: `${40 + Math.sin(Date.now() / 200 + i) * 30 + i * 8}%`,
-                animationDelay: `${i * 80}ms`,
-                animationDuration: `${600 + i * 100}ms`,
-              }}
-            />
-          ))}
-        </div>
       )}
     </div>
   );
@@ -141,7 +175,7 @@ function BoomboxControls({
         <button
           onClick={onStop}
           disabled={stopped}
-          className="w-9 h-9 rounded-full bg-base-300 text-base-content/70 flex items-center justify-center hover:bg-base-200 hover:text-base-content transition-all active:scale-[0.93] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-all active:scale-[0.93] disabled:opacity-30 disabled:cursor-not-allowed"
           title="Detener"
         >
           {STOP_ICON}
@@ -161,7 +195,7 @@ function BoomboxControls({
           max="1"
           step="0.05"
           value={muted ? 0 : volume}
-          onChange={(e) => { play('media.volume'); onVolumeChange(parseFloat(e.target.value)); }}
+          onChange={(e) => { play('interaction.subtle'); onVolumeChange(parseFloat(e.target.value)); }}
           className="flex-1 h-1 rounded-full appearance-none cursor-pointer range-thumb"
           style={{
             background: `linear-gradient(to right, var(--color-primary) ${(muted ? 0 : volume) * 100}%, var(--color-base-300) ${(muted ? 0 : volume) * 100}%)`,
@@ -172,79 +206,68 @@ function BoomboxControls({
   );
 }
 
-function StationList({
-  stations,
-  currentId,
-  favorites,
+function StationCard({
+  station,
+  isActive,
+  isFav,
   onSelect,
   onToggleFavorite,
+  compact,
 }: {
-  stations: RadioStation[];
-  currentId: string | null;
-  favorites: Record<string, true>;
+  station: RadioStation;
+  isActive: boolean;
+  isFav: boolean;
   onSelect: (s: RadioStation) => void;
   onToggleFavorite: (id: string) => void;
+  compact?: boolean;
 }) {
   return (
-    <div className="space-y-0.5 pr-1">
-      {stations.map((station, i) => {
-        const isActive = station.id === currentId;
-        const isFav = !!favorites[station.id];
-        return (
-          <div key={station.id} style={{ animationDelay: `${i * 30}ms` }} className="flex items-center gap-1 group opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards]">
-            <button
-              onClick={(e) => { e.stopPropagation(); play('interaction.toggle'); onToggleFavorite(station.id); }}
-              className={`shrink-0 p-1.5 rounded-lg transition-colors ${
-                isFav
-                  ? 'text-base-content hover:text-base-content/70'
-                  : 'text-transparent group-hover:text-base-content/30 hover:text-base-content/70'
-              }`}
-              title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-            >
-              {isFav ? STAR_FILLED : STAR_EMPTY}
-            </button>
-            <button
-              onClick={() => onSelect(station)}
-              className={[
-                'flex-1 flex items-center gap-2.5 p-2.5 rounded-xl border transition-colors duration-150',
-                'active:scale-[0.98]',
-                isActive
-                  ? 'bg-primary/10 border-primary'
-                  : 'bg-transparent border-transparent hover:bg-base-200 hover:border-base-300',
-              ].join(' ')}
-            >
-              <div className={[
-                'w-9 h-9 rounded-full overflow-hidden bg-base-100 shrink-0 ring-1 flex items-center justify-center',
-                isActive ? 'ring-primary/50' : 'ring-base-content/5',
-              ].join(' ')}>
-                {station.logo ? (
-                  <img src={station.logo} alt={station.name} className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf2') as HTMLElement)?.classList.remove('hidden'); }} />
-                ) : null}
-                <div className={`w-full h-full flex items-center justify-center text-base font-bold text-base-content rf2 ${station.logo ? 'hidden' : ''}`}>
-                  {station.name.charAt(0)}
-                </div>
-              </div>
-              <div className="text-left min-w-0 flex-1">
-                <p className={[
-                  'text-sm leading-tight truncate transition-colors',
-                  isActive ? 'text-base-content font-medium' : 'text-base-content/70',
-                ].join(' ')}>
-                  {station.name}
-                </p>
-                <p className="text-[10px] text-base-content/70 uppercase tracking-wider">
-                  {isActive ? 'Sonando ahora' : 'Radio'}
-                </p>
-              </div>
-              {isActive && (
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
-              )}
-            </button>
-          </div>
-        );
-      })}
+    <div
+      className={`flex items-center gap-2 ${compact ? 'p-2' : 'p-2.5'} rounded-xl border transition-colors duration-150 cursor-pointer group active:scale-[0.98] ${
+        isActive
+          ? 'bg-primary/10 border-primary'
+          : 'bg-transparent border-base-300/50 hover:bg-base-200 hover:border-base-300'
+      }`}
+      onClick={() => onSelect(station)}
+    >
+      <div className={[
+        'rounded-full overflow-hidden bg-base-100 shrink-0 ring-1 flex items-center justify-center',
+        compact ? 'w-8 h-8' : 'w-9 h-9',
+        isActive ? 'ring-primary/50' : 'ring-base-content/5',
+      ].join(' ')}>
+        {station.logo ? (
+          <img src={station.logo} alt={station.name} className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf2') as HTMLElement)?.classList.remove('hidden'); }} />
+        ) : null}
+        <div className={`w-full h-full flex items-center justify-center text-sm font-bold text-base-content rf2 ${station.logo ? 'hidden' : ''}`}>
+          {station.name.charAt(0)}
+        </div>
+      </div>
+      <div className="text-left min-w-0 flex-1">
+        <p className={[
+          'text-sm leading-tight truncate transition-colors',
+          isActive ? 'text-base-content font-medium' : 'text-base-content/70',
+        ].join(' ')}>
+          {station.name}
+        </p>
+      </div>
+      {isActive && (
+        <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+      )}
+      <button
+        onClick={(e) => { e.stopPropagation(); play('interaction.toggle'); onToggleFavorite(station.id); }}
+        className={`shrink-0 p-1 rounded transition-colors ${
+          isFav
+            ? 'text-base-content hover:text-base-content/70'
+            : 'text-base-content/20 group-hover:text-base-content/50 hover:text-base-content/70'
+        }`}
+        title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+      >
+        {isFav ? STAR_FILLED : STAR_EMPTY}
+      </button>
     </div>
   );
 }
+
 
 export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -264,6 +287,8 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [favExpanded, setFavExpanded] = useState(true);
+  const [sortAZ, setSortAZ] = useState(true);
 
   const stopped = !current || !playing;
   const currentSignal = current?.signals?.[signalIndex] || { type: 'audio' as const, url: current?.streamUrl || '' };
@@ -479,15 +504,15 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
     return result;
   }, [stations, searchQuery, activeTags]);
 
-  const favoriteStations = useMemo(
-    () => filteredStations.filter((s) => favorites[s.id]),
-    [filteredStations, favorites]
-  );
+  const favoriteStations = useMemo(() => {
+    const list = filteredStations.filter((s) => favorites[s.id]);
+    return sortAZ ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : [...list].sort((a, b) => b.name.localeCompare(a.name));
+  }, [filteredStations, favorites, sortAZ]);
 
-  const otherStations = useMemo(
-    () => filteredStations.filter((s) => !favorites[s.id]),
-    [filteredStations, favorites]
-  );
+  const otherStations = useMemo(() => {
+    const list = filteredStations.filter((s) => !favorites[s.id]);
+    return sortAZ ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : [...list].sort((a, b) => b.name.localeCompare(a.name));
+  }, [filteredStations, favorites, sortAZ]);
 
   const toggleTag = (tag: string) => {
     setActiveTags((prev) =>
@@ -566,7 +591,17 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
       ].join(' ')}>
         <div className="flex flex-col md:flex-row">
           {/* Boombox player panel */}
-          <div className="md:w-72 lg:w-80 shrink-0 flex flex-col items-center py-8 border-b md:border-b-0 md:border-r border-base-300 min-h-[320px]">
+          <div className="relative md:w-72 lg:w-80 shrink-0 flex flex-col items-center py-8 border-b md:border-b-0 md:border-r border-base-300 min-h-[320px]">
+            {/* Ambient glow — no layout shift */}
+            <div
+              className="absolute inset-0 pointer-events-none z-0"
+              style={{
+                opacity: playing ? 1 : 0,
+                transition: 'opacity 0.8s ease-in-out',
+                background: 'radial-gradient(circle at 50% 115%, var(--color-primary) 0%, transparent 39%)',
+                filter: 'blur(200px)',
+              }}
+            />
             {current ? (
               <>
                 {error && (
@@ -583,7 +618,7 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
                     </button>
                   </div>
                 )}
-                <BoomboxDisplay station={current} playing={playing} />
+                <BoomboxDisplay station={current} playing={playing} loading={loading} />
                 
                 {/* Signal selector - shown if multiple signals available */}
                 {current.signals && current.signals.length > 1 && (
@@ -629,13 +664,6 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
                 onMute={() => { play('interaction.toggle'); setMuted((m) => !m); }}
                 onVolumeChange={setVolume}
               />
-            )}
-
-            {loading && (
-              <div className="flex items-center gap-2 text-xs text-base-content/70">
-                <div className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                Cargando...
-              </div>
             )}
           </div>
 
@@ -692,53 +720,78 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
               )}
             </div>
 
-            {/* Scrollable list area */}
-            <div className="flex-1 max-h-[400px] overflow-y-auto -mx-1 px-1 space-y-1">
-              {/* Favorites section */}
-              <div className="sticky top-0 z-10 bg-base-200 pt-0.5 pb-1">
-                <p className="text-[10px] text-base-content/40 font-semibold uppercase tracking-wider px-1.5">
+            {/* Favorites — fixed, never scrolls */}
+            <div className="shrink-0 mb-2">
+              <button
+                onClick={() => { play('interaction.tap'); setFavExpanded((v) => !v); }}
+                className="w-full flex items-center justify-between px-1.5 py-1 rounded-lg hover:bg-base-100 transition-colors"
+              >
+                <span className="text-[10px] text-base-content/40 font-semibold uppercase tracking-wider">
                   Favoritos {favoriteStations.length > 0 ? `(${favoriteStations.length})` : ''}
-                </p>
-              </div>
-              {favoriteStations.length > 0 ? (
-                <StationList
-                  stations={favoriteStations}
-                  currentId={current?.id ?? null}
-                  favorites={favorites}
-                  onSelect={handleSelect}
-                  onToggleFavorite={onToggleFavorite}
-                />
-              ) : (
-                <p className="text-xs text-base-content/30 px-1.5 py-2 italic leading-relaxed">
-                  Todavía no tienes favoritos.{' '}
-                  Haz clic en la estrella <span className="not-italic">☆</span> para agregar radios.
-                </p>
-              )}
-
-              {/* All stations section */}
-              {otherStations.length > 0 && (
-                <>
-                  <div className="border-t border-base-300/40 my-1" />
-                  <div className="sticky top-0 z-10 bg-base-200 pt-0.5 pb-1">
-                    <p className="text-[10px] text-base-content/40 font-semibold uppercase tracking-wider px-1.5">
-                      Todas ({otherStations.length})
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-base-content/30 transition-transform duration-200 ${favExpanded ? 'rotate-180' : ''}`}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {favExpanded && (
+                <div className="mt-1 max-h-40 overflow-y-auto rounded-lg">
+                  {favoriteStations.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                      {favoriteStations.map((station) => (
+                        <StationCard
+                          key={station.id}
+                          station={station}
+                          isActive={station.id === current?.id}
+                          isFav={true}
+                          onSelect={handleSelect}
+                          onToggleFavorite={onToggleFavorite}
+                          compact
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-base-content/30 px-1.5 py-2 italic leading-relaxed">
+                      Sin favoritos. Haz clic en ☆ para agregar.
                     </p>
-                  </div>
-                  <StationList
-                    stations={otherStations}
-                    currentId={current?.id ?? null}
-                    favorites={favorites}
-                    onSelect={handleSelect}
-                    onToggleFavorite={onToggleFavorite}
-                  />
-                </>
+                  )}
+                </div>
               )}
+            </div>
 
-              {filteredStations.length === 0 && (
+            <div className="border-t border-base-300/40 mb-2" />
+
+            {/* Scrollable list area */}
+            <div className="flex-1 max-h-[360px] min-h-[360px] overflow-y-auto -mx-1 px-1">
+              <div className="sticky top-0 z-10 bg-base-200 pt-0.5 pb-1 flex items-center justify-between">
+                <p className="text-[10px] text-base-content/40 font-semibold uppercase tracking-wider px-1.5">
+                  Todas ({otherStations.length})
+                </p>
+                <button
+                  onClick={() => { play('interaction.tap'); setSortAZ((v) => !v); }}
+                  className="text-[10px] text-base-content/40 hover:text-base-content px-1.5 transition-colors"
+                >
+                  {sortAZ ? 'A-Z' : 'Z-A'}
+                </button>
+              </div>
+
+              {otherStations.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                  {otherStations.map((station) => (
+                    <StationCard
+                      key={station.id}
+                      station={station}
+                      isActive={station.id === current?.id}
+                      isFav={!!favorites[station.id]}
+                      onSelect={handleSelect}
+                      onToggleFavorite={onToggleFavorite}
+                    />
+                  ))}
+                </div>
+              ) : filteredStations.length === 0 ? (
                 <div className="text-center py-8 text-base-content/70 text-sm">
                   {fallback ? 'Cargando radios...' : 'Sin coincidencias'}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -749,6 +802,9 @@ export function RadioPlayer({ stations, tags, favorites, onToggleFavorite }: Pro
         <a href="https://api.radio-browser.info" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">radio-browser.info</a>
         {' · '}
         <a href="https://github.com/Alplox/json-teles" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
+        {' · '}
+        <a href="https://github.com/Alplox/QueOnda/blob/main/AGENTS.md#cd-disc-images-radio-player-animation" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">CD images</a>
+        {' (CC BY-NC 4.0)'}
       </div>
 
       {/* Sticky bottom player */}

@@ -296,12 +296,12 @@ export function ClientJobList() {
       </div>
       <div className="px-3 pb-3 text-right text-[10px] text-base-content/50 border-t border-base-300 pt-2">
         <a
-          href="https://mis-recursos-webdev.pages.dev/#chile-focus"
+          href="https://mis-recursos-webdev.pages.dev/#chile-búsqueda-trabajo"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-base-content underline underline-offset-2 transition-colors"
         >
-          📋 Ir a portales de empleo en Chile
+          📋 Ir a lista con portales de empleo en Chile
         </a>
       </div>
     </div>
