@@ -536,7 +536,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
       setError(null);
     } else {
       setError(null);
-      const streamType = getRadioStreamType(current.streamUrl);
+      const streamType = currentSignal.type;
       if (streamType === 'audio' && audioRef.current) {
         audioRef.current.play().then(() => setPlaying(true)).catch((e) => {
           if (e.name === 'NotAllowedError') {
