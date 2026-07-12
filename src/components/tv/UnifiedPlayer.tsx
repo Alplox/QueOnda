@@ -111,6 +111,10 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
       prevHls.destroy();
     }
 
+    // Clear stale MediaSource blob before re-attaching
+    video.removeAttribute('src');
+    video.load();
+
     if (!isHlsType) {
       setLoading(false);
       return;

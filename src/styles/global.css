@@ -315,10 +315,43 @@ section[id][data-visible] h2 .letter {
 }
 
 /* Rarity tiers */
-.emoji-card.common { --holo-intensity: 0.15; }
+.emoji-card.common { --holo-intensity: 0.35; }
 .emoji-card.rare { --holo-intensity: 0.55; }
 .emoji-card.epic { --holo-intensity: 0.75; }
 .emoji-card.legendary { --holo-intensity: 0.9; }
+
+/* Per-rarity holographic patterns — override ::after background */
+
+/* Common: checkerboard */
+.emoji-card.common .emoji-card__art::after {
+  background:
+    conic-gradient(from 90deg at 1px 1px, hsl(40, 80%, 50%) 25%, transparent 0) 0 0 / 12px 12px;
+  mix-blend-mode: soft-light;
+}
+
+/* Rare: polka dot grid */
+.emoji-card.rare .emoji-card__art::after {
+  background:
+    radial-gradient(circle 2px, hsl(210, 70%, 65%) 90%, transparent 100%),
+    radial-gradient(circle 2px, hsl(260, 60%, 60%) 90%, transparent 100%);
+  background-size: 14px 14px;
+  background-position: 0 0, 7px 7px;
+  mix-blend-mode: soft-light;
+}
+
+/* Epic: diagonal geological strata */
+.emoji-card.epic .emoji-card__art::after {
+  background: repeating-linear-gradient(
+    -45deg,
+    hsl(270, 50%, 55%) 0px,
+    hsl(280, 45%, 60%) 3px,
+    hsl(260, 55%, 50%) 6px,
+    hsl(250, 40%, 45%) 9px,
+    hsl(280, 50%, 55%) 12px
+  );
+  background-size: 300% 300%;
+  mix-blend-mode: soft-light;
+}
 
 /* ponytail: touch devices have no hover — force holo visible */
 @media (hover: none) {
