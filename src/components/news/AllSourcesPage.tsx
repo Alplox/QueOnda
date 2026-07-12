@@ -439,7 +439,7 @@ export function AllSourcesPage() {
               onClick={() => { play('interaction.tap'); (allSelected ? deselectAll() : selectAll()); }}
               className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all cursor-pointer ${
 allSelected
-                    ? 'bg-base-300 text-base-content/70 hover:text-base-content'
+                    ? 'bg-base-content/10 text-base-content/70 hover:text-base-content'
                     : 'bg-primary text-primary-content hover:bg-primary'
               }`}
             >
@@ -448,7 +448,7 @@ allSelected
             {searchQuery && filteredSources.length > 0 && (
               <button
                 onClick={() => { play('interaction.tap'); selectBySearch(); }}
-                className="px-3 py-1.5 text-[11px] font-medium bg-base-300 text-base-content/70 hover:text-base-content rounded-lg transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-[11px] font-medium bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg transition-colors cursor-pointer"
               >
                 Agregar {filteredSources.length - filteredSources.filter(s => selected.has(s.sourceKey)).length} de búsqueda
               </button>
@@ -456,7 +456,7 @@ allSelected
             <button
               onClick={() => { play('interaction.tap'); setShowMap(v => !v); }}
               className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-colors cursor-pointer ${
-showMap ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/70 hover:text-base-content'
+showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-content/70 hover:text-base-content'
               }`}
             >
               {showMap ? 'Ocultar mapa' : 'Filtrar por región'}
@@ -464,7 +464,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/70 
             {selectedRegion && (
               <button
                 onClick={() => { play('interaction.tap'); setSelectedRegion(null); }}
-                className="px-3 py-1.5 text-[11px] font-medium bg-base-300 text-error/80 hover:text-error rounded-lg transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-[11px] font-medium bg-base-content/10 text-error/80 hover:text-error rounded-lg transition-colors cursor-pointer"
               >
                 Limpiar región
               </button>
@@ -501,7 +501,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/70 
             <div className="sticky bottom-4">
               <button
                 onClick={() => { play('interaction.tap'); handleFetch(); }}
-                className="w-full py-3 text-sm font-semibold bg-primary text-primary-content rounded-xl hover:opacity-90 transition-all active:scale-[0.98] shadow-lg shadow-primary/20 cursor-pointer"
+                className="w-full py-3 text-sm font-semibold bg-primary text-primary-content rounded-xl hover:opacity-90 transition-all active:scale-[0.96] shadow-lg shadow-primary/20 cursor-pointer"
               >
                 Cargar {selectedCount} {selectedCount === 1 ? 'fuente' : 'fuentes'}
               </button>
@@ -615,7 +615,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/70 
               <button
                 key={i}
                 onClick={() => { play('interaction.tap'); setActiveTag(activeTag === tag ? null : tag); }}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors cursor-pointer active:scale-95 ${
+                className={`px-3 py-1.5 rounded-full text-sm border transition-colors cursor-pointer active:scale-[0.96] ${
                   activeTag === tag
                     ? 'bg-primary border-primary text-primary-content'
                     : 'bg-base-200 text-base-content/70 border-base-300 hover:border-primary/50 hover:text-base-content'
@@ -627,7 +627,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/70 
             {activeTag && (
               <button
                 onClick={() => { play('interaction.tap'); setActiveTag(null); }}
-                className="px-3 py-1.5 rounded-full text-sm bg-base-200 text-error border border-base-300 hover:border-error/50 hover:text-base-content transition-colors cursor-pointer active:scale-95"
+                className="px-3 py-1.5 rounded-full text-sm bg-base-200 text-error border border-base-300 hover:border-error/50 hover:text-base-content transition-colors cursor-pointer active:scale-[0.96]"
               >
                 Limpiar filtro
               </button>

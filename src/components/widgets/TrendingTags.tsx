@@ -67,7 +67,7 @@ export function TrendingTags({ tags, loading }: Props) {
               key={i}
               onClick={() => handleClick(tag)}
               style={{ animationDelay: `${i * 40}ms` }}
-              className={`px-3 py-1.5 rounded-full text-sm border transition-all cursor-pointer active:scale-95 hover:scale-105 opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
+              className={`px-3 py-1.5 rounded-full text-sm border transition-all cursor-pointer active:scale-[0.96] hover:scale-105 opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
                 isActive
                   ? 'bg-primary border-primary text-primary-content'
                   : 'bg-base-200 text-base-content/70 border-base-300 hover:border-primary/50 hover:text-base-content'
@@ -80,7 +80,7 @@ export function TrendingTags({ tags, loading }: Props) {
         {activeTag && (
           <button
             onClick={() => { play('interaction.confirm'); setTag(null); }}
-            className="px-3 py-1.5 rounded-full text-sm bg-base-200 text-error border border-base-300 hover:border-error/50 hover:text-base-content transition-colors cursor-pointer active:scale-95"
+            className="px-3 py-1.5 rounded-full text-sm bg-base-200 text-error border border-base-300 hover:border-error/50 hover:text-base-content transition-colors cursor-pointer active:scale-[0.96]"
           >
             Limpiar filtro
           </button>

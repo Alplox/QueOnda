@@ -43,7 +43,7 @@ export function ChileMap({ allSources, selectedRegion, onSelectRegion }: ChileMa
   return (
     <div className="relative w-full max-w-[180px] mx-auto">
       <svg viewBox="0 0 160 810" className="w-full h-auto" role="img" aria-label="Mapa de Chile">
-        <path d={CHILE_OUTLINE} fill="var(--color-base-200)" stroke="var(--color-base-300)" strokeWidth="0.3" className="pointer-events-none" />
+        <path d={CHILE_OUTLINE} fill="var(--color-base-200)" stroke="var(--color-base-content)" strokeWidth="0.3" opacity="0.15" className="pointer-events-none" />
         {REGIONS.map((r) => {
           const count = regionCounts.get(r.key) ?? 0;
           const isSelected = selectedRegion === r.key;
@@ -61,8 +61,9 @@ export function ChileMap({ allSources, selectedRegion, onSelectRegion }: ChileMa
                 cx={r.cx}
                 cy={r.cy}
                 r={R}
-                fill={isSelected ? 'var(--color-primary)' : 'var(--color-base-300)'}
-                stroke={isSelected ? 'var(--color-primary)' : 'var(--color-base-300)'}
+                fill={isSelected ? 'var(--color-primary)' : 'var(--color-base-content)'}
+                stroke={isSelected ? 'var(--color-primary)' : 'var(--color-base-content)'}
+                opacity={isSelected ? 1 : 0.2}
                 className={!hasNoSources ? 'transition-all hover:brightness-110' : ''}
               />
               <text
@@ -72,7 +73,8 @@ export function ChileMap({ allSources, selectedRegion, onSelectRegion }: ChileMa
                 dominantBaseline="central"
                 fontSize="6"
                 fontWeight="700"
-                fill={isSelected ? 'var(--color-primary-content)' : 'var(--color-base-content/90)'}
+                fill={isSelected ? 'var(--color-primary-content)' : 'var(--color-base-content)'}
+                opacity={isSelected ? 1 : 0.9}
               >
                 {r.nr}
               </text>
@@ -81,7 +83,8 @@ export function ChileMap({ allSources, selectedRegion, onSelectRegion }: ChileMa
                 y={r.cy + R + 8}
                 textAnchor="middle"
                 fontSize="5"
-                fill="var(--color-base-content/50)"
+                fill="var(--color-base-content)"
+                opacity="0.5"
               >
                 {count}
               </text>

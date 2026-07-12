@@ -110,7 +110,7 @@ export function GoogleTrendsWidget() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => play('interaction.tap')}
-              className="text-base text-base-content truncate block no-underline hover:underline active:scale-[0.97] transition-all"
+              className="text-base text-base-content truncate block no-underline hover:underline active:scale-[0.96] transition-all"
             >
               {trend.title}
             </a>

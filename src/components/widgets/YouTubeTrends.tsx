@@ -29,7 +29,7 @@ function VideoCard({ video, isCompact }: { video: Video; isCompact?: boolean }) 
       href={video.link}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group rounded-xl overflow-hidden bg-base-200 border border-base-300 hover:border-primary hover:shadow-lg shadow-sm transition-[border-color,box-shadow] no-underline active:scale-[0.97] ${
+      className={`group rounded-xl overflow-hidden bg-base-200 border border-base-300 hover:border-primary hover:shadow-lg shadow-sm transition-[border-color,box-shadow] no-underline active:scale-[0.96] ${
         isCompact ? 'w-52 shrink-0' : ''
       }`}
     >
@@ -320,7 +320,7 @@ export function YouTubeTrends() {
 
         {!isRetryingAll && errorCount > 0 && (
           <button onClick={handleRetryAllErrors}
-            className="px-2 py-1 text-[10px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.97] cursor-pointer">
+            className="px-2 py-1 text-[10px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer">
             Reintentar todos ({errorCount})
           </button>
         )}
@@ -336,7 +336,7 @@ export function YouTubeTrends() {
 
         <div className="relative" ref={configRef}>
           <button onClick={() => { play('interaction.tap'); setConfigOpen(o => !o); }}
-            className="px-2.5 py-1 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary transition-all active:scale-[0.97] cursor-pointer">
+            className="px-2.5 py-1 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary transition-all active:scale-[0.96] cursor-pointer">
             Canales
           </button>
           {configOpen && (
@@ -398,13 +398,13 @@ export function YouTubeTrends() {
                           <p className="text-[10px] text-warning/80 leading-relaxed break-words">{ch.errorMessage || 'Error desconocido'}</p>
                           <div className="flex gap-2">
                             <button onClick={() => { navigator.clipboard.writeText(ch.errorMessage || ''); play('interaction.confirm'); }}
-                              className="px-2 py-1 text-[10px] font-medium bg-base-100 border border-base-300 rounded-lg text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer active:scale-[0.97]" title="Copiar error">
+                              className="px-2 py-1 text-[10px] font-medium bg-base-100 border border-base-300 rounded-lg text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer active:scale-[0.96]" title="Copiar error">
                               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline mr-0.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                               Copiar
                             </button>
                             <button onClick={() => { play('interaction.subtle'); handleRetryChannel(ch); }}
                               disabled={retryingChannel === ch.id}
-                              className="px-2 py-1 text-[10px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all cursor-pointer active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed">
+                              className="px-2 py-1 text-[10px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all cursor-pointer active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed">
                               {retryingChannel === ch.id ? 'Reintentando...' : 'Reintentar'}
                             </button>
                           </div>
@@ -446,19 +446,19 @@ export function YouTubeTrends() {
         <div className="hidden sm:flex items-center justify-center gap-3 mt-4">
           {hasMore && (
             <button onClick={() => setGridLimit(s => Math.min(s + 6, displayVideos.length))}
-              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.97] cursor-pointer">
+              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer">
               Mostrar más ({displayVideos.length - gridLimit})
             </button>
           )}
           {gridLimit > 15 && (
             <button onClick={() => setGridLimit(s => Math.max(s - 6, 15))}
-              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.97] cursor-pointer">
+              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.96] cursor-pointer">
               Mostrar menos
             </button>
           )}
           {gridLimit > 15 && (
             <button onClick={() => setGridLimit(15)}
-              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.97] cursor-pointer">
+              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.96] cursor-pointer">
               Ocultar todo
             </button>
           )}

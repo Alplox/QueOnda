@@ -359,7 +359,7 @@ El build de Astro genera `dist/server/` + `dist/client/`. El script reestructura
 
 ### Notas
 
-- `wrangler.jsonc` fue eliminado del repo — el CI de Pages lo detectaba y causaba conflictos con el build command personalizado. Solo existe `wrangler.jsonc.example` como template de referencia.
+- `wrangler.jsonc` fue eliminado del repo — el CI de Pages lo detectaba y causaba conflictos con el build command personalizado.
 
 ---
 

@@ -71,7 +71,7 @@ function SourceErrorPanel({ sourceResults, onRetry }: { sourceResults: SourceRes
           </button>
           <button
             onClick={onRetry}
-            className="px-3 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.97] cursor-pointer"
+            className="px-3 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer"
           >
             Reintentar
           </button>
@@ -102,7 +102,7 @@ function LoadingSkeleton() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-xl bg-base-200 border border-base-300 overflow-hidden animate-pulse">
+          <div key={i} className="rounded-xl bg-base-200 border border-base-300 overflow-hidden animate-pulse min-h-[473px]">
             <div className="px-4 py-3 border-b border-base-300 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-base-300 shrink-0" />
               <div className="h-3 w-28 bg-base-300 rounded" />
@@ -204,7 +204,7 @@ export function NewsFeed({
     return (
       <div className="text-center flex flex-col items-center gap-4 py-12 text-base-content/70">
         <p>No se pudieron cargar las fuentes de noticias</p>
-        <button onClick={onRetry} className="px-4 py-2 text-xs font-medium bg-primary text-primary-content border border-primary rounded-lg hover:opacity-80 transition-all active:scale-[0.97] cursor-pointer">Reintentar</button>
+        <button onClick={onRetry} className="px-4 py-2 text-xs font-medium bg-primary text-primary-content border border-primary rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer">Reintentar</button>
       </div>
     );
   }
@@ -214,7 +214,7 @@ export function NewsFeed({
   }
 
   return (
-    <div className="space-y-8 animate-[fadeSlideIn_0.4s_ease-out]">
+    <div className="space-y-8">
       {trending.length > 0 && (
         <div>
           <TrendingTags tags={trending} />
@@ -359,7 +359,7 @@ export function NewsFeed({
             {hasMoreClusters && (
               <button
                 onClick={() => setClusterLimit(c => c + 3)}
-                className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.97] cursor-pointer"
+                className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
               >
                 Cargar más temas
               </button>
@@ -367,7 +367,7 @@ export function NewsFeed({
             {clusterLimit > 3 && (
               <button
                 onClick={() => setClusterLimit(3)}
-                className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.97] cursor-pointer"
+                className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
               >
                 Colapsar todo
               </button>
@@ -376,7 +376,7 @@ export function NewsFeed({
         </div>
       )}
 
-      {filteredClusters.length === 0 && activeTag && (
+      {clusters.length > 0 && filteredClusters.length === 0 && activeTag && (
         <div className="text-center py-12 text-base-content/50 text-sm">
           Sin resultados para "{activeTag}"
         </div>

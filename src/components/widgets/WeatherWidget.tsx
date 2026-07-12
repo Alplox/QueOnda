@@ -258,7 +258,7 @@ export function WeatherWidget() {
         <button
           type="submit"
           disabled={searching || !searchQuery.trim()}
-          className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+          className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
         >
           {searching ? '...' : 'Ir'}
         </button>
@@ -308,7 +308,7 @@ export function WeatherWidget() {
         {hasMore && (
           <button
             onClick={() => setLimit(s => s + LOAD_MORE)}
-            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.97] cursor-pointer"
+            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
           >
             Mostrar más ({allCities.length - limit} restantes)
           </button>
@@ -316,7 +316,7 @@ export function WeatherWidget() {
         {hasExtra && (
           <button
             onClick={() => setLimit(INITIAL)}
-            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.97] cursor-pointer"
+            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.96] cursor-pointer"
           >
             Mostrar menos
           </button>

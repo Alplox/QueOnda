@@ -74,7 +74,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
                 key={cat}
                 onClick={() => { play('navigation.tab'); onSelect(cat); }}
                 style={{ animationDelay: `${i * 40}ms` }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-[0.95] opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-[0.96] opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
                   isActive
                     ? 'bg-primary text-primary-content ring-1 ring-primary'
                     : 'text-base-content/70 hover:text-base-content/70 hover:bg-base-content/[0.04]'

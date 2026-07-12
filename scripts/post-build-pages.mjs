@@ -27,7 +27,7 @@ if (existsSync(clientDir)) {
     'android-chrome-512x512.png', 'apple-touch-icon.png', 'chile-flag.svg',
     'favicon-16x16.png', 'favicon-32x32.png', 'favicon.ico', 'og-image.png',
     'screenshot.jpeg', 'site.webmanifest', '_headers',
-    'cd-disc-1.png', 'cd-disc-2.png', 'cd-disc-3.png', 'cd-disc-4.png', 'cd-disc-5.png'];
+    'cd-disc-1.png', 'cd-disc-2.png', 'cd-disc-3.png', 'cd-disc-4.png', 'cd-disc-5.png', 'emoji'];
   for (const entry of entries) {
     const src = join(clientDir, entry);
     if (existsSync(src)) {

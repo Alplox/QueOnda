@@ -69,7 +69,11 @@ export function EmergencyWidget() {
       <section id="emergencia" className="scroll-mt-20 max-w-7xl mx-auto px-4 pt-4">
         <div className="mb-4 flex items-start justify-between gap-2">
           <div>
-            <h2 className="text-2xl font-bold text-balance text-base-content">Emergencia</h2>
+            <h2 className="text-2xl font-bold text-balance text-base-content">
+              {'Emergencia'.split('').map((char, i) => (
+                <span key={i} className="letter" style={{ transitionDelay: `${i * 30}ms` }}>{char === ' ' ? '\u00A0' : char}</span>
+              ))}
+            </h2>
             <p className="text-sm text-base-content/70 mt-1">Sismos recientes en Chile (≥5.0)</p>
           </div>
           {!loading && items.length > initialItems && (
@@ -89,41 +93,41 @@ export function EmergencyWidget() {
 
         {loading ? (
           <>
-            <div className="flex sm:hidden gap-2 overflow-x-hidden pb-2 -mx-4 px-4 animate-pulse">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="shrink-0 w-[175px] rounded-xl border border-base-300 p-3 space-y-2">
-                  <div className="flex items-center gap-1.5">
+            <div className="flex sm:hidden gap-2 overflow-x-hidden pb-2 -mx-4 px-4">
+              {Array.from({ length: initialItems }).map((_, i) => (
+                <div key={i} className="snap-start shrink-0 w-[175px] rounded-xl p-3 shadow-sm border border-base-300">
+                  <div className="flex items-center gap-1.5 animate-pulse">
                     <div className="h-4 w-12 bg-base-300 rounded-full" />
                     <div className="h-4 w-10 bg-base-300 rounded" />
                   </div>
-                  <div className="h-2.5 bg-base-300 rounded w-20" />
-                  <div className="h-3 bg-base-300 rounded w-full" />
-                  <div className="h-3 bg-base-300 rounded w-3/4" />
-                  <div className="h-2.5 bg-base-300 rounded w-12" />
+                  <div className="h-2.5 bg-base-300 rounded w-20 mt-1.5 animate-pulse" />
+                  <div className="h-3 bg-base-300 rounded w-full mt-2 animate-pulse" />
+                  <div className="h-3 bg-base-300 rounded w-3/4 mt-1 animate-pulse" />
+                  <div className="h-2.5 bg-base-300 rounded w-12 mt-1.5 animate-pulse" />
                 </div>
               ))}
             </div>
-            <div className="hidden sm:grid gap-2 grid-cols-3 lg:grid-cols-4 animate-pulse">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="rounded-xl border border-base-300 p-3 space-y-2">
-                  <div className="flex items-center gap-1.5">
+            <div className="hidden sm:grid gap-2 grid-cols-3 lg:grid-cols-4">
+              {Array.from({ length: initialItems }).map((_, i) => (
+                <div key={i} className="rounded-xl p-3 shadow-sm border border-base-300">
+                  <div className="flex items-center gap-1.5 animate-pulse">
                     <div className="h-4 w-12 bg-base-300 rounded-full" />
                     <div className="h-4 w-10 bg-base-300 rounded" />
                   </div>
-                  <div className="h-2.5 bg-base-300 rounded w-20" />
-                  <div className="h-3 bg-base-300 rounded w-full" />
-                  <div className="h-3 bg-base-300 rounded w-3/4" />
-                  <div className="h-2.5 bg-base-300 rounded w-12" />
+                  <div className="h-2.5 bg-base-300 rounded w-20 mt-1.5 animate-pulse" />
+                  <div className="h-3 bg-base-300 rounded w-full mt-2 animate-pulse" />
+                  <div className="h-3 bg-base-300 rounded w-3/4 mt-1 animate-pulse" />
+                  <div className="h-2.5 bg-base-300 rounded w-12 mt-1.5 animate-pulse" />
                 </div>
               ))}
             </div>
           </>
         ) : error ? (
-          <p className="text-xs text-base-content/40 pb-1">
+          <p className="text-xs text-base-content/40 pb-1 opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards]">
             Datos de sismos no disponibles
           </p>
         ) : items.length === 0 ? (
-          <p className="text-xs text-base-content/40 pb-1">
+          <p className="text-xs text-base-content/40 pb-1 opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards]">
             Sin sismos recientes (≥5.0) -{' '}
             <a
               href="https://www.sismologia.cl/"
@@ -136,7 +140,6 @@ export function EmergencyWidget() {
           </p>
         ) : (
           <>
-            {/* Móvil: scroll horizontal de una fila */}
             <div className="flex sm:hidden gap-2 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4">
               {visibleItems.map((item, i) => (
                 <a
@@ -160,16 +163,11 @@ export function EmergencyWidget() {
                     </div>
                     <span className="block text-[9px] text-base-content/40 mt-0.5">
                       {new Date(item.time).toLocaleDateString('es-CL', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                       })}
                     </span>
                   </div>
-
                   <p className="text-xs text-base-content leading-snug line-clamp-2">{item.place || item.title}</p>
-
                   {item.depth !== undefined && (
                     <div className="flex items-center gap-2 mt-1.5 text-[9px] text-base-content/70">
                       <span>{item.depth.toFixed(1)} km</span>
@@ -179,7 +177,6 @@ export function EmergencyWidget() {
               ))}
             </div>
 
-            {/* Desktop: grid normal */}
             <div className="hidden sm:grid gap-2 grid-cols-3 lg:grid-cols-4">
               {visibleItems.map((item, i) => (
                 <a
@@ -203,16 +200,11 @@ export function EmergencyWidget() {
                     </div>
                     <span className="block text-[9px] text-base-content/40 mt-0.5">
                       {new Date(item.time).toLocaleDateString('es-CL', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                       })}
                     </span>
                   </div>
-
                   <p className="text-xs text-base-content leading-snug line-clamp-2">{item.place || item.title}</p>
-
                   {item.depth !== undefined && (
                     <div className="flex items-center gap-2 mt-1.5 text-[9px] text-base-content/70">
                       <span>{item.depth.toFixed(1)} km</span>

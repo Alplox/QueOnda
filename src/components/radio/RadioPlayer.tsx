@@ -169,7 +169,7 @@ function BoomboxControls({
       <div className="flex items-center justify-center gap-4">
         <button
           onClick={onPlayPause}
-          className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center hover:bg-primary/90 transition-all active:scale-[0.93] shadow-lg"
+          className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center hover:bg-primary/90 transition-all active:scale-[0.96] shadow-lg"
           title={playing ? 'Pausar' : 'Reproducir'}
         >
           {playing ? PAUSE_ICON : PLAY_ICON}
@@ -177,7 +177,7 @@ function BoomboxControls({
         <button
           onClick={onStop}
           disabled={stopped}
-          className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-all active:scale-[0.93] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-all active:scale-[0.96] disabled:opacity-30 disabled:cursor-not-allowed"
           title="Detener"
         >
           {STOP_ICON}
@@ -187,7 +187,7 @@ function BoomboxControls({
       <div className="flex items-center gap-2">
         <button
           onClick={onMute}
-          className="text-base-content/70 hover:text-base-content transition-colors shrink-0 active:scale-[0.93]"
+          className="text-base-content/70 hover:text-base-content transition-colors shrink-0 active:scale-[0.96]"
         >
           {muted || volume === 0 ? MUTED_ICON : volume > 0.5 ? VOLUME_HIGH : VOLUME_LOW}
         </button>
@@ -225,7 +225,7 @@ function StationCard({
 }) {
   return (
     <div
-      className={`flex items-center gap-2 ${compact ? 'p-2' : 'p-2.5'} rounded-xl border transition-colors duration-150 cursor-pointer group active:scale-[0.98] ${
+      className={`flex items-center gap-2 ${compact ? 'p-2' : 'p-2.5'} rounded-xl border transition-colors duration-150 cursor-pointer group active:scale-[0.96] ${
         isActive
           ? 'bg-primary/10 border-primary'
           : 'bg-transparent border-base-300/50 hover:bg-base-200 hover:border-base-300'

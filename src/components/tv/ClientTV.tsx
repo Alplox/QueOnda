@@ -3,6 +3,7 @@ import type { Channel } from '../../types';
 import { ChannelSelector } from './ChannelSelector';
 import { ChannelGrid } from './ChannelGrid';
 import { UnifiedPlayer } from './UnifiedPlayer';
+import { Emoji } from '../Emoji';
 import { play } from '@/lib/sound';
 
 function loadFavorites(): Set<string> {
@@ -333,7 +334,7 @@ export function ClientTV() {
                   className={`text-[11px] px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                     importMethod === m ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
                   }`}>
-                  {m === 'file' ? '📁 Archivo' : m === 'url' ? '🔗 URL' : '📝 Texto'}
+                  {m === 'file' ? <><Emoji emoji="📁" /> Archivo</> : m === 'url' ? <><Emoji emoji="🔗" /> URL</> : <><Emoji emoji="📝" /> Texto</>}
                 </button>
               ))}
             </div>

@@ -119,7 +119,7 @@ export function Header() {
                   href={`#${section.id}`}
                   onClick={handleNavClick}
                   style={{ animationDelay: `${i * 50}ms` }}
-                  className={`px-3 py-1.5 text-sm rounded-lg whitespace-nowrap no-underline transition-transform active:scale-[0.97] opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards] ${
+                  className={`px-3 py-1.5 text-sm rounded-lg whitespace-nowrap no-underline transition-transform active:scale-[0.96] opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards] ${
                     activeSection === section.id
                       ? 'text-base-content font-semibold'
                       : 'text-base-content/70 hover:text-base-content hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05]'
@@ -134,7 +134,7 @@ export function Header() {
               <div ref={moreRef} className="hidden md:relative md:block">
                 <button
                   onClick={() => { play('overlay.expand'); setMoreOpen(!isMoreOpen); }}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors whitespace-nowrap flex items-center gap-1 transition-transform active:scale-[0.97] ${
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors whitespace-nowrap flex items-center gap-1 transition-transform active:scale-[0.96] ${
                     isMoreOpen
                       ? 'text-base-content bg-base-200'
                       : 'text-base-content/70 hover:text-base-content hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05]'
@@ -161,7 +161,7 @@ export function Header() {
                         key={section.id}
                         href={`#${section.id}`}
                         onClick={handleNavClick}
-                        className={`px-3 py-2 text-sm rounded-lg transition-colors no-underline transition-transform active:scale-[0.97] ${
+                        className={`px-3 py-2 text-sm rounded-lg transition-colors no-underline transition-transform active:scale-[0.96] ${
                            activeSection === section.id
                             ? 'text-base-content font-semibold bg-primary/10'
                             : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
@@ -213,7 +213,7 @@ export function Header() {
               key={section.id}
               href={`#${section.id}`}
               onClick={handleNavClick}
-               className={`block px-3 py-2.5 text-sm rounded-lg transition-colors no-underline transition-transform active:scale-[0.97] ${
+               className={`block px-3 py-2.5 text-sm rounded-lg transition-colors no-underline transition-transform active:scale-[0.96] ${
                   activeSection === section.id
                    ? 'text-base-content font-semibold bg-primary/10'
                    : 'text-base-content/70 hover:text-base-content hover:bg-base-200'

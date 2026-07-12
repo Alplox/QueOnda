@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import type { Job, JobSource } from '../../lib/jobs/types';
 import { JOB_SOURCES } from '../../lib/jobs/types';
+import { Emoji } from '../Emoji';
 
 export function ClientJobList() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -301,7 +302,7 @@ export function ClientJobList() {
           rel="noopener noreferrer"
           className="hover:text-base-content underline underline-offset-2 transition-colors"
         >
-          📋 Ir a lista con portales de empleo en Chile
+          <Emoji emoji="📋" /> Ir a lista con portales de empleo en Chile
         </a>
       </div>
     </div>

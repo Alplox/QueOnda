@@ -426,7 +426,7 @@ function StopCombobox() {
               <button
                 type="submit"
                 disabled={searching || !stopId.trim()}
-                className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+                className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
               >
                 {searching ? '...' : 'Consultar'}
               </button>
@@ -462,7 +462,7 @@ function StopCombobox() {
                 type="button"
                 onClick={() => handleSelect(code)}
                 style={{ animationDelay: `${i * 60}ms` }}
-                className="px-2 py-1 text-[10px] font-medium bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:scale-105 transition-all active:scale-[0.97] cursor-pointer opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards]"
+                className="px-2 py-1 text-[10px] font-medium bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:scale-105 transition-all active:scale-[0.96] cursor-pointer opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards]"
               >
                 {code}
               </button>
@@ -496,7 +496,7 @@ function StopCombobox() {
               <button
                 type="submit"
                 disabled={loadingRoute || !routeInput.trim()}
-                className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+                className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
               >
                 {loadingRoute ? '...' : 'Ver ruta'}
               </button>
@@ -603,7 +603,7 @@ function StopCombobox() {
                 <button
                   type="submit"
                   disabled={searching || !stopId.trim()}
-                  className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+                  className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
                 >
                   {searching ? '...' : 'Consultar'}
                 </button>

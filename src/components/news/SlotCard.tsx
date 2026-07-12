@@ -316,7 +316,7 @@ export const SlotCard = memo(function SlotCard({
 
   return (
     <>
-      <div className={`rounded-xl bg-base-200 border overflow-hidden h-full flex flex-col shadow-sm transition-colors ${error ? 'border-error/30' : 'border-base-300'}`}>
+      <div className={`rounded-xl bg-base-200 border overflow-hidden h-full min-h-[473px] flex flex-col shadow-sm transition-colors ${error ? 'border-error/30' : 'border-base-300'}`}>
         <div className="px-3 py-2.5 border-b border-base-300 flex items-center gap-1.5 flex-shrink-0 relative">
           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${error ? 'bg-error' : loading ? 'bg-warning animate-pulse' : 'bg-primary'}`} />
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -397,7 +397,7 @@ export const SlotCard = memo(function SlotCard({
               {onCancelSkip && (
                 <button
                     onClick={() => { play('interaction.subtle'); onCancelSkip(slotIndex); }}
-                  className="mt-3 px-3 py-1.5 text-[11px] font-medium bg-base-300 text-base-content/70 hover:text-base-content rounded-lg transition-all active:scale-[0.97] cursor-pointer"
+                  className="mt-3 px-3 py-1.5 text-[11px] font-medium bg-base-300 text-base-content/70 hover:text-base-content rounded-lg transition-all active:scale-[0.96] cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -416,7 +416,7 @@ export const SlotCard = memo(function SlotCard({
               )}
               <button
                 onClick={handleRetry}
-                className="px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-content border border-primary rounded-lg hover:opacity-80 transition-all active:scale-[0.97] cursor-pointer"
+                className="px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-content border border-primary rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer"
               >
                 Reintentar
               </button>
@@ -472,7 +472,7 @@ export const SlotCard = memo(function SlotCard({
                   {nextAvailable && (
                     <button
                       onClick={() => { play('interaction.tap'); onSourceChange(slotIndex, nextAvailable, true); }}
-                      className="px-3 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.97] cursor-pointer"
+                      className="px-3 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer"
                     >
                       Cargar siguiente
                     </button>

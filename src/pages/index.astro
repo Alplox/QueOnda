@@ -20,6 +20,7 @@ import { ClientRadios } from '../components/radio/ClientRadios';
 import '../styles/global.css';
 import { getTodayBg } from '../lib/backgrounds';
 import { getTodayFestivity } from '../lib/festivities';
+import { emojiToPath } from '../lib/emoji';
 
 const hour = new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Santiago' });
 const todayBg = getTodayBg();
@@ -76,6 +77,13 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     </script>
   </head>
   <body class="bg-base-100 text-base-content min-h-screen pt-14">
+    <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+      <filter id="paper-grain">
+        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+        <feColorMatrix type="saturate" values="0" />
+      </filter>
+    </svg>
+
     <Header client:load />
 
     <SideIndex client:load />
@@ -100,7 +108,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
           <div class={`overflow-hidden backdrop-blur-sm bg-base-100/40 rounded-2xl p-8 md:p-12 shadow-xl border border-base-300/20 ${festivity?.theme ?? ''}`}>
             <div class="flex justify-center mb-5 animate-[fadeSlideIn_0.5s_ease-out_0.3s_both] will-animate">
               <div class="bg-base-100/80 backdrop-blur-sm text-base-content text-sm font-semibold px-4 py-1.5 rounded-xl whitespace-nowrap">
-                {festivity?.flagSvg ? <img src={festivity.flagSvg} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : festivity?.emoji ? `${festivity.emoji} ` : ''}{greeting}
+                {festivity?.flagSvg ? <img src={festivity.flagSvg} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : festivity?.emoji ? <img src={emojiToPath(festivity.emoji)} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : ''}{greeting}
               </div>
             </div>
 <h1 class="hero-title text-[clamp(2rem,8vw,3rem)] md:text-[clamp(2.5rem,6vw,4.5rem)] lg:text-[clamp(3rem,5vw,6rem)] font-extrabold tracking-tighter leading-none text-base-content mb-4 text-nowrap animate-[heroScaleIn_0.6s_cubic-bezier(0.16,1,0.3,1)_0.5s_both] will-animate">
@@ -207,9 +215,10 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
       });
     </script>
 
-    <script>
+    <script is:inline>
       // Section entrance animation — one-shot data-visible on scroll
       (function() {
+        if (typeof document === 'undefined') return;
         var observer = new IntersectionObserver(function(entries) {
           for (var i = 0; i < entries.length; i++) {
             if (entries[i].isIntersecting) {

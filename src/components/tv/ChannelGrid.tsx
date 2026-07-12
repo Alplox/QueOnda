@@ -76,7 +76,7 @@ export function ChannelGrid({ channels, selectedId, favorites, onSelect, onToggl
                 onClick={() => { play('interaction.tap'); onSelect(ch); }}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play('interaction.tap'); onSelect(ch); } }}
                 style={{ animationDelay: `${index * 40}ms` }}
-                className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all active:scale-[0.97] shrink-0 w-[84px] sm:w-24 cursor-pointer opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards] hover:scale-105 ${
+                className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all active:scale-[0.96] shrink-0 w-[84px] sm:w-24 cursor-pointer opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards] hover:scale-105 ${
                   isSelected
                     ? 'bg-primary ring-2 ring-primary'
                     : 'bg-base-200 hover:bg-base-200 ring-1 ring-base-content/[0.07]'
