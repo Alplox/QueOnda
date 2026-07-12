@@ -56,17 +56,17 @@ export function extractKeywords(title: string): string[] {
     }
   }
 
-  return [...new Set([...unigrams, ...bigrams, ...trigrams])];
+  // ponytail: normalize diacritics once at extraction time, not per comparison
+  return [...new Set([...unigrams, ...bigrams, ...trigrams].map(stripDiacritics))];
 }
 
-function calculateSimilarity(keywordsA: string[], keywordsB: string[]): number {
-  const normA = keywordsA.map(stripDiacritics);
-  const normB = keywordsB.map(stripDiacritics);
-  const setA = new Set(normA);
-  const setB = new Set(normB);
-  const intersection = new Set([...setA].filter((k) => setB.has(k)));
-  const union = new Set([...setA, ...setB]);
-  return intersection.size / union.size;
+// ponytail: operates on pre-built Sets, iterates smaller for intersection
+function calculateSimilarity(setA: Set<string>, setB: Set<string>): number {
+  if (setA.size === 0 || setB.size === 0) return 0;
+  const [smaller, larger] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
+  let intersection = 0;
+  for (const k of smaller) if (larger.has(k)) intersection++;
+  return intersection / (setA.size + setB.size - intersection);
 }
 
 export function clusterArticles(articles: Article[]): NewsCluster[] {
@@ -78,7 +78,8 @@ export function clusterArticles(articles: Article[]): NewsCluster[] {
     return true;
   });
 
-  const allKeywords = deduped.map(a => extractKeywords(a.title));
+  // ponytail: pre-build Sets once — avoids re-allocation in O(n^2) comparisons
+  const allKeywordSets = deduped.map(a => new Set(extractKeywords(a.title)));
   const clusters: NewsCluster[] = [];
   const assigned = new Set<number>();
 
@@ -87,7 +88,7 @@ export function clusterArticles(articles: Article[]): NewsCluster[] {
 
     const cluster: NewsCluster = {
       topic: deduped[i].title,
-      keywords: allKeywords[i],
+      keywords: [...allKeywordSets[i]],
       articles: [deduped[i]],
       sourceCount: 1,
     };
@@ -98,10 +99,7 @@ export function clusterArticles(articles: Article[]): NewsCluster[] {
     for (let j = i + 1; j < deduped.length; j++) {
       if (assigned.has(j)) continue;
 
-      const similarity = calculateSimilarity(
-        cluster.keywords,
-        allKeywords[j]
-      );
+      const similarity = calculateSimilarity(allKeywordSets[i], allKeywordSets[j]);
 
       if (similarity > 0.25) {
         if ((sourceCountInCluster[deduped[j].sourceKey] || 0) < MAX_SAME_SOURCE) {

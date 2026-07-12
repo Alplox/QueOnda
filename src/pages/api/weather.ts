@@ -223,19 +223,24 @@ export const GET: APIRoute = async ({ url, request }) => {
     let weatherMap = await fetchOpenMeteo(cities);
 
     if (!weatherMap) {
+      const gaelResults = await Promise.allSettled(
+        cities.map(city => fetchGaelCloud(city.name))
+      );
       weatherMap = {};
-      for (const city of cities) {
-        const gael = await fetchGaelCloud(city.name);
-        if (gael) weatherMap[city.name] = gael;
-      }
+      gaelResults.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value) weatherMap![cities[i].name] = r.value;
+      });
+      if (Object.keys(weatherMap).length === 0) weatherMap = null;
     }
 
     if (!weatherMap || Object.keys(weatherMap).length === 0) {
+      const boostrResults = await Promise.allSettled(
+        cities.map(city => fetchBoostr(city.name))
+      );
       weatherMap = {};
-      for (const city of cities) {
-        const boostr = await fetchBoostr(city.name);
-        if (boostr) weatherMap[city.name] = boostr;
-      }
+      boostrResults.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value) weatherMap![cities[i].name] = r.value;
+      });
     }
 
     if (Object.keys(weatherMap).length === 0) {

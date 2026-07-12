@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { fetchAllSports, deduplicateArticles } from '../../lib/rss';
-import { getCached, setCache } from '../../lib/cache';
+import { getCached, setCache, dedupeFetch } from '../../lib/cache';
 import type { SourceResult, Article } from '../../types';
 
 interface SportArticle {
@@ -26,7 +26,7 @@ export const GET: APIRoute = async () => {
   }
 
   try {
-    const { articles, sourceResults, totalSources, displayedSources } = await fetchAllSports();
+    const { articles, sourceResults, totalSources, displayedSources } = await dedupeFetch('sports-data', () => fetchAllSports());
 
     const deduped: SportArticle[] = (deduplicateArticles(articles, 25) as Article[]).map(a => ({
       title: a.title,

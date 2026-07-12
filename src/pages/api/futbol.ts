@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { BROWSER_UA } from '../../lib/rss';
-import { getCached, setCache } from '../../lib/cache';
+import { getCached, setCache, dedupeFetch } from '../../lib/cache';
 import { fetchAllSports, deduplicateArticles } from '../../lib/rss';
 import type { SourceResult } from '../../types';
 
@@ -188,8 +188,8 @@ export const GET: APIRoute = async () => {
   let displayedSources = 0;
 
   try {
-    const sports = await fetchAllSports();
-    for (const a of deduplicateArticles(sports.articles, Infinity) as Article[]) {
+    const sports = await dedupeFetch('sports-data', () => fetchAllSports());
+    for (const a of deduplicateArticles(sports.articles, 25) as Article[]) {
       articles.push({
         title: a.title,
         link: a.link,
@@ -205,7 +205,7 @@ export const GET: APIRoute = async () => {
   const data: FutbolResponse = {
     standings,
     matches: matches.slice(0, 20),
-    articles: articles.slice(0, 25),
+    articles,
     source,
     sourceResults,
     totalSources,

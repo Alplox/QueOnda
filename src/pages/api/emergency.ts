@@ -74,11 +74,9 @@ async function fetchGaelCloud(): Promise<EmergencyItem[]> {
     
     const chileData = await chileRes.json() as ChileanEarthquake[];
 
-    // Sort by date (most recent first)
-    chileData.sort((a, b) => parseDate(b.Fecha) - parseDate(a.Fecha));
-
-    // Filter by minimum magnitude
+    // Filter first, then sort — fewer items to sort
     const filteredData = chileData.filter(eq => parseFloat(eq.Magnitud) >= MIN_MAGNITUDE);
+    filteredData.sort((a, b) => parseDate(b.Fecha) - parseDate(a.Fecha));
 
     const items: EmergencyItem[] = [];
     for (const eq of filteredData.slice(0, 10)) {

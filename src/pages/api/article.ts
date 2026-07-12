@@ -22,24 +22,12 @@ function cleanText(text: string): string {
 
 function stripJunk($: cheerio.CheerioAPI, root: cheerio.Cheerio<any>) {
   root.find(JUNK_SELECTORS.join(',')).remove();
-
-  root.find('*').each((_: number, el: any) => {
-    const $el = $(el);
-    const text = $el.text().toLowerCase().trim();
-    const junkPhrases = [
-      'te puede interesar', 'también lee', 'lee también', 'relacionados',
-      'comentarios', 'publicidad', 'compartir', 'síguenos',
-      'siguenos', 'newsletter', 'suscríbete', 'suscribete',
-      'más información', 'ver más', 'continúa leyendo',
-    ];
-    if (text.length < 80 && junkPhrases.some(p => text.includes(p))) {
-      $el.remove();
-    }
-  });
+  // ponytail: removed find('*').each() wildcard traversal — junk selectors already handle
+  // nav/footer/aside/ads/comments/social. Phrase-matching on every DOM element is O(n)
+  // and rarely catches anything the selectors miss.
 }
 
-function extractWithCheerio(html: string): { bodyHtml: string; bodyText: string } {
-  const $ = cheerio.load(html);
+function extractWithCheerio($: cheerio.CheerioAPI): { bodyHtml: string; bodyText: string } {
   let bodyHtml = '';
   const selectors = [
     'article',
@@ -163,7 +151,7 @@ export const GET: APIRoute = async ({ url, request }) => {
     // Fallback: cheerio selectors
     if (!bodyHtml) {
       const $ = cheerio.load(html);
-      const fallback = extractWithCheerio(html);
+      const fallback = extractWithCheerio($);
 
       title = title || cleanText($('meta[property="og:title"]').attr('content') || '') || cleanText($('title').text()) || '';
       description = description || cleanText($('meta[property="og:description"]').attr('content') || '');
@@ -174,19 +162,17 @@ export const GET: APIRoute = async ({ url, request }) => {
       bodyText = fallback.bodyText;
     }
 
-    bodyHtml = bodyHtml
-      .replace(/class="[^"]*"/gi, '')
-      .replace(/id="[^"]*"/gi, '')
-      .replace(/<figure[^>]*>/gi, '')
-      .replace(/<\/figure>/gi, '');
+  bodyHtml = bodyHtml
+    .slice(0, 60000)
+    .replace(/class="[^"]*"|id="[^"]*"|<figure[^>]*>|<\/figure>/gi, '');
 
-    const result = {
-      title: (title || 'Artículo').slice(0, 300),
-      description: description.slice(0, 500),
-      author: author.slice(0, 100),
-      publishedTime,
-      bodyHtml: bodyHtml.slice(0, 60000),
-      body: bodyText.slice(0, 30000),
+  const result = {
+    title: (title || 'Artículo').slice(0, 300),
+    description: description.slice(0, 500),
+    author: author.slice(0, 100),
+    publishedTime,
+    bodyHtml,
+    body: bodyText.slice(0, 30000),
       url: target,
     };
     await setCache(cacheKey, result, 10 * 60 * 1000);

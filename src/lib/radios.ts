@@ -180,17 +180,13 @@ export async function fetchRadioBrowserStations(): Promise<{ stations: RadioStat
   const tagCount = new Map<string, number>();
   const stateCount = new Map<string, number>();
 
-  for (const s of raw) {
-    if (s.tags) {
-      for (const tag of s.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)) {
-        tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
-      }
+  // ponytail: count from already-built stations, not re-parsing raw
+  for (const s of stations) {
+    for (const tag of s.tags) {
+      tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
     }
     if (s.state) {
-      const st = normalizeState(s.state);
-      if (st) {
-        stateCount.set(st, (stateCount.get(st) || 0) + 1);
-      }
+      stateCount.set(s.state, (stateCount.get(s.state) || 0) + 1);
     }
   }
 

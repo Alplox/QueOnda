@@ -1,5 +1,4 @@
 import { XMLParser } from 'fast-xml-parser';
-import * as cheerio from 'cheerio';
 import feedsDb from './feeds-database.json';
 import type { Article, NewsCluster, SourceResult, SourceFeed } from '../types';
 
@@ -49,6 +48,8 @@ export const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
+  parseTagValue: false,
+  ignoreDeclaration: true,
 });
 
 const FEED_FETCH_TIMEOUT = 5000;
@@ -307,10 +308,9 @@ function extractImage(item: any): string | undefined {
   if (item['media:thumbnail']?.['@_url']) return item['media:thumbnail']['@_url'];
   const desc = safeString(item.description || '');
   if (!desc) return undefined;
-  const $ = cheerio.load(desc);
-  const src = $('img').first().attr('src');
-  if (src && (src.startsWith('http://') || src.startsWith('https://'))) return src;
-  return undefined;
+  // ponytail: regex replaces cheerio.load() — avoids ~2600 DOM parses per sports refresh
+  const m = desc.match(/<img[^>]+src="(https?:\/\/[^"]+)"/i);
+  return m?.[1];
 }
 
 function safeString(v: unknown): string {
@@ -334,8 +334,19 @@ function decodeHtmlEntities(text: unknown): string {
 }
 
 function cleanHtml(text: unknown): string {
-  const decoded = decodeHtmlEntities(text);
-  return decoded.replace(/<[^>]*>/g, '').trim();
+  const s = safeString(text);
+  // ponytail: fast path — skip 8 entity replaces when string has no & at all
+  if (!s.includes('&')) return s.replace(/<[^>]*>/g, '').trim();
+  return s
+    .replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(parseInt(c, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, c) => String.fromCodePoint(parseInt(c, 16)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/<[^>]*>/g, '').trim();
 }
 
 export function deduplicateArticles<T extends { title?: string; link?: string }>(articles: T[], limit = 25): T[] {
@@ -383,16 +394,15 @@ function extractLink(item: any, sourceUrl: string): string {
 function extractLinkFromDescription(rawDescription: unknown, aggregatorDomain: string): string {
   const html = decodeHtmlEntities(safeString(rawDescription));
   const hrefRegex = /<a\s+[^>]*href="([^"]+)"[^>]*>/gi;
-  const matches: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = hrefRegex.exec(html)) !== null) {
     const href = m[1];
     const host = tryExtractHost(href);
     if (!host) continue;
     if (href.includes('/tags/') || href.includes('#') || host === aggregatorDomain) continue;
-    matches.push(href);
+    return href;
   }
-  return matches[0] || '';
+  return '';
 }
 
 function tryExtractHost(url: string): string | null {
@@ -419,12 +429,14 @@ async function fetchSources(
   }
 
   const valid = articles.filter((a) => a.title && a.link);
-  const sorted = valid.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
-
-  const diverse: Article[] = [...sorted];
+  valid.sort((a, b) => {
+    if (a.pubDate > b.pubDate) return -1;
+    if (a.pubDate < b.pubDate) return 1;
+    return 0;
+  });
 
   const keptPerName = new Map<string, number>();
-  for (const a of diverse) {
+  for (const a of valid) {
     keptPerName.set(a.source, (keptPerName.get(a.source) || 0) + 1);
   }
 
@@ -445,10 +457,10 @@ async function fetchSources(
     sr.articlesCount = keptPerName.get(sr.name) ?? 0;
   }
 
-  const displayedSources = new Set(diverse.map((a) => a.sourceKey)).size;
+  const displayedSources = new Set(valid.map((a) => a.sourceKey)).size;
   const totalSources = new Set(sources.map((s) => s.sourceKey)).size;
 
-  return { articles: diverse, sourceResults, totalSources, displayedSources, allSources: sources };
+  return { articles: valid, sourceResults, totalSources, displayedSources, allSources: sources };
 }
 
 export async function fetchAllSports(): Promise<FetchResult> {

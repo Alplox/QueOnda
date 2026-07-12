@@ -4,7 +4,7 @@ import { getCached, setCache } from '../../lib/cache';
 import { BROWSER_UA } from '../../lib/rss';
 import { fetchChannels } from '../../lib/channels';
 
-const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseTagValue: false, ignoreDeclaration: true });
 const MAX_PER_CHANNEL = 10;
 
 function todayChile(): string {
