@@ -453,7 +453,8 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
         onPointerMove={mode === 'pip' && !animating ? handlePointerMove : undefined}
         onPointerUp={mode === 'pip' && !animating ? handlePointerUp : undefined}
       >
-        {/* --- HEADER / TITLE BAR --- */}
+        {/* --- HEADER / TITLE BAR (hidden in fullscreen) --- */}
+        {!(mode === 'inline' && isFullscreen) && (
         <div className={`${mode === 'pip' ? 'absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-neutral/70 to-transparent h-9' : 'bg-base-100/95 backdrop-blur-sm border-b border-base-300 rounded-t-xl'}`}>
           {mode === 'inline' ? (
             <>
@@ -559,9 +560,10 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
             </>
           )}
         </div>
+        )}
 
         {/* --- VIDEO AREA --- */}
-        <div className={`relative bg-neutral ${mode === 'inline' ? 'aspect-video rounded-b-xl overflow-hidden' : 'h-full pt-9'}`}>
+        <div className={`relative bg-neutral ${(mode === 'inline' && isFullscreen) ? 'h-full' : mode === 'inline' ? 'aspect-video rounded-b-xl overflow-hidden' : 'h-full pt-9'}`}>
           {/* Loading */}
           {loading && isHlsType && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral/80">
