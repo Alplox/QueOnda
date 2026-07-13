@@ -1,0 +1,15 @@
+name: Pre-warm cache
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # every 30 minutes
+  workflow_dispatch:         # manual trigger from GitHub UI
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -sf "https://$DOMAIN/api/cron" -H "Authorization: Bearer $CRON_SECRET"
+    env:
+      DOMAIN: ${{ secrets.DOMAIN }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
