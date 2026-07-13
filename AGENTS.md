@@ -93,6 +93,7 @@ src/
     clustering.ts            # Pure functions: extractKeywords, clusterArticles, extractTrendingFromArticles (server + client; code-split via dynamic import in ClientNewsFeed)
     radios.ts                # Radio station data + extraction
     transport.ts             # City configs, stop predictions, Metro API, POPULAR_STOPS list
+    ua.ts                    # BROWSER_UA constant (shared by rss.ts + radios.ts, client-safe)
   scripts/
     update-feeds-db.mjs      # Fetches awesome-chilean-rss DB and regenerates src/lib/feeds-database.json
     update-stops-db.mjs      # Downloads DTPM GTFS and regenerates src/lib/stops-database.json
@@ -107,22 +108,22 @@ All routes return JSON. CORS is not needed (same-origin).
 | Route                                 | Cache  | Response                                                                                                                |
 | ------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/news?mode=inventory`        | 15 min | `{ allSources }` — OPML source list                                                                                     |
-| `POST /api/news/batch`                | 15 min | `{ articles, sourceResults }` for given sources                                                                         |
-| `GET /api/channels?category=`         | 1 hour | `{ channels, categories }`                                                                                              |
-| `GET /api/finance`                    | 30 min | `{ uf, dolar, euro, ipc, utm }`                                                                                         |
-| `GET /api/youtube`                    | 30 min | `{ videos, channelStatuses }` — YouTube Chile trending via RSS                                                          |
+| `POST /api/news/batch`                | per-source 15 min | `{ articles, sourceResults }` — per-source caching (`rss:{url}`), only fetches uncached sources              |
+| `GET /api/channels?category=`         | 1 hour | `{ channels, categories }` — **no longer used by ClientTV** (fetched client-side with IDB cache)                        |
+| `GET /api/finance`                    | 30 min | `{ uf, dolar, euro, ipc, utm }` — **fallback only** (FinanceWidget fetches mindicador/dolarapi directly)               |
+| `GET /api/youtube`                    | 60 min | `{ videos, channelStatuses }` — YouTube Chile trending via RSS                                                          |
 | `GET /api/youtube/source?channelId=&name=` | 5 min | `{ videos, status }` — retry single channel                                                                        |
 | `GET /api/trends`                     | 30 min | `{ trends }` — Google Trends Chile RSS                                                                                  |
-| `GET /api/weather?city=`              | 10 min | `{ weather }` — Open-Meteo → Gael Cloud → Boostr fallback chain                                                         |
+| `GET /api/weather?city=`              | 10 min | `{ weather }` — **fallback only** (WeatherWidget fetches Open-Meteo directly, server for Gael/Boostr)                  |
 | `GET /api/transport?city=&stop=`      | 5 min  | `{ city, metro, stations, stopInfo }` — Metro lines + estaciones + llegada de buses RED                                 |
 | `GET /api/transport?city=&route=`     | 5 min  | `{ routeStops }` — Paraderos de un recorrido (ej: route=506)                                                            |
 | `GET /api/transport?mode=route-names` | 1 hour | `{ routes }` — Lista de todos los números de recorrido RED                                                              |
-| `GET /api/sports`                     | 10 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
-| `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — ESPN Deportes API (standings + scoreboard) → RSS sports news fallback      |
+| `GET /api/sports`                     | 30 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
+| `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
 | `GET /api/emergency`                  | 5 min  | `{ items }` — Gael Cloud → Boostr → USGS fallback chain                                                                 |
-| `GET /api/holidays`                   | 30 min | `{ holidays }` — Chilean holidays from Boostr API                                                                       |
-| `GET /api/article?url=`               | 10 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
-| `GET /api/radio-stations`             | 1 hour | `{ stations }` — Radio stations from radio-browser.info → json-teles → FALLBACK_RADIOS                                  |
+| `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
+| `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
+| `GET /api/radio-stations`             | 1 hour | `{ stations }` — **fallback only** (ClientRadios fetches radio-browser.info directly)                                   |
 | `GET /api/jobs`                       | 1 hour | `{ jobs }` — Job listings from multiple sources                                                                         |
 | `GET /api/spotify`                    | 30 min | `{ tracks }` — Spotify Chile top tracks                                                                                 |
 
@@ -140,9 +141,10 @@ All routes return JSON. CORS is not needed (same-origin).
 ### Data flow
 
 1. Astro SSR serves the main page shell (no SSR data — all fetching is client-driven)
-2. On page load, an inline script fires background `fetch()` calls to all API endpoints via `requestIdleCallback` (pre-warms server cache before widgets hydrate)
-3. React components mount and fetch data via `fetch('/api/...')` (server cache returns near-instantly after pre-warm)
-4. API routes proxy external sources (RSS, JSON, mindicador) with server-side caching
+2. On page load, an inline script fires minimal `fetch()` calls via `requestIdleCallback` — only critical endpoints (emergency) + deferred (trends, transport). Most widgets fetch directly from client-side APIs
+3. React components mount and either fetch directly from external APIs (CORS-enabled) or from `/api/...` server endpoints
+4. **IDB caching (IndexedDB)**: All major widgets cache results in IDB for instant reload. Pattern: render from IDB first, fetch in background, update IDB
+5. API routes remain for sources without CORS (RSS feeds, YouTube) or as fallback chains
 
 ### Component patterns
 
@@ -165,6 +167,7 @@ All routes return JSON. CORS is not needed (same-origin).
 - PiP mode: compact controls (play/pause, mute, expand, close), draggable via title bar (pointer events with `setPointerCapture`), centered signal selector
 - m3u8 playback uses `hls.js` (dynamically imported via `import('hls.js')`); iframe/YT/Twitch channels use `<iframe>` directly
 - Video starts unmuted (assumes user-initiated play); `error` state clears on `canplay`/`play` events
+- Channels fetched client-side with jsDelivr CDN fallbacks + IDB cache (24h TTL)
 
 ### Radio system
 
@@ -172,10 +175,11 @@ All routes return JSON. CORS is not needed (same-origin).
 - Falls back to hardcoded `FALLBACK_RADIOS` if API fails
 - Boombox layout: player panel (left) + station list (right) on desktop, stacked on mobile
 - HLS audio uses hidden `<video>` + hls.js; direct audio streams use `<audio>` element
+- Stations fetched client-side from radio-browser.info directly (CORS-enabled), with IDB cache (24h TTL)
 
 ### News system — 6 slots with dropdown
 
-- **Phase 1 (instant):** `GET /api/news?mode=inventory` returns just the OPML source list (`allSources[]`) — no RSS fetch, fast
+- **Phase 0 (instant):** `GET /api/news?mode=inventory` returns just the OPML source list (`allSources[]`) — no RSS fetch, fast
 - **Phase 2 (on mount):** `POST /api/news/batch` fetches all 6 selected sources in parallel (uses defaults from localStorage or fallback list)
 - **No Phase 3** — clustering and trending are computed **client-side** from the 6 active slots' articles
 - Each slot has a dropdown to change its source (from the full inventory). Sources already in use are disabled in other slots' dropdowns
@@ -185,6 +189,12 @@ All routes return JSON. CORS is not needed (same-origin).
 - Trending tags are computed reactively from the 6 active sources' articles whenever a slot changes
 - Tags in trending section are clickable — clicking a tag sets `?tag=` on the URL and scrolls to news section, filtering both source cards and clusters by that keyword
 - Clicking "Limpiar" clears the filter
+
+### News caching (client-side + server-side)
+
+- **Client IDB**: Batch results cached in IDB (`news-batch:{sourceKeys}`) with 10 min TTL — page reloads render articles instantly from cache
+- **Client IDB per-source**: Individual slot fetches cached (`news-source:{sourceKey}`) — switching slots is instant on revisit
+- **Server per-source**: `batch.ts` caches each source individually (`rss:{url}`) with 15 min TTL — changing 1 slot doesn't invalidate the other 5
 
 ### News clustering (client-side)
 
@@ -297,12 +307,12 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 ### Other sources (single source, sin fallback)
 | Sección | Fuente | URL |
 |---------|--------|-----|
-| TV | [json-teles](https://github.com/Alplox/json-teles) | `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` |
+| TV | [json-teles](https://github.com/Alplox/json-teles) | `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` → jsDelivr CDN fallback |
 | YouTube | YouTube RSS (canales chilenos) | `www.youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) |
 | Google Trends | [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` |
 | Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GRJmY7SUz` (Top 50 Chile) |
 | Sports RSS | awesome-chilean-rss DB (categoría `sports`) | múltiples fuentes RSS deportivas chilenas |
-| Holidays | [Boostr](https://docs.boostr.cl) | `api.boostr.cl/holidays.json` |
+| Holidays | [Nager.Date](https://date.nager.at) | `date.nager.at/api/v3/publicholidays/{year}/CL` — bundled fallback JSON |
 | Article proxy | [cheerio](https://cheerio.js.org) scraping | URL enviada por el cliente |
 | RED routes DB | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` (build-time via `update-stops-db.mjs`) |
 | Weather widget geolocation | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` |

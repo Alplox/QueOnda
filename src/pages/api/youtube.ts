@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { XMLParser } from 'fast-xml-parser';
 import { getCached, setCache } from '../../lib/cache';
-import { BROWSER_UA } from '../../lib/rss';
+import { BROWSER_UA, pMap } from '../../lib/rss';
 import { fetchChannels } from '../../lib/channels';
 
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseTagValue: false, ignoreDeclaration: true });
@@ -37,34 +37,36 @@ export const GET: APIRoute = async () => {
   }
 
   const today = todayChile();
-  const results = await Promise.allSettled(
-    targets.map((ch) =>
-      fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${ch.youtube!}`, {
-        signal: AbortSignal.timeout(8000),
-        headers: { 'User-Agent': BROWSER_UA },
-      })
-        .then((r) => (r.ok ? r.text() : Promise.reject({ type: 'http', status: r.status })))
-        .then((xml) => ({ name: ch.name, channelId: ch.youtube!, xml })),
-    ),
+  const fetchResults = await pMap(
+    targets,
+    async (ch) => {
+      try {
+        const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${ch.youtube!}`, {
+          signal: AbortSignal.timeout(8000),
+          headers: { 'User-Agent': BROWSER_UA },
+        });
+        if (!res.ok) return { ok: false as const, name: ch.name, channelId: ch.youtube!, error: `HTTP ${res.status}` };
+        const xml = await res.text();
+        return { ok: true as const, name: ch.name, channelId: ch.youtube!, xml };
+      } catch (e: any) {
+        const msg = e?.name === 'AbortError' ? 'Timeout' : 'Error de conexión';
+        return { ok: false as const, name: ch.name, channelId: ch.youtube!, error: msg };
+      }
+    },
+    8,
   );
 
   const videos: any[] = [];
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    const { youtube, name } = targets[i];
-    const yt = youtube!;
+  for (const result of fetchResults) {
+    const yt = result.channelId;
 
-    if (result.status !== 'fulfilled') {
-      const reason = result.reason;
-      let msg = 'Error de conexión';
-      if (reason instanceof DOMException && reason.name === 'AbortError') msg = 'Timeout al conectar con YouTube';
-      else if (reason?.type === 'http') msg = `YouTube respondió con código HTTP ${reason.status}`;
-      statusMap.set(yt, { status: 'error', count: 0, errorMessage: msg });
+    if (!result.ok) {
+      statusMap.set(yt, { status: 'error', count: 0, errorMessage: result.error });
       continue;
     }
 
     try {
-      const { xml } = result.value;
+      const { xml, name } = result;
       const parsed = parser.parse(xml);
       const entries = parsed.feed?.entry;
       if (!entries) {
@@ -111,9 +113,9 @@ export const GET: APIRoute = async () => {
   });
 
   const result = { videos, channelStatuses };
-  await setCache(CACHE_KEY, result, 30 * 60 * 1000);
+  await setCache(CACHE_KEY, result, 60 * 60 * 1000);
 
   return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
   });
 };

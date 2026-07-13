@@ -5,6 +5,20 @@ import { ChannelGrid } from './ChannelGrid';
 import { UnifiedPlayer } from './UnifiedPlayer';
 import { Emoji } from '../Emoji';
 import { play } from '@/lib/sound';
+import { idbGet, idbSet } from '@/lib/idb-cache';
+
+const IDB_KEY = 'tv-channels';
+const IDB_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+const JSON_TELES_URLS = [
+  'https://raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json',
+  'https://cdn.jsdelivr.net/gh/Alplox/json-teles@main/countries/cl.json',
+];
+
+const IPTV_ORG_URLS = [
+  'https://iptv-org.github.io/iptv/countries/cl.m3u',
+  'https://cdn.jsdelivr.net/gh/iptv-org/iptv@gh-pages/countries/cl.m3u',
+];
 
 function loadFavorites(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem('tv-favorites') || '[]')); } catch { return new Set(); }
@@ -12,6 +26,26 @@ function loadFavorites(): Set<string> {
 
 function saveFavorites(favs: Set<string>) {
   localStorage.setItem('tv-favorites', JSON.stringify([...favs]));
+}
+
+async function fetchJSON(urls: string[]): Promise<any> {
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (r.ok) return await r.json();
+    } catch {}
+  }
+  return null;
+}
+
+async function fetchText(urls: string[]): Promise<string | null> {
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (r.ok) return await r.text();
+    } catch {}
+  }
+  return null;
 }
 
 export function ClientTV() {
@@ -97,17 +131,13 @@ export function ClientTV() {
     localStorage.setItem('tv-source', s);
     setPlayer(null);
     setImportError(null);
-    if (s !== 'custom') {
-      fetch(`/api/channels?source=${s}`)
-        .then((r) => r.json())
-        .then((data) => { setChannels(data.channels || []); setCategories(data.categories || ['todas']); })
-        .catch(() => setChannels([]));
-    } else {
+    if (s === 'custom') {
       setChannels(customChannels);
       const cats = ['todas', ...new Set(customChannels.map((c) => c.category).filter(Boolean))];
       setCategories(cats);
       setLoading(false);
     }
+    // actual fetch happens in the useEffect watching `source`
   }, [customChannels]);
 
   const handleFileImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,15 +196,65 @@ export function ClientTV() {
       setLoading(false);
       return;
     }
-    fetch(`/api/channels?source=${source}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setChannels(data.channels || []);
-        setCategories(data.categories || ['todas']);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+
+    const idbKey = source === 'iptv-org' ? `${IDB_KEY}:iptv` : IDB_KEY;
+    let cancelled = false;
+    let resolved = false;
+
+    type TVCache = { channels: Channel[]; categories: string[] };
+
+    // Phase 0: IDB cache → instant render
+    idbGet<TVCache>(idbKey).then(cached => {
+      if (cancelled || !cached?.data?.channels?.length) return;
+      resolved = true;
+      setChannels(cached.data.channels);
+      setCategories(cached.data.categories);
+      setLoading(false);
+    });
+
+    // Phase 1: background fetch → update
+    async function loadChannels() {
+      if (source === 'iptv-org') {
+        const text = await fetchText(IPTV_ORG_URLS);
+        if (cancelled) return;
+        // ponytail: reuses parseCustomM3U from this component (same M3U format)
+        const channels = text ? parseCustomM3U(text) : [];
+        const cats = ['todas', ...new Set(channels.map((c) => c.category).filter(Boolean))];
+        idbSet(idbKey, { channels, categories: cats }, IDB_TTL);
+        setChannels(channels);
+        setCategories(cats);
+      } else {
+        const data = await fetchJSON(JSON_TELES_URLS);
+        if (cancelled) return;
+        const raw: Channel[] = data?.channels || [];
+        const channels = raw
+          .filter((ch: Channel) => ch.signals?.length > 0 || ch.youtube || ch.twitch)
+          .map((ch: Channel) => {
+            const signals = (ch.signals || []).filter((s) => s.type === 'm3u8' || s.type === 'iframe');
+            if (ch.youtube) {
+              (ch.last_youtube_livestreams || []).forEach((vid: string) => {
+                signals.push({ type: 'youtube-vod', url: `https://www.youtube.com/embed/${vid}?autoplay=1` });
+              });
+              signals.push({ type: 'youtube', url: `https://www.youtube.com/embed/live_stream?channel=${ch.youtube}&autoplay=1` });
+            }
+            if (ch.twitch) {
+              signals.push({ type: 'twitch', url: `https://player.twitch.tv/?channel=${ch.twitch}&parent=localhost&parent=queonda.vercel.app` });
+            }
+            return { ...ch, signals };
+          })
+          .filter((ch: Channel) => ch.signals.length > 0);
+        const cats = ['todas', ...new Set(channels.map((c) => c.category).filter(Boolean))];
+        idbSet(idbKey, { channels, categories: cats }, IDB_TTL);
+        setChannels(channels);
+        setCategories(cats);
+      }
+      if (!resolved) setLoading(false);
+      resolved = true;
+    }
+
+    loadChannels();
+    return () => { cancelled = true; };
+  }, [source, customChannels]);
 
   const counts = useMemo(() => {
     const map: Record<string, number> = {};

@@ -60,9 +60,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <style>@font-face{font-family:'Figtree Fallback';src:local('Arial');size-adjust:107%;ascent-override:91%;descent-override:22%;line-gap-override:0%}</style>
     <link rel="preload" as="image" href={todayBg.url} fetchpriority="high" />
-    <link rel="preload" as="fetch" href="/api/news?mode=inventory" crossorigin="anonymous" />
     <link rel="preload" as="fetch" href="/api/emergency" crossorigin="anonymous" />
-    <link rel="preload" as="fetch" href="/api/weather?city=santiago" crossorigin="anonymous" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap"
@@ -237,21 +235,11 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
       // Phase 2 (idle): below-fold APIs without saturating the network.
       (function() {
         var critical = [
-          '/api/news?mode=inventory',
           '/api/emergency',
-          '/api/weather?city=santiago',
-          '/api/radio-stations',
         ];
         var deferred = [
-          '/api/channels',
-          '/api/finance',
-          '/api/youtube',
           '/api/trends',
           '/api/transport',
-          '/api/futbol',
-          '/api/sports',
-          '/api/holidays',
-          '/api/jobs',
         ];
         function warm(list: string[]) {
           for (var i = 0; i < list.length; i++) {

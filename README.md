@@ -25,19 +25,19 @@ npm run update-stops    # regenera src/lib/stops-database.json (RED)
 
 ## Secciones
 
-- **Noticias**: RSS feeds de fuentes chilenas, clustering client-side por palabras clave
-- **TV en vivo**: canales chilenos con HLS/iframe, modo PiP automático
-- **Radio**: streaming de radios chilenas vía HLS
-- **Clima**: Open-Meteo + Gael Cloud + Boostr (fallback chain)
+- **Noticias**: RSS feeds de fuentes chilenas, clustering client-side por palabras clave, IDB cache (10 min)
+- **TV en vivo**: canales chilenos con HLS/iframe, modo PiP automático, fetch client-side con CDN fallbacks + IDB cache (24h)
+- **Radio**: streaming de radios chilenas vía HLS, fetch client-side con IDB cache (24h)
+- **Clima**: Open-Meteo directo client-side + Gael Cloud/Boostr server fallback, IDB cache (10 min)
 - **Transporte**: Metro de Santiago + RED (buses) con predicciones
-- **Finanzas**: UF, USD, EUR, IPC, UTM vía mindicador.cl + 4 fallbacks
+- **Finanzas**: UF, USD, EUR, IPC, UTM vía mindicador.cl + dolarapi.com client-side, server fallback, IDB cache (30 min)
 - **YouTube**: últimos videos de canales chilenos vía RSS (reintento automático por canal)
 - **Google Trends**: tendencias Chile
 - **Spotify**: Top 50 Chile vía proxy server-side
-- **Deportes**: RSS deportivo + tabla de posiciones fútbol chileno (ESPN API)
+- **Deportes**: RSS deportivo + tabla de posiciones fútbol chileno (ESPN API client-side), IDB cache (1h)
 - **Trabajos**: ofertas laborales desde múltiples fuentes
 - **Sismos**: emergencias sísmicas vía Gael Cloud → USGS
-- **Feríados**: calendario de feriados chilenos
+- **Feríados**: calendario de feriados chilenos vía nager.at client-side, bundled fallback, IDB cache (1 año)
 
 ## Fuentes de datos
 

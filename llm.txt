@@ -24,10 +24,14 @@ src/
 ## Architecture Notes
 
 - All data is fetched client-side via `fetch('/api/...')` — Astro SSR serves only the shell.
-- Inline script pre-warms server cache via `requestIdleCallback` on page load.
+- **IDB caching (IndexedDB)**: All major widgets cache results in IDB for instant reload. Pattern: render from IDB first, fetch in background, update IDB.
+- **Client-side API fetching**: Weather, finance, radio, TV channels, football, holidays — all fetch directly from CORS-enabled external APIs (no worker needed).
+- **News**: batch results + per-source results cached in IDB (10 min). Server-side per-source caching (`rss:{url}`) so changing1 slot doesn't invalidate others.
+- Inline script pre-warms only critical endpoints (emergency) via `requestIdleCallback` on page load.
 - React components hydrate at different priorities: `client:load` (header), `client:idle` (news, TV, radio), `client:visible` (widgets).
 - **clustering.ts** is code-split via dynamic `import()` in ClientNewsFeed.
 - **hls.js** is loaded lazily per-play via `import('hls.js')`.
+- **ua.ts** extracts `BROWSER_UA` to break the `radios.ts → rss.ts → feeds-database.json` import chain, making radios.ts client-safe.
 
 ## Theme System
 
@@ -41,34 +45,33 @@ src/
 All return JSON. No CORS needed (same-origin). Cache durations in parens.
 
 - `GET /api/news?mode=inventory` — OPML source list (15m)
-- `POST /api/news/batch` — fetch specific RSS sources (15m)
-- `GET /api/news/source?url=&name=` — retry single source (15m)
-- `POST /api/news/analyze` — full fetch + clustering (deprecated)
-- `GET /api/channels?category=` — TV channels JSON (1h)
-- `GET /api/finance` — UF, USD, EUR, IPC, UTM (30m)
-- `GET /api/youtube` — YouTube Chile RSS (30m)
+- `POST /api/news/batch` — per-source RSS caching (per-source 15m)
+- `GET /api/channels?category=` — TV channels JSON (1h) — **fallback only** (ClientTV fetches client-side)
+- `GET /api/finance` — UF, USD, EUR, IPC, UTM (30m) — **fallback only** (FinanceWidget fetches client-side)
+- `GET /api/youtube` — YouTube Chile RSS (60m)
 - `GET /api/trends` — Google Trends Chile (30m)
-- `GET /api/weather?city=&cities=&q=` — multi-source weather (10m)
+- `GET /api/weather?city=&cities=&q=` — multi-source weather (10m) — **fallback only** (WeatherWidget fetches client-side)
 - `GET /api/transport?city=&stop=&route=&mode=route-names` — Metro + RED (5m)
-- `GET /api/sports` — sports RSS (10m)
-- `GET /api/futbol` — standings + matches + news (10m)
+- `GET /api/sports` — sports RSS (30m)
+- `GET /api/futbol` — RSS articles only (FootballTable fetches ESPN client-side)
 - `GET /api/emergency` — sismos (5m)
-- `GET /api/holidays` — Chilean holidays (30m)
-- `GET /api/radio-stations` — radio stations (1h)
-- `GET /api/article?url=` — article proxy via cheerio (10m per URL)
+- `GET /api/holidays` — Chilean holidays (30m) — **fallback only** (HolidaysWidget fetches client-side)
+- `GET /api/radio-stations` — radio stations (1h) — **fallback only** (ClientRadios fetches client-side)
+- `GET /api/article?url=` — article proxy via cheerio (60m per URL)
 
 ## Data Sources
 
-- RSS: awesome-chilean-rss DB (local feeds-database.json)
-- Weather: Open-Meteo → Gael Cloud → Boostr
+- RSS: awesome-chilean-rss DB (local feeds-database.json) — server-side (no CORS)
+- Weather: Open-Meteo direct (client-side) → Gael Cloud → Boostr (server fallback)
 - Transport: Metro.cl + Red.cl + xor.cl
-- Finance: mindicador.cl
-- TV: Alplox/json-teles
-- Radio: radio-browser.info → json-teles
-- Sports: ESPN public API + La Tercera RSS
+- Finance: mindicador.cl + dolarapi.com (client-side) → SII/Boostr (server fallback)
+- TV: json-teles + iptv-org (client-side) → jsDelivr CDN fallbacks
+- Radio: radio-browser.info (client-side) → json-teles → FALLBACK_RADIOS
+- Sports: ESPN public API (client-side) + La Tercera RSS (server-side)
 - Earthquakes: Gael Cloud → Boostr → USGS
+- Holidays: nager.at (client-side) → bundled fallback JSON
 - Trends: Google Trends RSS
-- YouTube: channel RSS feeds from json-teles
+- YouTube: channel RSS feeds from json-teles (server-side, no CORS)
 
 ## Sound System
 
@@ -76,11 +79,11 @@ Web Audio API singleton (`src/lib/sound.ts`). Exports `play(role)`, `setMuted()`
 
 ## TV System
 
-Single `<video>` + hls.js instance, shared between inline and PiP modes. FLIP animation on mode switch. Auto-PiP via IntersectionObserver. Channel favorites persisted to localStorage.
+Single `<video>` + hls.js instance, shared between inline and PiP modes. FLIP animation on mode switch. Auto-PiP via IntersectionObserver. Channel favorites persisted to localStorage. Channels fetched client-side from json-teles/iptv-org with jsDelivr CDN fallbacks + IDB cache (24h).
 
 ## News System
 
-6 slots with source dropdowns. Sources persisted to `localStorage['news-slots']`. Pinned sources in `localStorage['news-pins']`. Clustering runs client-side with Jaccard similarity (>0.25 threshold). Trending tags computed from active slot articles. Clicking a tag sets `?tag=` URL param and filters news.
+6 slots with source dropdowns. Sources persisted to `localStorage['news-slots']`. Pinned sources in `localStorage['news-pins']`. Clustering runs client-side with Jaccard similarity (>0.25 threshold). Trending tags computed from active slot articles. Clicking a tag sets `?tag=` URL param and filters news. Batch results + per-source results cached in IDB (10 min). Server-side per-source caching (`rss:{url}`) so changing1 slot doesn't invalidate others.
 
 ## Conventions
 

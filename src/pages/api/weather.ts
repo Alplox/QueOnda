@@ -171,7 +171,7 @@ export const GET: APIRoute = async ({ url, request }) => {
   const searchQuery = url.searchParams.get('q');
   const citiesParam = url.searchParams.get('cities');
 
-  const cacheKey = searchQuery ?? citiesParam ?? '__default__';
+  const cacheKey = (searchQuery ?? citiesParam ?? '__default__').toLowerCase().trim();
 
   const cached = await getCached<Record<string, unknown>>(cacheKey);
   if (cached) {

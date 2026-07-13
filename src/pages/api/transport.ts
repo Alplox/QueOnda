@@ -50,7 +50,9 @@ async function fetchMetroCl(): Promise<{ lines: any[]; source: string } | null> 
 }
 
 export const GET: APIRoute = async ({ url, request }) => {
-  const cacheKey = `transport:${url.search}`;
+  // ponytail: build stable cache key from sorted params (avoids ?stop=A&city=santiago vs ?city=santiago&stop=A = 2 keys)
+  const params = [...url.searchParams.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const cacheKey = `transport:${params.map(([k, v]) => `${k}=${v.toLowerCase()}`).join('&') || 'default'}`;
   const cached = await getCached<any>(cacheKey);
   if (cached) {
     return new Response(JSON.stringify(cached), {

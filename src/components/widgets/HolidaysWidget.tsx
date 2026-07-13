@@ -1,4 +1,9 @@
 import { useEffect, useState } from 'react';
+import { idbGet, idbSet } from '../../lib/idb-cache';
+import fallbackData from '../../lib/holidays-fallback.json';
+
+const IDB_KEY = 'holidays';
+const IDB_TTL = 365 * 24 * 60 * 60 * 1000; // 1 year — holidays change once a year
 
 interface Holiday {
   date: string;
@@ -6,6 +11,22 @@ interface Holiday {
   type: string;
   inalienable: boolean;
   extra: string;
+}
+
+interface NagerHoliday {
+  date: string;
+  localName: string;
+  global: boolean;
+}
+
+const INALIENABLE_DATES = new Set([
+  '2026-01-01', '2026-05-01', '2026-09-18', '2026-09-19', '2026-12-25',
+]);
+
+function mapNagerHoliday(h: NagerHoliday): Holiday | null {
+  if (!h.global) return null;
+  const inalienable = INALIENABLE_DATES.has(h.date);
+  return { date: h.date, title: h.localName, type: 'Civil', inalienable, extra: inalienable ? 'Civil e Irrenunciable' : 'Civil' };
 }
 
 function parseLocalDate(dateStr: string): Date {
@@ -45,11 +66,36 @@ export function HolidaysWidget() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/holidays')
-      .then((r) => r.json())
-      .then((data) => setHolidays(data.holidays || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    let resolved = false;
+
+    // Phase 0: IDB cache → instant render
+    idbGet<Holiday[]>(IDB_KEY).then(cached => {
+      if (cancelled || !cached?.data?.length) return;
+      resolved = true;
+      setHolidays(cached.data);
+      setLoading(false);
+    });
+
+    // Phase 1: background fetch → update
+    const year = new Date().getFullYear();
+    fetch(`https://date.nager.at/api/v3/publicholidays/${year}/CL`, { signal: AbortSignal.timeout(8000) })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((json: NagerHoliday[]) => {
+        if (cancelled) return;
+        const mapped = json.map(mapNagerHoliday).filter(Boolean) as Holiday[];
+        const data = mapped.length > 0 ? mapped : (fallbackData as Holiday[]);
+        idbSet(IDB_KEY, data, IDB_TTL);
+        setHolidays(data);
+        if (!resolved) setLoading(false);
+        resolved = true;
+      })
+      .catch(() => {
+        if (cancelled || resolved) return;
+        setHolidays(fallbackData as Holiday[]);
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {

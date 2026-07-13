@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { SourceFeed, Article, NewsCluster, SourceResult } from '../../types';
-import { cacheGet, cacheSet } from '../../lib/idb-cache';
+import { idbGet, idbSet } from '../../lib/idb-cache';
 import { ArticleReader } from './ArticleReader';
 import { extractHost } from '../../lib/url';
 import { loadJSON, saveJSON } from '../../lib/storage';
@@ -71,10 +71,10 @@ export function AllSourcesPage() {
     const lastSelection = loadJSON<string[]>(STORAGE_SELECTION, []);
     if (lastSelection.length > 0) {
       const cacheKey = makeCacheKey(lastSelection);
-      cacheGet<{ timestamp: number; articles: Article[]; sourceResults: SourceResult[] }>(cacheKey).then(cached => {
-        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-          setArticles(cached.articles);
-          setSourceResults(cached.sourceResults);
+      idbGet<{ articles: Article[]; sourceResults: SourceResult[] }>(cacheKey).then(cached => {
+        if (cached) {
+          setArticles(cached.data.articles);
+          setSourceResults(cached.data.sourceResults);
           setCachedTimestamp(new Date(cached.timestamp).toLocaleString('es-CL'));
           setStatus('results');
           return;
@@ -221,11 +221,10 @@ export function AllSourcesPage() {
     const selectedArr = [...selected];
     if (selectedArr.length > 0) {
       const cacheKey = makeCacheKey(selectedArr);
-      await cacheSet(cacheKey, {
-        timestamp: Date.now(),
+      await idbSet(cacheKey, {
         articles: articles.filter(a => a.source !== sourceName),
         sourceResults: sourceResults.filter(sr => sr.name !== sourceName),
-      });
+      }, CACHE_TTL);
     }
   }
 
@@ -262,11 +261,10 @@ export function AllSourcesPage() {
       const selectedArr = [...selected];
       if (selectedArr.length > 0) {
         const cacheKey = makeCacheKey(selectedArr);
-        await cacheSet(cacheKey, {
-          timestamp: Date.now(),
+        await idbSet(cacheKey, {
           articles: [...articles, ...newArticles],
           sourceResults: [...sourceResults, ...newResults],
-        });
+        }, CACHE_TTL);
       }
     } catch {
       // silent
@@ -355,11 +353,10 @@ export function AllSourcesPage() {
 
       // Cache in IDB
       const cacheKey = makeCacheKey(selectedArr);
-      await cacheSet(cacheKey, {
-        timestamp: Date.now(),
+      await idbSet(cacheKey, {
         articles: articles,
         sourceResults: allResults,
-      });
+      }, CACHE_TTL);
       setCachedTimestamp(new Date().toLocaleString('es-CL'));
 
       setStatus('results');
@@ -371,11 +368,10 @@ export function AllSourcesPage() {
       // Show partial results if some chunks loaded
       if (articles.length > 0) {
         const cacheKey = makeCacheKey(selectedArr);
-        await cacheSet(cacheKey, {
-          timestamp: Date.now(),
+        await idbSet(cacheKey, {
           articles: articles,
           sourceResults: allResults,
-        });
+        }, CACHE_TTL);
         setCachedTimestamp(new Date().toLocaleString('es-CL'));
         setStatus('results');
       } else {

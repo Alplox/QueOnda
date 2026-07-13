@@ -1,4 +1,4 @@
-import { BROWSER_UA } from './rss';
+import { BROWSER_UA } from './ua';
 
 export interface RadioSignal {
   type: 'hls' | 'audio' | 'iframe';

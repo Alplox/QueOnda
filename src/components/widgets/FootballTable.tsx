@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArticleReader } from '../news/ArticleReader';
 import { play } from '@/lib/sound';
+import { idbGet, idbSet } from '@/lib/idb-cache';
+
+const IDB_KEY = 'football-espn';
+const IDB_TTL = 60 * 60 * 1000; // 1 hour
 
 interface StandingEntry {
   position: number;
@@ -67,6 +71,88 @@ function formatDate(utc: string): string {
 
 type Tab = 'standings' | 'matches' | 'news';
 
+function toStatus(espnState: string, espnName: string): MatchEntry['status'] {
+  if (espnState === 'post') return 'FINISHED';
+  if (espnState === 'in') return 'IN_PLAY';
+  if (espnState === 'pre') return 'SCHEDULED';
+  if (espnName === 'STATUS_POSTPONED') return 'POSTPONED';
+  if (espnName === 'STATUS_CANCELLED') return 'CANCELLED';
+  return 'SCHEDULED';
+}
+
+async function fetchESPNData(): Promise<{ standings: StandingEntry[]; matches: MatchEntry[] } | null> {
+  try {
+    const [standingsRes, leagueRes] = await Promise.all([
+      fetch('https://site.web.api.espn.com/apis/v2/sports/soccer/chi.1/standings?region=cl&lang=es', { signal: AbortSignal.timeout(8000) }),
+      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard?limit=1', { signal: AbortSignal.timeout(5000) }),
+    ]);
+    if (!standingsRes.ok) return null;
+
+    const sData = await standingsRes.json();
+    const group = sData.children?.[0]?.standings;
+    if (!group?.entries?.length) return null;
+
+    const standings: StandingEntry[] = group.entries.map((e: any) => {
+      const stats = (s: string) => e.stats?.find((st: any) => st.name === s);
+      const val = (s: string) => { const st = stats(s); return st ? (st.value !== undefined ? Number(st.value) : 0) : 0; };
+      return {
+        position: val('rank'), team: e.team.displayName || e.team.name || e.team.location,
+        crest: e.team.logos?.[0]?.href || null, playedGames: val('gamesPlayed'),
+        won: val('wins'), draw: val('ties'), lost: val('losses'), points: val('points'),
+        goalsFor: val('pointsFor'), goalsAgainst: val('pointsAgainst'),
+        goalDifference: val('pointDifferential'), rankChange: val('rankChange'),
+      };
+    });
+
+    const now = new Date();
+    const calendar: string[] = sData.calendar || [];
+    if (leagueRes.ok) {
+      const lData = await leagueRes.json();
+      const cal = lData.leagues?.[0]?.calendar;
+      if (Array.isArray(cal)) calendar.push(...cal.filter((d: string) => !calendar.includes(d)));
+    }
+    const uniqueDates = [...new Set(calendar.map((d: string) => d.slice(0, 10).replace(/-/g, '')))].sort();
+    const todayStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const recentDates = uniqueDates.filter(d => d <= todayStr).slice(-3);
+    const upcomingDates = uniqueDates.filter(d => d >= todayStr).slice(0, 2);
+
+    const dateResults = await Promise.all(
+      [...recentDates, ...upcomingDates].map(date =>
+        fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard?dates=${date}&limit=20`, { signal: AbortSignal.timeout(6000) })
+          .then(r => r.json()).catch(() => null)
+      )
+    );
+
+    const matches: MatchEntry[] = [];
+    const seenIds = new Set<number>();
+    for (const data of dateResults) {
+      if (!data?.events) continue;
+      for (const ev of data.events) {
+        const comp = ev.competitions?.[0];
+        if (!comp) continue;
+        const home = comp.competitors?.find((c: any) => c.homeAway === 'home');
+        const away = comp.competitors?.find((c: any) => c.homeAway === 'away');
+        if (!home || !away) continue;
+        const id = Number(ev.id);
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+        const st = comp.status?.type;
+        matches.push({
+          id, date: ev.date || comp.date, status: toStatus(st?.state, st?.name),
+          homeTeam: home.team?.displayName || home.team?.name || home.team?.location,
+          homeCrest: home.team?.logo || null,
+          awayTeam: away.team?.displayName || away.team?.name || away.team?.location,
+          awayCrest: away.team?.logo || null,
+          homeScore: home.score !== undefined ? Number(home.score) : null,
+          awayScore: away.score !== undefined ? Number(away.score) : null,
+        });
+      }
+    }
+    matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return { standings, matches };
+  } catch { return null; }
+}
+
 export function FootballTable() {
   const [data, setData] = useState<{
     standings: StandingEntry[];
@@ -82,11 +168,40 @@ export function FootballTable() {
   const loadMoreRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    fetch('/api/futbol')
-      .then((r) => r.json())
-      .then((res) => setData(res))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    let resolved = false;
+
+    // Phase 0: IDB cache → instant render for ESPN data
+    type ESPNCache = { standings: StandingEntry[]; matches: MatchEntry[] };
+    idbGet<ESPNCache>(IDB_KEY).then(cached => {
+      if (cancelled || !cached?.data) return;
+      resolved = true;
+      setData(prev => ({ ...prev, standings: cached.data.standings, matches: cached.data.matches, articles: prev?.articles || [], source: 'espn' }));
+      setLoading(false);
+    });
+
+    async function load() {
+      const [espnData, sportsResult] = await Promise.all([
+        fetchESPNData(),
+        fetch('/api/sports').then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+
+      if (cancelled) return;
+
+      const articles: Article[] = (sportsResult?.articles || []).slice(0, 30);
+
+      if (espnData) {
+        idbSet(IDB_KEY, { standings: espnData.standings, matches: espnData.matches }, IDB_TTL);
+        setData({ standings: espnData.standings, matches: espnData.matches, articles, source: 'espn' });
+      } else {
+        setData({ standings: [], matches: [], articles, source: 'rss', error: 'No se pudieron obtener datos de ESPN' });
+      }
+      if (!resolved) setLoading(false);
+      resolved = true;
+    }
+
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const visibleArticles = data?.articles.slice(0, limit) || [];

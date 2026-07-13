@@ -36,12 +36,12 @@ export const GET: APIRoute = async () => {
     }));
 
     const data: SportsResponse = { articles: deduped, sourceResults, totalSources, displayedSources };
-    await setCache('sports', data, 10 * 60 * 1000);
+    await setCache('sports', data, 30 * 60 * 1000);
 
     return new Response(JSON.stringify(data), {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=600',
+        'Cache-Control': 'public, max-age=1800',
       },
     });
   } catch {

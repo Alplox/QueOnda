@@ -1,16 +1,54 @@
 import { useEffect, useState } from 'react';
+import { idbGet, idbSet } from '../../lib/idb-cache';
 
-interface Indicator {
-  value: number;
-  date: string;
+const IDB_KEY = 'finance';
+const IDB_TTL = 30 * 60 * 1000; // 30 min
+
+interface Indicator { value: number; date: string; }
+interface FinanceData { uf: Indicator; dolar: Indicator; euro: Indicator; ipc: Indicator; utm: Indicator; }
+type IndicatorKey = keyof FinanceData;
+const ALL_KEYS: IndicatorKey[] = ['uf', 'dolar', 'euro', 'ipc', 'utm'];
+
+async function fetchMindicadorClient(): Promise<Partial<FinanceData>> {
+  const res = await fetch('https://mindicador.cl/api', { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`${res.status}`);
+  const data = await res.json();
+  return {
+    uf: data.uf?.valor != null ? { value: data.uf.valor, date: data.uf.fecha } : undefined,
+    dolar: data.dolar?.valor != null ? { value: data.dolar.valor, date: data.dolar.fecha } : undefined,
+    euro: data.euro?.valor != null ? { value: data.euro.valor, date: data.euro.fecha } : undefined,
+    ipc: data.ipc?.valor != null ? { value: data.ipc.valor, date: data.ipc.fecha } : undefined,
+    utm: data.utm?.valor != null ? { value: data.utm.valor, date: data.utm.fecha } : undefined,
+  };
 }
 
-interface FinanceData {
-  uf: Indicator;
-  dolar: Indicator;
-  euro: Indicator;
-  ipc: Indicator;
-  utm: Indicator;
+async function fetchDolarApiClient(): Promise<Partial<FinanceData>> {
+  const res = await fetch('https://cl.dolarapi.com/v1/cotizaciones', { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`${res.status}`);
+  const items: Array<{ moneda: string; ultimoCierre: number; fechaActualizacion: string }> = await res.json();
+  const result: Partial<FinanceData> = {};
+  for (const item of items) {
+    if (item.moneda === 'USD' && item.ultimoCierre != null) result.dolar = { value: item.ultimoCierre, date: item.fechaActualizacion };
+    else if (item.moneda === 'EUR' && item.ultimoCierre != null) result.euro = { value: item.ultimoCierre, date: item.fechaActualizacion };
+  }
+  if (result.dolar?.value == null && result.euro?.value == null) throw new Error('no indicators');
+  return result;
+}
+
+async function fetchFinanceClient(): Promise<FinanceData | null> {
+  const merged: Partial<FinanceData> = {};
+  for (const fn of [fetchMindicadorClient, fetchDolarApiClient]) {
+    try {
+      const data = await fn();
+      for (const key of ALL_KEYS) { if (!merged[key] && data[key]?.value != null) merged[key] = data[key] as Indicator; }
+      if (ALL_KEYS.every(k => merged[k]?.value != null)) break;
+    } catch {}
+  }
+  return ALL_KEYS.some(k => merged[k]?.value != null) ? merged as FinanceData : null;
+}
+
+async function fetchFinanceServer(): Promise<FinanceData | null> {
+  try { const r = await fetch('/api/finance'); const j = await r.json(); return j.error ? null : j; } catch { return null; }
 }
 
 interface ItemDef {
@@ -142,18 +180,34 @@ export function FinanceWidget() {
   const [stale, setStale] = useState(false);
 
   useEffect(() => {
-    fetch('/api/finance')
-      .then(async (r) => {
-        const json = await r.json();
-        if (json.error) {
-          setError(true);
-          return;
+    let cancelled = false;
+    let resolved = false;
+
+    // Phase 0: IDB cache → instant render
+    idbGet<FinanceData>(IDB_KEY).then(cached => {
+      if (cancelled || !cached?.data) return;
+      resolved = true;
+      setData(cached.data);
+      setLoading(false);
+    });
+
+    // Phase 1: background fetch → update
+    fetchFinanceClient()
+      .then(async result => {
+        if (cancelled) return;
+        const data = result ?? await fetchFinanceServer();
+        if (data) {
+          idbSet(IDB_KEY, data, IDB_TTL);
+          setData(data);
         }
-        setData(json);
-        setStale(!!json.stale);
+        if (!resolved) setLoading(false);
+        resolved = true;
       })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!cancelled && !resolved) setError(true);
+      })
+      .finally(() => { if (!cancelled && !resolved) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {

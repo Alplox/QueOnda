@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { BROWSER_UA } from '../../lib/rss';
 import * as cheerio from 'cheerio';
-import { getCached, setCache, dedupeFetch } from '../../lib/cache';
+import { dedupeFetch } from '../../lib/cache';
 import { validateFetchUrl } from '../../lib/url-validator';
 import { checkRateLimit } from '../../lib/rate-limit';
 
@@ -84,14 +84,8 @@ export const GET: APIRoute = async ({ url, request }) => {
     return new Response(JSON.stringify({ error: 'Missing url param' }), { status: 400 });
   }
 
-  const cacheKey = `article:${target}`;
-  const cached = await getCached<any>(cacheKey);
-  if (cached) {
-    return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
-    });
-  }
-
+  // ponytail: no KV cache — each unique URL = 1 KV write, unbounded cardinality.
+  // dedupeFetch (in-memory) handles concurrent + same-session re-opens.
   const check = validateFetchUrl(target);
   if (!check.valid) {
     return new Response(JSON.stringify({ error: check.error }), { status: 400 });
@@ -104,7 +98,7 @@ export const GET: APIRoute = async ({ url, request }) => {
   }
 
   try {
-    const { html, failed } = await dedupeFetch(cacheKey + '::fetch', async () => {
+    const { html, failed } = await dedupeFetch(`article:${target}`, async () => {
       const res = await fetch(target, {
         headers: {
           'User-Agent': BROWSER_UA,
@@ -175,14 +169,12 @@ export const GET: APIRoute = async ({ url, request }) => {
     body: bodyText.slice(0, 30000),
       url: target,
     };
-    await setCache(cacheKey, result, 10 * 60 * 1000);
-
     return new Response(
       JSON.stringify(result),
       {
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=600',
+          'Cache-Control': 'public, max-age=3600',
         },
       }
     );

@@ -1,4 +1,57 @@
 import { useState, useEffect } from 'react';
+import { idbGet, idbSet } from '../../lib/idb-cache';
+
+const IDB_KEY = 'weather-default';
+const IDB_TTL = 10 * 60 * 1000; // 10 min
+
+const DEFAULT_CITIES_COORDS = [
+  { name: 'Santiago', lat: -33.45, lon: -70.67 },
+  { name: 'Valparaiso', lat: -33.05, lon: -71.61 },
+  { name: 'Concepcion', lat: -36.83, lon: -73.05 },
+  { name: 'Antofagasta', lat: -23.65, lon: -70.40 },
+  { name: 'La Serena', lat: -29.90, lon: -71.25 },
+  { name: 'Temuco', lat: -38.74, lon: -72.59 },
+  { name: 'Rancagua', lat: -34.17, lon: -70.75 },
+  { name: 'Talca', lat: -35.43, lon: -71.66 },
+  { name: 'Chillan', lat: -36.61, lon: -72.10 },
+  { name: 'Puerto Montt', lat: -41.47, lon: -72.94 },
+  { name: 'Iquique', lat: -20.22, lon: -70.14 },
+  { name: 'Punta Arenas', lat: -53.16, lon: -70.91 },
+];
+
+type CityWeatherData = { city: string; temp: number; feelsLike: number; humidity: number; weatherCode: number; wind: number };
+
+async function fetchOpenMeteoDirect(cities: { name: string; lat: number; lon: number }[]): Promise<Record<string, CityWeatherData> | null> {
+  try {
+    const lats = cities.map(c => c.lat.toFixed(2)).join(',');
+    const lons = cities.map(c => c.lon.toFixed(2)).join(',');
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=America/Santiago`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const results = Array.isArray(data) ? data : [data];
+    const map: Record<string, CityWeatherData> = {};
+    results.forEach((r: any, i: number) => {
+      const city = cities[i];
+      if (!city || !r.current) return;
+      map[city.name] = {
+        city: city.name,
+        temp: Math.round(r.current.temperature_2m),
+        feelsLike: Math.round(r.current.apparent_temperature),
+        humidity: r.current.relative_humidity_2m,
+        weatherCode: r.current.weather_code,
+        wind: r.current.wind_speed_10m,
+      };
+    });
+    return Object.keys(map).length > 0 ? map : null;
+  } catch { return null; }
+}
+
+async function fetchServerWeather(qs: string): Promise<Record<string, CityWeatherData> | null> {
+  try { const r = await fetch(`/api/weather?${qs}`); const d = await r.json(); return d.weather || null; } catch { return null; }
+}
 
 function WeatherIcon({ code }: { code: number }) {
   return <span className="text-primary">
@@ -38,11 +91,7 @@ interface CityWeather {
   wind: number;
 }
 
-const DEFAULT_CITY_NAMES = [
-  'Santiago', 'Valparaiso', 'Concepcion', 'Antofagasta',
-  'La Serena', 'Temuco', 'Rancagua', 'Talca',
-  'Chillan', 'Puerto Montt', 'Iquique', 'Punta Arenas',
-];
+const DEFAULT_CITY_NAMES = DEFAULT_CITIES_COORDS.map(c => c.name);
 
 const INITIAL = 6;
 const LOAD_MORE = 6;
@@ -102,14 +151,26 @@ export function WeatherWidget() {
 
   useEffect(() => {
     let cancelled = false;
+    let resolved = false;
+
+    // Phase 0: IDB cache → instant render
+    idbGet<Record<string, CityWeather | null>>(IDB_KEY).then(cached => {
+      if (cancelled || !cached?.data) return;
+      resolved = true;
+      setDefaultMap(cached.data);
+      setLoading(false);
+    });
 
     async function load() {
-      const [defaultRes] = await Promise.all([
-        fetch('/api/weather').then(r => r.json()).catch(() => ({ weather: null })),
-      ]);
-
+      const defaultWeather = await fetchOpenMeteoDirect(DEFAULT_CITIES_COORDS);
       if (cancelled) return;
-      if (defaultRes.weather) setDefaultMap(defaultRes.weather);
+      if (defaultWeather) {
+        idbSet(IDB_KEY, defaultWeather, IDB_TTL);
+        setDefaultMap(defaultWeather);
+      } else if (!resolved) {
+        const serverWeather = await fetchServerWeather('');
+        if (!cancelled && serverWeather) setDefaultMap(serverWeather);
+      }
 
       try {
         const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -121,19 +182,30 @@ export function WeatherWidget() {
         ).then(r => r.json()).catch(() => null);
         const place = geoRes?.results?.[0];
         if (place && !cancelled) {
-          const weatherRes = await fetch(`/api/weather?cities=${encodeURIComponent(place.name)}`).then(r => r.json()).catch(() => null);
-          if (weatherRes?.weather) {
-            const matchKey = Object.keys(weatherRes.weather).find(k => normalize(k) === normalize(place.name));
-            const w = matchKey ? weatherRes.weather[matchKey] : null;
-            if (w) setUserCity(w);
+          const geo = DEFAULT_CITIES_COORDS.find(c => normalize(c.name) === normalize(place.name));
+          const cities = geo ? [geo] : [{ name: place.name, lat: place.latitude, lon: place.longitude }];
+          const userWeather = await fetchOpenMeteoDirect(cities);
+          if (cancelled) return;
+          if (userWeather) {
+            const matchKey = Object.keys(userWeather).find(k => normalize(k) === normalize(place.name));
+            if (matchKey) setUserCity(userWeather[matchKey]);
             else setGeoError('no se pudo obtener clima de tu ubicacion');
+          } else {
+            const serverRes = await fetchServerWeather(`cities=${encodeURIComponent(place.name)}`);
+            if (!cancelled && serverRes) {
+              const matchKey = Object.keys(serverRes).find(k => normalize(k) === normalize(place.name));
+              const w = matchKey ? serverRes[matchKey] : null;
+              if (w) setUserCity(w);
+              else setGeoError('no se pudo obtener clima de tu ubicacion');
+            }
           }
         }
       } catch {
         if (!cancelled) setGeoError('no se pudo obtener tu ubicacion');
       }
 
-      if (!cancelled) setLoading(false);
+      if (!cancelled && !resolved) setLoading(false);
+      resolved = true;
     }
 
     load();
@@ -142,10 +214,24 @@ export function WeatherWidget() {
 
   useEffect(() => {
     if (savedNames.length === 0) return;
-    fetch(`/api/weather?cities=${savedNames.map(encodeURIComponent).join(',')}`)
-      .then(r => r.json())
-      .then(data => { if (data.weather) setExtraMap(data.weather); })
-      .catch(() => {});
+    // Try Open-Meteo direct for saved cities
+    const savedCityCoords = savedNames.map(name => {
+      const existing = DEFAULT_CITIES_COORDS.find(c => c.name.toLowerCase() === name.toLowerCase());
+      return existing || { name, lat: 0, lon: 0 }; // unknown cities get 0,0 → will fail → server fallback
+    }).filter(c => c.lat !== 0 || c.lon !== 0);
+
+    if (savedCityCoords.length > 0) {
+      fetchOpenMeteoDirect(savedCityCoords)
+        .then(data => { if (data) setExtraMap(data); })
+        .catch(() => {});
+    }
+    // For unknown cities, use server
+    const unknownCities = savedNames.filter(n => !DEFAULT_CITIES_COORDS.some(c => c.name.toLowerCase() === n.toLowerCase()));
+    if (unknownCities.length > 0) {
+      fetchServerWeather(`cities=${unknownCities.map(encodeURIComponent).join(',')}`)
+        .then(data => { if (data) setExtraMap(prev => ({ ...prev, ...data })); })
+        .catch(() => {});
+    }
   }, [savedNames]);
 
   async function handleSearch(e: React.FormEvent) {
@@ -166,15 +252,31 @@ export function WeatherWidget() {
     // Not found locally — geocode and add
     setSearching(true);
     try {
-      const res = await fetch(`/api/weather?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      if (data.weather) {
-        const cityName = Object.keys(data.weather)[0];
-        saveNames([cityName, ...savedNames.filter(n => normalize(n) !== normalize(cityName))]);
-        setFilterCity(cityName);
-        setSearchQuery('');
+      // Geocode via Open-Meteo
+      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=es&format=json`, { signal: AbortSignal.timeout(5000) });
+      const geoData = await geoRes.json();
+      const result = geoData.results?.[0];
+      if (result) {
+        const cities = [{ name: result.name, lat: result.latitude, lon: result.longitude }];
+        const weather = await fetchOpenMeteoDirect(cities);
+        if (weather && weather[result.name]) {
+          saveNames([result.name, ...savedNames.filter(n => normalize(n) !== normalize(result.name))]);
+          setFilterCity(result.name);
+          setSearchQuery('');
+        } else {
+          // Try server fallback
+          const serverWeather = await fetchServerWeather(`q=${encodeURIComponent(q)}`);
+          if (serverWeather) {
+            const cityName = Object.keys(serverWeather)[0];
+            saveNames([cityName, ...savedNames.filter(n => normalize(n) !== normalize(cityName))]);
+            setFilterCity(cityName);
+            setSearchQuery('');
+          } else {
+            setSearchError('Ciudad no encontrada');
+          }
+        }
       } else {
-        setSearchError(data.error || 'Ciudad no encontrada');
+        setSearchError('Ciudad no encontrada');
       }
     } catch {
       setSearchError('Error al buscar ciudad');

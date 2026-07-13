@@ -31,6 +31,16 @@ const SKIP_GRACE_SECONDS = 5;
 const CACHE_TTL = 15 * 60 * 1000; // 15 min, matching server cache
 const CACHE_BATCH_TTL = 10 * 60 * 1000;
 
+function batchCacheKey(sources: SourceFeed[]): string {
+  return 'news-batch:' + sources.map(s => s.sourceKey).sort().join(',');
+}
+
+interface BatchCacheEntry {
+  sourceKey: string;
+  articles: Article[];
+  error: string | null;
+}
+
 function restoreSlotState(sources: SourceFeed[]): { slots: SlotData[]; pins: Record<number, PinnedSource> } {
   const migratedPins = migratePinnedSources(
     loadJSON<Record<number, unknown>>(STORAGE_KEY_PINS, {}),
@@ -134,9 +144,22 @@ export function ClientNewsFeed() {
 
       const toFetch = builtSlots.filter(s => s.source).map(s => s.source!);
       if (toFetch.length > 0) {
+        // Try batch IDB cache for instant article render
+        idbGet<BatchCacheEntry[]>(batchCacheKey(toFetch)).then(batchCached => {
+          if (cancelled || !batchCached?.data) return;
+          const cachedMap = new Map(batchCached.data.map(e => [e.sourceKey, e]));
+          setSlots(prev => prev.map(slot => {
+            if (!slot.source) return slot;
+            const entry = cachedMap.get(slot.source.sourceKey);
+            if (entry) return { ...slot, articles: entry.articles, loading: false, error: entry.error };
+            return slot;
+          }));
+        });
+
         fetchBatch(toFetch).then(results => {
           if (cancelled) return;
           applyBatchResults(results);
+          saveBatchToIDB(toFetch, results);
           startAutoSkip(results, builtSlots, sources);
         });
       }
@@ -164,9 +187,22 @@ export function ClientNewsFeed() {
 
           const toFetch = builtSlots.filter(s => s.source).map(s => s.source!);
           if (toFetch.length > 0) {
+            // Try batch IDB cache for instant article render
+            idbGet<BatchCacheEntry[]>(batchCacheKey(toFetch)).then(batchCached => {
+              if (cancelled || !batchCached?.data) return;
+              const cachedMap = new Map(batchCached.data.map(e => [e.sourceKey, e]));
+              setSlots(prev => prev.map(slot => {
+                if (!slot.source) return slot;
+                const entry = cachedMap.get(slot.source.sourceKey);
+                if (entry) return { ...slot, articles: entry.articles, loading: false, error: entry.error };
+                return slot;
+              }));
+            });
+
             fetchBatch(toFetch).then(results => {
               if (cancelled) return;
               applyBatchResults(results);
+              saveBatchToIDB(toFetch, results);
               startAutoSkip(results, builtSlots, sources);
             });
           }
@@ -263,7 +299,21 @@ export function ClientNewsFeed() {
     });
   }
 
+  function saveBatchToIDB(sources: SourceFeed[], results: Array<{ name: string; articles: Article[]; error: string | null }>) {
+    const entries: BatchCacheEntry[] = sources.map((src, i) => ({
+      sourceKey: src.sourceKey,
+      articles: results[i]?.articles || [],
+      error: results[i]?.error || null,
+    }));
+    idbSet(batchCacheKey(sources), entries, CACHE_BATCH_TTL);
+  }
+
   async function fetchSingleSourceFeed(source: SourceFeed): Promise<{ articles: Article[]; error: string | null }> {
+    const idbKey = `news-source:${source.sourceKey}`;
+    // Try IDB first for instant slot render
+    const cached = await idbGet<{ articles: Article[]; error: string | null }>(idbKey);
+    if (cached?.data) return cached.data;
+
     try {
       const res = await fetch('/api/news/batch', {
         method: 'POST',
@@ -272,7 +322,9 @@ export function ClientNewsFeed() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Error');
-      return { articles: data.articles || [], error: null };
+      const result = { articles: data.articles || [], error: null };
+      idbSet(idbKey, result, CACHE_BATCH_TTL);
+      return result;
     } catch (err) {
       return { articles: [], error: err instanceof Error ? err.message : 'Error' };
     }
@@ -465,6 +517,7 @@ export function ClientNewsFeed() {
     if (toFetch.length > 0) {
       fetchBatch(toFetch).then(results => {
         applyBatchResults(results);
+        saveBatchToIDB(toFetch, results);
         startAutoSkip(results, slots, allSources);
       });
     }

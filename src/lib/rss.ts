@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import feedsDb from './feeds-database.json';
 import type { Article, NewsCluster, SourceResult, SourceFeed } from '../types';
+import { BROWSER_UA } from './ua';
 
 
 const FEEDS_DB_URLS = [
@@ -43,7 +44,7 @@ let dbCacheTimestamp: number = 0;
 
 const PROXY_FEED_PATTERN = /google news|bing news|mastodon/i;
 
-export const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
+export { BROWSER_UA } from './ua';
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -53,7 +54,7 @@ const parser = new XMLParser({
 });
 
 const FEED_FETCH_TIMEOUT = 5000;
-const FETCH_CONCURRENCY = 15;
+const FETCH_CONCURRENCY = 8;
 const MAX_FEEDS_FALLBACK = 40;
 
 const AGGREGATOR_DOMAINS = new Set([
@@ -188,7 +189,7 @@ export async function getNewsSources(): Promise<SourceFeed[]> {
   return getSourcesFromCategories(NEWS_CATEGORIES);
 }
 
-async function pMap<T, R>(
+export async function pMap<T, R>(
   items: T[],
   fn: (item: T, index: number) => Promise<R>,
   concurrency: number
