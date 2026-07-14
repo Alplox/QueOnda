@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { play } from '@/lib/sound';
 import { loadJSON, saveJSON } from '@/lib/storage';
+import { idbGet, idbSet } from '@/lib/idb-cache';
 
 interface Video {
   title: string;
@@ -22,6 +23,8 @@ interface ChannelStatus {
 const STORAGE_KEY = 'youtube-channels';
 const PER_CHANNEL_KEY = 'youtube-per-channel';
 const PER_CHANNEL_OPTIONS = [1, 2, 3, 6, 10];
+const IDB_KEY = 'youtube-trends';
+const IDB_TTL = 30 * 60 * 1000; // 30 min
 
 function VideoCard({ video, isCompact }: { video: Video; isCompact?: boolean }) {
   return (
@@ -170,19 +173,34 @@ export function YouTubeTrends() {
   }, [channels, retryChannels]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    // Phase 0: IDB cache → instant render
+    type YTCache = { videos: Video[]; channels: ChannelStatus[] };
+    idbGet<YTCache>(IDB_KEY).then(cached => {
+      if (cancelled || !cached?.data) return;
+      setVideos(cached.data.videos);
+      setChannels(cached.data.channels);
+      setLoading(false);
+    });
+
+    // Phase 1: Fetch fresh data
     fetch('/api/youtube')
       .then((r) => r.json())
       .then((data) => {
+        if (cancelled) return;
         setVideos(data.videos || []);
         setChannels(data.channelStatuses || []);
+        idbSet(IDB_KEY, { videos: data.videos || [], channels: data.channelStatuses || [] }, IDB_TTL);
         const errorChs = (data.channelStatuses || []).filter((c: ChannelStatus) => c.status === 'error');
         if (errorChs.length > 0) retryChannels(errorChs);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
 
     const saved = loadJSON<string[] | null>(STORAGE_KEY, null);
     if (saved && saved.length > 0) setSelectedIds(new Set(saved));
+    return () => { cancelled = true; };
   }, [retryChannels]);
 
   useEffect(() => {

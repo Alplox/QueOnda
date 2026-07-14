@@ -4,7 +4,7 @@ export function SpotifyChart() {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [meta, setMeta] = useState<{ title: string; thumbnailUrl: string }>({ title: 'Top 50 - Chile', thumbnailUrl: '' });
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
     fetch('/api/spotify')
@@ -13,7 +13,7 @@ export function SpotifyChart() {
       .catch(() => {});
 
     timerRef.current = setTimeout(() => setFailed(true), 30000);
-    return () => clearTimeout(timerRef.current);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
   useEffect(() => {

@@ -13,13 +13,13 @@ export interface CardData {
   attack: { name: string; damage: number };
 }
 
-export function EmojiCard({ card, flipping }: { card: CardData; flipping: boolean }) {
+export function EmojiCard({ card, flipping, revealing }: { card: CardData; flipping: boolean; revealing: boolean }) {
   useEffect(() => {
     import('hover-tilt/web-component');
   }, []);
 
   return (
-    <div className={`emoji-card ${card.rarity} ${flipping ? 'flipping' : ''}`} data-type={card.type}>
+    <div className={`emoji-card ${card.rarity} ${flipping ? 'flipping' : ''} ${revealing ? 'revealing' : ''}`} data-type={card.type}>
       <hover-tilt shadow scale-factor={1.08} glare-intensity={1.5} class="[&::part(container)]:rounded-xl">
         <div className="emoji-card__face">
           <div className="emoji-card__art">

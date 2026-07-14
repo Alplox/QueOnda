@@ -518,6 +518,7 @@ export function FiestasCountdown() {
   const [msgIndex, setMsgIndex] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [flipping, setFlipping] = useState(false);
+  const [revealing, setRevealing] = useState(false);
 
   useEffect(() => {
     setData(compute());
@@ -561,8 +562,10 @@ export function FiestasCountdown() {
         return next;
       });
       setFlipping(false);
+      setRevealing(true);
+      setTimeout(() => setRevealing(false), 450);
       setTimeout(() => setSpinning(false), 250);
-    }, 250);
+    }, 200);
   };
   const enhanced = !!timeLeft && timeLeft.days < 7 && phase === 'before';
 
@@ -681,7 +684,7 @@ export function FiestasCountdown() {
         <div className="h-px bg-gradient-to-r from-transparent via-base-content/20 to-transparent my-5" />
 
         <div className="flex flex-col items-center gap-3">
-          <EmojiCard card={currentCard} flipping={flipping} />
+          <EmojiCard card={currentCard} flipping={flipping} revealing={revealing} />
           <div className="flex items-center gap-3">
             <span className="text-xs text-base-content/50 tabular-nums">
               {cardIndex + 1}/{EMOJI_COLLECTION.length}

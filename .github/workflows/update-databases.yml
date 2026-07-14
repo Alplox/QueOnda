@@ -1,0 +1,32 @@
+name: Update Databases
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Sundays 03:00 UTC = 23:00 CLT
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run update-feeds
+      - run: npm run update-stops
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/lib/feeds-database.json src/lib/stops-database.json
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "chore: update feeds + stops databases [skip ci]"
+            git push
+          fi

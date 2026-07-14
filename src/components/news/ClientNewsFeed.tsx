@@ -397,7 +397,7 @@ export function ClientNewsFeed() {
     if (isSkip && currentSlot?.source) {
       setTriedSources(prev => ({
         ...prev,
-        [slotIndex]: [...new Set([...(prev[slotIndex] || []), currentSlot!.source.sourceKey])]
+        [slotIndex]: [...new Set([...(prev[slotIndex] || []), currentSlot!.source!.sourceKey])]
       }));
     } else if (!isSkip) {
       setTriedSources(prev => {

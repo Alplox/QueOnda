@@ -472,17 +472,34 @@ section[id][data-visible] h2 .letter {
 
 /* Card flip animation */
 .emoji-card.flipping .emoji-card__face {
-  animation: cardFlipOut 0.25s ease-in forwards;
+  animation: cardFlipOut 0.2s ease-in forwards;
+}
+
+.emoji-card.revealing .emoji-card__face {
+  animation: cardFlipIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 @keyframes cardFlipOut {
-  0% { transform: rotateY(0deg) scale(1); opacity: 1; }
-  100% { transform: rotateY(90deg) scale(0.95); opacity: 0; }
+  0% { transform: perspective(800px) rotateY(0deg) scaleY(1); opacity: 1; }
+  100% { transform: perspective(800px) rotateY(90deg) scaleY(0.85); opacity: 0; }
 }
 
 @keyframes cardFlipIn {
-  0% { transform: rotateY(-90deg) scale(0.95); opacity: 0; }
-  100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+  0% { transform: perspective(800px) rotateY(-90deg) scaleY(0.85); opacity: 0; }
+  60% { transform: perspective(800px) rotateY(8deg) scaleY(1.04); opacity: 1; }
+  80% { transform: perspective(800px) rotateY(-2deg) scaleY(1.01); }
+  100% { transform: perspective(800px) rotateY(0deg) scaleY(1); opacity: 1; }
+}
+
+/* Holo flash burst on card reveal */
+.emoji-card.revealing .emoji-card__art::after {
+  animation: holoFlash 0.5s ease-out forwards;
+}
+
+@keyframes holoFlash {
+  0% { opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { opacity: 0; }
 }
 
 /* range input thumb */

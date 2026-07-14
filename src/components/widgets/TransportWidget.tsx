@@ -362,8 +362,8 @@ function StopCombobox() {
       case 'Enter':
         e.preventDefault();
         if (highlightIdx >= 0) {
-          if (mode === 'paradero') handleSelect(filtered[highlightIdx].code);
-          else handleSelect(filtered[highlightIdx]);
+          if (mode === 'paradero') handleSelect((filtered[highlightIdx] as PopularStop).code);
+          else handleSelect(filtered[highlightIdx] as string);
         } else {
           handleSubmit(e as unknown as React.FormEvent);
         }
@@ -437,20 +437,23 @@ function StopCombobox() {
                 ref={dropdownRef}
                 className="absolute z-50 left-0 right-16 top-full mt-1 bg-base-100 border border-base-300 rounded-lg shadow-xl max-h-56 overflow-y-auto animate-[fadeSlideIn_0.15s_ease-out]"
               >
-                {filtered.slice(0, 100).map((s, i) => (
+                {filtered.slice(0, 100).map((s, i) => {
+                  const stop = s as PopularStop;
+                  return (
                   <button
-                    key={s.code}
+                    key={stop.code}
                     type="button"
-                    onClick={() => handleSelect(s.code)}
+                    onClick={() => handleSelect(stop.code)}
                     onMouseEnter={() => setHighlightIdx(i)}
                     className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors cursor-pointer ${
                       i === highlightIdx ? 'bg-base-300' : 'hover:bg-base-200'
                     }`}
                   >
-                    <span className="font-mono text-xs font-semibold text-base-content">{s.code}</span>
-                    {s.comuna && <span className="text-[10px] text-base-content/70">{s.comuna}</span>}
+                    <span className="font-mono text-xs font-semibold text-base-content">{stop.code}</span>
+                    {stop.comuna && <span className="text-[10px] text-base-content/70">{stop.comuna}</span>}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </form>
@@ -507,7 +510,7 @@ function StopCombobox() {
                 ref={dropdownRef}
                 className="absolute z-50 left-0 right-16 top-full mt-1 bg-base-100 border border-base-300 rounded-lg shadow-xl max-h-56 overflow-y-auto animate-[fadeSlideIn_0.15s_ease-out]"
               >
-                {filtered.map((r, i) => (
+                {(filtered as string[]).map((r, i) => (
                   <button
                     key={r}
                     type="button"

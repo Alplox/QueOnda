@@ -1,4 +1,11 @@
-declare module 'cloudflare:workers' {
-  const env: Record<string, any>;
-  export { env };
+/// <reference types="astro/client" />
+
+import type { } from 'react';
+
+declare module 'react' {
+  namespace JSX {
+    interface IntrinsicElements {
+      'hover-tilt': any;
+    }
+  }
 }

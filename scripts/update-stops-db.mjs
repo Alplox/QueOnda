@@ -5,10 +5,13 @@
 const OUTPUT_PATH = 'src/lib/stops-database.json';
 
 async function fetchLatestGtfsUrl() {
-  const res = await fetch('https://dtpm.cl/index.php/gtfs-vigente');
+  const url = 'https://dtpm.cl/index.php/gtfs-vigente';
+  console.log(`  GET ${url} ...`);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch DTPM page: HTTP ${res.status} ${res.statusText}`);
   const html = await res.text();
   const m = html.match(/href="(\/descargas\/gtfs\/[^"]+)"/);
-  if (!m) throw new Error('Could not find GTFS download link on DTPM page');
+  if (!m) throw new Error(`Could not find GTFS download link on DTPM page (${url}). Page length: ${html.length} chars`);
   return `https://www.dtpm.cl${m[1]}`;
 }
 
@@ -39,13 +42,18 @@ function parseCSV(csv) {
 }
 
 async function main() {
-  console.log('Fetching latest GTFS URL...');
+  const t0 = Date.now();
+  console.log(`[${new Date().toISOString()}] Fetching latest GTFS URL from DTPM...`);
   const gtfsUrl = await fetchLatestGtfsUrl();
   console.log(`Downloading ${gtfsUrl}...`);
   const res = await fetch(gtfsUrl);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '(no body)');
+    throw new Error(`GTFS download failed: HTTP ${res.status} ${res.statusText} — URL: ${gtfsUrl}\nResponse: ${body.slice(0, 500)}`);
+  }
   const buf = await res.arrayBuffer();
   console.log(`Downloaded ${(buf.byteLength / 1024 / 1024).toFixed(1)} MB`);
+  if (buf.byteLength < 1000) throw new Error(`GTFS file suspiciously small (${buf.byteLength} bytes) — expected multi-MB zip`);
 
   const { default: yauzl } = await import('yauzl');
   const { Buffer } = await import('buffer');
@@ -88,6 +96,7 @@ async function main() {
     .reduce((acc, r) => { acc[r.route_id] = r.route_short_name || r.route_id; return acc; }, /** @type {Record<string, string>} */ ({}));
   const routeIds = new Set(Object.keys(routes));
   console.log(`  ${routeIds.size} bus routes`);
+  if (routeIds.size === 0) throw new Error('Zero bus routes parsed — GTFS format may have changed');
 
   console.log('Parsing stops...');
   /** @type {Record<string, { stop_name: string, stop_lat: number, stop_lon: number }>} */
@@ -156,9 +165,11 @@ async function main() {
   const routeCount = Object.keys(stopsByRoute).length;
   const stopCount = Object.keys(stops).length;
   console.log(`Written to ${OUTPUT_PATH} (${sizeKB} KB, ${routeCount} routes, ${stopCount} stops)`);
+  console.log(`Done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 
 main().catch(err => {
-  console.error('Failed:', err);
+  console.error(`\n[FAILED] ${err.message}`);
+  if (err.cause) console.error(`  Caused by: ${err.cause}`);
   process.exit(1);
 });

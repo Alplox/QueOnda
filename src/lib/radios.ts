@@ -151,13 +151,13 @@ function normalizeState(state: string): string {
   return STATE_NORMALIZE[key] || state.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export async function fetchRadioBrowserStations(): Promise<{ stations: RadioStation[]; tags: string[]; states: string[] }> {
+export async function fetchRadioBrowserStations(): Promise<{ stations: RadioStation[]; tags: string[]; states: string[]; stateCounts: Record<string, number> }> {
   const url = `${RADIO_BROWSER_API}/json/stations/search?limit=500&countrycode=CL&lastcheckok=1&hidebroken=true&order=clickcount&reverse=true`;
   const res = await fetch(url, {
     headers: { 'User-Agent': BROWSER_UA },
     signal: AbortSignal.timeout(15000),
   });
-  if (!res.ok) return { stations: [], tags: [], states: [] };
+  if (!res.ok) return { stations: [], tags: [], states: [], stateCounts: {} };
   const raw: RadioBrowserStation[] = await res.json();
 
   const stations: RadioStation[] = raw

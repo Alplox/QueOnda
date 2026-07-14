@@ -23,12 +23,20 @@ function slugifyBaseName(name) {
 }
 
 async function main() {
-  console.log('Fetching feeds-database.json...');
+  const t0 = Date.now();
+  console.log(`[${new Date().toISOString()}] Fetching feeds-database.json from ${FEEDS_DB_URL}...`);
   const res = await fetch(FEEDS_DB_URL, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' },
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '(no body)');
+    throw new Error(`Fetch failed: HTTP ${res.status} ${res.statusText} — URL: ${FEEDS_DB_URL}\nResponse: ${body.slice(0, 500)}`);
+  }
   const data = await res.json();
+  if (!data.sites || !Array.isArray(data.sites) || data.sites.length === 0) {
+    throw new Error(`Unexpected upstream format: no "sites" array found. Keys: ${Object.keys(data).join(', ')}`);
+  }
+  console.log(`  Received ${data.sites.length} sites from upstream`);
 
   const allFeeds = [];
   /** @type {Record<string, import('../src/types').SourceFeed[]>} */
@@ -79,6 +87,7 @@ async function main() {
   const filteredFeeds = allFeeds.filter(f => catFeedSet.has(f.sourceKey + '|' + f.url));
   const totalFeeds = filteredFeeds.length;
   console.log(`Extracted ${allFeeds.length} total, ${totalFeeds} in app categories (${categoriesKeys.join(', ')})`);
+  if (totalFeeds === 0) throw new Error('Zero feeds extracted — upstream format may have changed');
 
   // Generate compact TypeScript file
   const lines = [];
@@ -102,9 +111,11 @@ async function main() {
 
   fs.writeFileSync(OUTPUT_PATH, JSON.stringify(dbData), 'utf-8');
   console.log(`Written to ${OUTPUT_PATH} (${(fs.statSync(OUTPUT_PATH).size / 1024).toFixed(0)}KB)`);
+  console.log(`Done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 
 main().catch(err => {
-  console.error('Failed:', err);
+  console.error(`\n[FAILED] ${err.message}`);
+  if (err.cause) console.error(`  Caused by: ${err.cause}`);
   process.exit(1);
 });

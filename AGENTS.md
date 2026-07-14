@@ -70,12 +70,12 @@ src/
       TrendingTags.tsx         # Tag chips
       FinanceWidget.tsx        # UF, USD, EUR, IPC, UTM (client:visible)
       ThemeSwitcher.tsx        # Theme selector dropdown (client:visible)
-      YouTubeTrends.tsx        # YouTube Chile trending videos grid (client:visible)
+      YouTubeTrends.tsx        # YouTube Chile trending videos grid (client:visible; IDB cache: youtube-trends 30min)
       SpotifyChart.tsx         # Spotify Top 50 Chile iframe embed (client:visible)
       GoogleTrendsWidget.tsx   # Google Trends Chile list (client:visible)
       WeatherWidget.tsx        # Multi-city weather cards (client:visible)
       TransportWidget.tsx      # Metro grid + estaciones + llegada de buses (client:visible)
-      FootballTable.tsx        # Chilean football standings + matches + news feed (client:visible)
+      FootballTable.tsx        # Chilean football standings + matches + news feed (client:visible; IDB cache: football-standings 6h, football-matches 1h, football-articles 30min; progressive per-tab rendering)
       JobList.tsx              # Job listings placeholder (client:visible)
       ClientJobList.tsx        # Client job listings widget (client:visible)
       EmergencyWidget.tsx      # Sismos recientes widget (client:load)
@@ -83,7 +83,7 @@ src/
       HolidaysWidget.tsx       # Chilean holidays calendar (client:visible)
       FiestasCountdown.tsx     # Fiestas Patrias countdown (client:visible)
       RouteMap.tsx             # Transit route map component (client:visible)
-      ChileFlag.tsx            # Static Chile flag SVG
+      ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
   lib/
     cache.ts                 # Shared server-side in-memory cache utility
     channels.ts              # Channel fetch + cache logic
@@ -141,7 +141,7 @@ All routes return JSON. CORS is not needed (same-origin).
 ### Data flow
 
 1. Astro SSR serves the main page shell (no SSR data — all fetching is client-driven)
-2. On page load, an inline script fires minimal `fetch()` calls via `requestIdleCallback` — only critical endpoints (emergency) + deferred (trends, transport). Most widgets fetch directly from client-side APIs
+2. On page load, an inline script fires minimal `fetch()` calls via `requestIdleCallback` — critical (emergency) + deferred (trends, transport, youtube, sports). Most widgets fetch directly from client-side APIs
 3. React components mount and either fetch directly from external APIs (CORS-enabled) or from `/api/...` server endpoints
 4. **IDB caching (IndexedDB)**: All major widgets cache results in IDB for instant reload. Pattern: render from IDB first, fetch in background, update IDB
 5. API routes remain for sources without CORS (RSS feeds, YouTube) or as fallback chains
@@ -339,6 +339,8 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 - **`@playform/compress`** minifies HTML and JS in the build pipeline (`astro.config.mjs`; CSS compression disabled — was stripping responsive `@media` rules)
 - **Google Fonts** loaded non-blocking via `media="print" onload="this.media='all'"` (`index.astro`)
 - **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate
+  - Critical (rAF): `/api/emergency`
+  - Deferred (idle): `/api/trends`, `/api/transport`, `/api/youtube`, `/api/sports`
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)
 - **ClientNewsFeed** hydrates at idle (`client:idle`) instead of eagerly (`client:load`)
 - All 35 DaisyUI themes are bundled (no reduction — user preference)
@@ -365,7 +367,6 @@ El build de Astro genera `dist/server/` + `dist/client/`. El script reestructura
 | Binding | Nombre KV |
 |---------|-----------|
 | `KV_CACHE` | Cache de API routes |
-| `SESSION` | `queonda-session` |
 
 ### Notas
 
