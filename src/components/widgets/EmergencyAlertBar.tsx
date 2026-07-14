@@ -85,7 +85,7 @@ export function EmergencyAlertBar({ items }: Props) {
       rel="noopener noreferrer"
       onClick={() => play('notification.warning')}
       className={`inline-flex items-center gap-2 text-xs no-underline shrink-0 ${
-        item.severity === 'critical' ? 'text-error-content' : item.severity === 'high' ? 'text-warning-content' : 'text-base-content/70'
+        item.severity === 'critical' ? 'text-error-content' : item.severity === 'high' ? 'text-warning-content' : 'text-base-content/80'
       } hover:text-base-content transition-colors`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${severityColors[item.severity]}`} />

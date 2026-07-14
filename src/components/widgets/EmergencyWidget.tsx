@@ -170,7 +170,7 @@ export function EmergencyWidget() {
                 <span key={i} className="letter" style={{ transitionDelay: `${i * 30}ms` }}>{char === ' ' ? '\u00A0' : char}</span>
               ))}
             </h2>
-            <p className="text-sm text-base-content/70 mt-1">Sismos recientes en Chile (≥5.0)</p>
+            <p className="text-sm text-base-content/80 mt-1">Sismos recientes en Chile (≥5.0)</p>
           </div>
           {!loading && items.length > initialItems && (
             <button
@@ -315,7 +315,7 @@ export function EmergencyWidget() {
               href="https://api.gael.cloud/#sismos"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors"
+              className="text-base-content/80 hover:text-base-content underline underline-offset-2 transition-colors"
             >
               Gael Cloud
             </a>
@@ -324,7 +324,7 @@ export function EmergencyWidget() {
               href="https://docs.boostr.cl/reference/earthquakes"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors"
+              className="text-base-content/80 hover:text-base-content underline underline-offset-2 transition-colors"
             >
               Boostr
             </a>
@@ -333,7 +333,7 @@ export function EmergencyWidget() {
               href="https://earthquake.usgs.gov/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors"
+              className="text-base-content/80 hover:text-base-content underline underline-offset-2 transition-colors"
             >
               USGS
             </a>

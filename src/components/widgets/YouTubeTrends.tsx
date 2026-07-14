@@ -327,6 +327,7 @@ export function YouTubeTrends() {
 
         {(!selectedIds || selectedIds.size !== 1) && (
           <select value={perChannel} onChange={(e) => handlePerChannel(Number(e.target.value))}
+            aria-label="Videos por canal"
             className="px-2 py-1 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-colors cursor-pointer outline-none focus:border-primary">
             {PER_CHANNEL_OPTIONS.map((o) => (
               <option key={o} value={o}>{o} por canal</option>

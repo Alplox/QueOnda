@@ -224,7 +224,7 @@ export function NewsFeed({
       <div className="transition-all duration-300">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs text-base-content/50 uppercase tracking-wider font-semibold">
+            <h3 className="text-xs text-base-content/60 uppercase tracking-wider font-semibold">
               {activeTag ? `"${activeTag}" en medios` : 'Últimas noticias'}
             </h3>
             <span className="text-[10px] text-base-content/30">{slotCount}/12</span>
@@ -266,6 +266,7 @@ export function NewsFeed({
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
+                  aria-label="Limpiar búsqueda"
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 text-base-content/30 hover:text-base-content"
                 >
                   <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -345,7 +346,7 @@ export function NewsFeed({
 
       {visibleClusters.length > 0 && (
         <div className="transition-all duration-300 animate-[fadeSlideIn_0.4s_ease-out]">
-          <h3 className="text-xs text-base-content/50 uppercase tracking-wider font-semibold mb-3">
+          <h3 className="text-xs text-base-content/60 uppercase tracking-wider font-semibold mb-3">
             Agrupadas por tema
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

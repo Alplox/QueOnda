@@ -187,6 +187,7 @@ function BoomboxControls({
       <div className="flex items-center gap-2">
         <button
           onClick={onMute}
+          aria-label={muted ? 'Activar sonido' : 'Silenciar'}
           className="text-base-content/70 hover:text-base-content transition-colors shrink-0 active:scale-[0.96]"
         >
           {muted || volume === 0 ? MUTED_ICON : volume > 0.5 ? VOLUME_HIGH : VOLUME_LOW}
@@ -616,6 +617,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                     <p className="text-[11px] text-error leading-snug">{error}</p>
                     <button
                       onClick={() => { play('interaction.subtle'); setError(null); }}
+                      aria-label="Cerrar error"
                       className="shrink-0 ml-auto text-error/50 hover:text-error transition-colors"
                     >
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -729,6 +731,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   <select
                     value={activeState}
                     onChange={(e) => { play('interaction.tap'); setActiveState(e.target.value); }}
+                    aria-label="Filtrar por ciudad"
                     className="w-full text-xs bg-base-100 border border-base-300 rounded-lg px-2 py-1.5 text-base-content focus:outline-none focus:border-primary/50 transition-colors"
                   >
                     <option value="">Todas las ciudades ({states.reduce((s, c) => s + (stateCounts[c] || 0), 0)})</option>
@@ -857,6 +860,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={() => { play('interaction.toggle'); if (videoRef.current) videoRef.current.muted = !videoRef.current.muted; if (audioRef.current) audioRef.current.muted = !audioRef.current.muted; setMuted((m) => !m); }}
+              aria-label={muted ? 'Activar sonido' : 'Silenciar'}
               className="w-7 h-7 flex items-center justify-center rounded text-base-content/70 hover:text-base-content hover:bg-base-content/10 transition-colors active:scale-[0.9] shrink-0">
               {muted ? MUTED_ICON : volume > 0.5 ? VOLUME_HIGH : VOLUME_LOW}
             </button>
@@ -871,6 +875,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
               }}
             />
             <button onClick={handlePlayPause}
+              aria-label={playing ? 'Pausar' : 'Reproducir'}
               className="w-7 h-7 flex items-center justify-center rounded bg-primary text-primary-content hover:bg-primary/90 transition-colors active:scale-[0.9] shrink-0">
               {playing ? (
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="1.5" width="3" height="9" rx="0.5" /><rect x="7" y="1.5" width="3" height="9" rx="0.5" /></svg>
@@ -879,6 +884,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
               )}
             </button>
             <button onClick={handleStop}
+              aria-label="Detener"
               className="w-7 h-7 flex items-center justify-center rounded text-base-content/70 hover:text-base-content hover:bg-base-content/10 transition-colors active:scale-[0.9] shrink-0">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1" y="1" width="8" height="8" rx="1" /></svg>
             </button>

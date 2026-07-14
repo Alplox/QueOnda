@@ -3,8 +3,12 @@ import { ArticleReader } from '../news/ArticleReader';
 import { play } from '@/lib/sound';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 
-const IDB_KEY = 'football-espn';
-const IDB_TTL = 60 * 60 * 1000; // 1 hour
+const IDB_KEY_STANDINGS = 'football-standings';
+const IDB_TTL_STANDINGS = 6 * 60 * 60 * 1000; // 6 hours (standings change 1-2x per matchday)
+const IDB_KEY_MATCHES = 'football-matches';
+const IDB_TTL_MATCHES = 60 * 60 * 1000; // 1 hour
+const IDB_KEY_ARTICLES = 'football-articles';
+const IDB_TTL_ARTICLES = 30 * 60 * 1000; // 30 min (matches server cache)
 
 interface StandingEntry {
   position: number;
@@ -80,18 +84,16 @@ function toStatus(espnState: string, espnName: string): MatchEntry['status'] {
   return 'SCHEDULED';
 }
 
-async function fetchESPNData(): Promise<{ standings: StandingEntry[]; matches: MatchEntry[] } | null> {
+async function fetchStandings(): Promise<{ standings: StandingEntry[]; calendar: string[] } | null> {
   try {
-    const [standingsRes, leagueRes] = await Promise.all([
+    const [standingsRes, calendarRes] = await Promise.all([
       fetch('https://site.web.api.espn.com/apis/v2/sports/soccer/chi.1/standings?region=cl&lang=es', { signal: AbortSignal.timeout(8000) }),
       fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard?limit=1', { signal: AbortSignal.timeout(5000) }),
     ]);
     if (!standingsRes.ok) return null;
-
     const sData = await standingsRes.json();
     const group = sData.children?.[0]?.standings;
     if (!group?.entries?.length) return null;
-
     const standings: StandingEntry[] = group.entries.map((e: any) => {
       const stats = (s: string) => e.stats?.find((st: any) => st.name === s);
       const val = (s: string) => { const st = stats(s); return st ? (st.value !== undefined ? Number(st.value) : 0) : 0; };
@@ -103,26 +105,29 @@ async function fetchESPNData(): Promise<{ standings: StandingEntry[]; matches: M
         goalDifference: val('pointDifferential'), rankChange: val('rankChange'),
       };
     });
-
-    const now = new Date();
     const calendar: string[] = sData.calendar || [];
-    if (leagueRes.ok) {
-      const lData = await leagueRes.json();
-      const cal = lData.leagues?.[0]?.calendar;
+    if (calendarRes.ok) {
+      const calData = await calendarRes.json();
+      const cal = calData.leagues?.[0]?.calendar;
       if (Array.isArray(cal)) calendar.push(...cal.filter((d: string) => !calendar.includes(d)));
     }
+    return { standings, calendar };
+  } catch { return null; }
+}
+
+async function fetchMatches(calendar: string[]): Promise<MatchEntry[]> {
+  try {
+    const now = new Date();
     const uniqueDates = [...new Set(calendar.map((d: string) => d.slice(0, 10).replace(/-/g, '')))].sort();
     const todayStr = now.toISOString().slice(0, 10).replace(/-/g, '');
     const recentDates = uniqueDates.filter(d => d <= todayStr).slice(-3);
     const upcomingDates = uniqueDates.filter(d => d >= todayStr).slice(0, 2);
-
     const dateResults = await Promise.all(
       [...recentDates, ...upcomingDates].map(date =>
         fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard?dates=${date}&limit=20`, { signal: AbortSignal.timeout(6000) })
           .then(r => r.json()).catch(() => null)
       )
     );
-
     const matches: MatchEntry[] = [];
     const seenIds = new Set<number>();
     for (const data of dateResults) {
@@ -149,19 +154,19 @@ async function fetchESPNData(): Promise<{ standings: StandingEntry[]; matches: M
       }
     }
     matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    return { standings, matches };
-  } catch { return null; }
+    return matches;
+  } catch { return []; }
 }
 
 export function FootballTable() {
-  const [data, setData] = useState<{
-    standings: StandingEntry[];
-    matches: MatchEntry[];
-    articles: Article[];
-    source: 'espn' | 'rss';
-    error?: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [standings, setStandings] = useState<StandingEntry[]>([]);
+  const [matches, setMatches] = useState<MatchEntry[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [source, setSource] = useState<'espn' | 'rss'>('espn');
+  const [error, setError] = useState<string | undefined>();
+  const [loadingStandings, setLoadingStandings] = useState(true);
+  const [loadingMatches, setLoadingMatches] = useState(true);
+  const [loadingArticles, setLoadingArticles] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('standings');
   const [limit, setLimit] = useState(INITIAL_COUNT);
   const [readerUrl, setReaderUrl] = useState<string | null>(null);
@@ -169,43 +174,59 @@ export function FootballTable() {
 
   useEffect(() => {
     let cancelled = false;
-    let resolved = false;
 
-    // Phase 0: IDB cache → instant render for ESPN data
-    type ESPNCache = { standings: StandingEntry[]; matches: MatchEntry[] };
-    idbGet<ESPNCache>(IDB_KEY).then(cached => {
+    // Phase 0: IDB cache → instant render per data type
+    idbGet<StandingEntry[]>(IDB_KEY_STANDINGS).then(cached => {
       if (cancelled || !cached?.data) return;
-      resolved = true;
-      setData(prev => ({ ...prev, standings: cached.data.standings, matches: cached.data.matches, articles: prev?.articles || [], source: 'espn' }));
-      setLoading(false);
+      setStandings(cached.data);
+      setLoadingStandings(false);
+    });
+    idbGet<MatchEntry[]>(IDB_KEY_MATCHES).then(cached => {
+      if (cancelled || !cached?.data) return;
+      setMatches(cached.data);
+      setLoadingMatches(false);
+    });
+    idbGet<Article[]>(IDB_KEY_ARTICLES).then(cached => {
+      if (cancelled || !cached?.data) return;
+      setArticles(cached.data);
+      setLoadingArticles(false);
     });
 
+    // Phase 1: Fetch fresh data — standings first (1 request), then matches (5), articles parallel
     async function load() {
-      const [espnData, sportsResult] = await Promise.all([
-        fetchESPNData(),
-        fetch('/api/sports').then(r => r.ok ? r.json() : null).catch(() => null),
-      ]);
-
+      const standingsResult = await fetchStandings();
       if (cancelled) return;
 
-      const articles: Article[] = (sportsResult?.articles || []).slice(0, 30);
-
-      if (espnData) {
-        idbSet(IDB_KEY, { standings: espnData.standings, matches: espnData.matches }, IDB_TTL);
-        setData({ standings: espnData.standings, matches: espnData.matches, articles, source: 'espn' });
+      if (standingsResult) {
+        setStandings(standingsResult.standings);
+        idbSet(IDB_KEY_STANDINGS, standingsResult.standings, IDB_TTL_STANDINGS);
+        // Matches depend on calendar from standings
+        const matchesResult = await fetchMatches(standingsResult.calendar);
+        if (cancelled) return;
+        setMatches(matchesResult);
+        idbSet(IDB_KEY_MATCHES, matchesResult, IDB_TTL_MATCHES);
       } else {
-        setData({ standings: [], matches: [], articles, source: 'rss', error: 'No se pudieron obtener datos de ESPN' });
+        setError('No se pudieron obtener datos de ESPN');
+        setSource('rss');
       }
-      if (!resolved) setLoading(false);
-      resolved = true;
+      setLoadingStandings(false);
+      setLoadingMatches(false);
+
+      // Articles — fetch in parallel (already started above via IDB, now fresh)
+      const sportsResult = await fetch('/api/sports').then(r => r.ok ? r.json() : null).catch(() => null);
+      if (cancelled) return;
+      const arts: Article[] = (sportsResult?.articles || []).slice(0, 30);
+      setArticles(arts);
+      setLoadingArticles(false);
+      idbSet(IDB_KEY_ARTICLES, arts, IDB_TTL_ARTICLES);
     }
 
     load();
     return () => { cancelled = true; };
   }, []);
 
-  const visibleArticles = data?.articles.slice(0, limit) || [];
-  const hasMore = limit < (data?.articles.length || 0);
+  const visibleArticles = articles.slice(0, limit) || [];
+  const hasMore = limit < articles.length;
 
   useEffect(() => {
     if (limit > INITIAL_COUNT && loadMoreRef.current) {
@@ -213,48 +234,11 @@ export function FootballTable() {
     }
   }, [limit]);
 
-  const liveMatches = data?.matches.filter(m => m.status === 'IN_PLAY' || m.status === 'PAUSED') || [];
-  const finishedMatches = data?.matches.filter(m => m.status === 'FINISHED').reverse() || [];
-  const upcomingMatches = data?.matches.filter(m => m.status === 'SCHEDULED' || m.status === 'TIMED') || [];
+  const liveMatches = matches.filter(m => m.status === 'IN_PLAY' || m.status === 'PAUSED');
+  const finishedMatches = matches.filter(m => m.status === 'FINISHED').reverse();
+  const upcomingMatches = matches.filter(m => m.status === 'SCHEDULED' || m.status === 'TIMED');
 
-  const standings = data?.standings || [];
   const totalTeams = standings.length;
-
-  const skeletonRows = activeTab === 'news' ? 6 : 16;
-
-  if (loading) {
-    return (
-      <div className="rounded-xl bg-base-200 border border-base-300 overflow-hidden">
-        <div className="p-4 border-b border-base-300">
-          <div className="h-3 bg-base-300 rounded w-32 animate-pulse" />
-        </div>
-        <div className="flex gap-1 px-4 pb-4 border-b border-base-300">
-          {(['standings', 'matches', 'news'] as const).map((tab) => (
-            <div key={tab} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${activeTab === tab ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/60'}`}>
-              {tab === 'standings' ? 'Posiciones' : tab === 'matches' ? 'Partidos' : 'Noticias'}
-            </div>
-          ))}
-        </div>
-        <div className="p-4">
-          <div className="animate-pulse space-y-3">
-            {Array.from({ length: skeletonRows }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="h-4 w-4 bg-base-300 rounded" />
-                <div className="h-5 w-5 bg-base-300 rounded-full shrink-0" />
-                <div className="h-3 bg-base-300 rounded flex-1" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-4 w-8 bg-base-300 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'standings', label: 'Posiciones' },
@@ -288,9 +272,9 @@ export function FootballTable() {
         ))}
       </div>
 
-      {data?.error && (
+      {error && (
         <div className="px-4 py-2 text-[10px] text-base-content/70 border-b border-base-300">
-          {data.error}
+          {error}
         </div>
       )}
 
@@ -364,7 +348,27 @@ export function FootballTable() {
         </div>
       )}
 
-      {activeTab === 'standings' && standings.length === 0 && (
+      {activeTab === 'standings' && loadingStandings && standings.length === 0 && (
+        <div className="p-4">
+          <div className="animate-pulse space-y-3">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-4 w-4 bg-base-300 rounded" />
+                <div className="h-5 w-5 bg-base-300 rounded-full shrink-0" />
+                <div className="h-3 bg-base-300 rounded flex-1" />
+                <div className="h-3 w-6 bg-base-300 rounded" />
+                <div className="h-3 w-6 bg-base-300 rounded" />
+                <div className="h-3 w-6 bg-base-300 rounded" />
+                <div className="h-3 w-6 bg-base-300 rounded" />
+                <div className="h-3 w-6 bg-base-300 rounded" />
+                <div className="h-4 w-8 bg-base-300 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'standings' && !loadingStandings && standings.length === 0 && (
         <div className="p-6 text-center text-sm text-base-content/70">
           Tabla de posiciones no disponible
         </div>
@@ -372,7 +376,19 @@ export function FootballTable() {
 
       {activeTab === 'matches' && (
         <>
-        {liveMatches.length === 0 && finishedMatches.length === 0 && upcomingMatches.length === 0 ? (
+        {loadingMatches && matches.length === 0 ? (
+          <div className="p-4">
+            <div className="animate-pulse space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <div className="h-3 bg-base-300 rounded flex-1" />
+                  <div className="h-5 w-12 bg-base-300 rounded" />
+                  <div className="h-3 bg-base-300 rounded flex-1" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : liveMatches.length === 0 && finishedMatches.length === 0 && upcomingMatches.length === 0 ? (
           <div className="p-6 text-center text-sm text-base-content/70">
             No hay partidos disponibles
           </div>
@@ -479,7 +495,19 @@ export function FootballTable() {
 
       {activeTab === 'news' && (
         <>
-        {(data?.articles.length ?? 0) === 0 ? (
+        {loadingArticles && articles.length === 0 ? (
+          <div className="p-4">
+            <div className="animate-pulse space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="px-3 py-2">
+                  <div className="h-2 bg-base-300 rounded w-16 mb-1.5" />
+                  <div className="h-3 bg-base-300 rounded w-full mb-1" />
+                  <div className="h-2 bg-base-300 rounded w-3/4" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : articles.length === 0 ? (
           <div className="p-6 text-center text-sm text-base-content/70">
             No hay noticias deportivas disponibles
           </div>
@@ -523,7 +551,7 @@ export function FootballTable() {
                 onClick={() => setLimit(l => l + LOAD_MORE)}
                 className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-300 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all active:scale-[0.96] cursor-pointer scroll-mt-16"
               >
-                Cargar más noticias ({(data?.articles.length ?? 0) - limit} restantes)
+                Cargar más noticias ({articles.length - limit} restantes)
               </button>
             )}
             {limit > INITIAL_COUNT && (
@@ -549,7 +577,7 @@ export function FootballTable() {
       )}
     </div>
     <div className="mt-2 text-right text-[10px] text-base-content/70">
-      {data?.source === 'espn' ? (
+      {source === 'espn' ? (
         <>Fuentes:{' '}
         <a href="https://github.com/pseudo-r/Public-ESPN-API" target="_blank" rel="noopener noreferrer" className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">ESPN (API pública)</a>
         {' · '}

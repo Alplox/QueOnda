@@ -56,7 +56,7 @@ async function fetchStationsDirectly(): Promise<{ stations: RadioStation[]; tags
     .map(s => ({
       id: s.stationuuid,
       name: s.name.trim(),
-      logo: s.favicon || null,
+      logo: s.favicon ? s.favicon.replace(/^http:\/\//, 'https://') : null,
       signals: [{ type: (s.hls === 1 ? 'hls' : 'audio') as 'hls' | 'audio', url: s.url_resolved, label: s.codec || (s.hls === 1 ? 'HLS' : 'AUDIO') }],
       streamUrl: s.url_resolved,
       website: s.homepage || '',

@@ -54,7 +54,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
       {canScrollLeft && (
         <div className="absolute left-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to right, var(--color-base-100) 40%, transparent)' }}>
-          <button onClick={() => { scrollBy(-1); play('interaction.subtle'); }}
+          <button onClick={() => { scrollBy(-1); play('interaction.subtle'); }} aria-label="Desplazar categorías a la izquierda"
             className="pointer-events-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer ml-1">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           </button>
@@ -100,7 +100,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
       {canScrollRight && (
         <div className="absolute right-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to left, var(--color-base-100) 40%, transparent)' }}>
-          <button onClick={() => { scrollBy(1); play('interaction.subtle'); }}
+          <button onClick={() => { scrollBy(1); play('interaction.subtle'); }} aria-label="Desplazar categorías a la derecha"
             className="pointer-events-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer mr-1">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
           </button>

@@ -23,7 +23,13 @@ export function RouteMap({ stops, routeName, onPickStop }: Props) {
 
     (async () => {
       const L = await import('leaflet');
-      await import('leaflet/dist/leaflet.css');
+      // ponytail: inject CSS lazily via DOM to avoid render-blocking <link> from Vite bundling dynamic import
+      if (!document.querySelector('link[href*="leaflet"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
 
       if (destroyed || !containerRef.current) return;
 

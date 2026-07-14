@@ -613,6 +613,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
         <select
           value={regionFilter ?? ''}
           onChange={e => onRegionFilterChange(e.target.value || null)}
+          aria-label="Filtrar por región"
           className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2 py-1.5 text-base-content focus:outline-none focus:border-primary transition-colors"
         >
           <option value="">Todas las regiones</option>

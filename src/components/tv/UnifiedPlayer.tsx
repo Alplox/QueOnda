@@ -493,6 +493,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                         className={`flex items-center gap-0.5 p-1 rounded transition-all active:scale-[0.9] ${
                           autoPipEnabled ? 'text-base-content hover:text-base-content' : 'text-base-content/70 hover:text-base-content hover:bg-base-300'
                         }`}
+                        aria-label={autoPipEnabled ? 'Auto-PiP: Activado' : 'Auto-PiP: Desactivado'}
                         title={autoPipEnabled ? 'Auto-PiP: Al desplazarse, abrir automáticamente en ventana flotante' : 'Auto-PiP: Desactivado'}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M8 7l-5 5m0 0l5 5m-5-5h16" /></svg>
                         <span className="hidden sm:inline text-[7px] font-medium leading-none">Auto</span>
@@ -500,11 +501,11 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                     </>
                   )}
                   <div className="w-px h-3.5 bg-base-300 shrink-0" />
-                  <button onClick={handleFloat} className="flex items-center gap-0.5 p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all active:scale-[0.9]" title="Abrir en ventana flotante">
+                  <button onClick={handleFloat} className="flex items-center gap-0.5 p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all active:scale-[0.9]" aria-label="Abrir en ventana flotante" title="Abrir en ventana flotante">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="3" /><path d="M2 9h20" /><path d="M9 2v20" /></svg>
                     <span className="hidden sm:inline text-[7px] font-medium leading-none">PiP</span>
                   </button>
-                  <button onClick={() => { play('overlay.close'); onClose(); }} className="p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all active:scale-[0.9]" title="Cerrar reproductor">
+                  <button onClick={() => { play('overlay.close'); onClose(); }} className="p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all active:scale-[0.9]" aria-label="Cerrar reproductor" title="Cerrar reproductor">
                     {CLOSE_ICON}
                   </button>
                 </div>
@@ -545,17 +546,20 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                   {!isEmbedType && (
                     <button onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                       className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+                      aria-label={muted ? 'Activar sonido' : 'Silenciar'}
                       title={muted ? 'Activar sonido' : 'Silenciar'}>
                       {muted ? <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 4.5v3h2l3 3V1.5L3 4.5H1zM8 4l4 4M12 4l-4 4" /></svg> : <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 4.5v3h2l3 3V1.5L3 4.5H1zM8 4c.4.6.7 1.3.7 2s-.3 1.4-.7 2M9.5 2.5c.8 1 .9 2.3.9 3.5s-.1 2.5-.9 3.5" /></svg>}
                     </button>
                   )}
                   <button onClick={(e) => { e.stopPropagation(); handleExpand(); }}
                     className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+                    aria-label="Expandir"
                     title="Expandir">
                     {EXPAND_ICON}
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); play('overlay.close'); onClose(); }}
                     className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+                    aria-label="Cerrar"
                     title="Cerrar">
                     {PIP_CLOSE_ICON}
                   </button>
@@ -621,7 +625,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
 
           {/* Center play button (HLS only, inline mode) */}
           {!playing && !loading && !error && isHlsType && mode === 'inline' && (
-            <div role="button" className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer" onClick={togglePlay}>
+            <div role="button" aria-label="Reproducir" className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer" onClick={togglePlay}>
               <div className="w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-neutral/50 transition-transform hover:scale-105 active:scale-95">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-primary-content"><path d="M8 5v14l11-7z" /></svg>
               </div>
@@ -630,7 +634,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
 
           {/* Center play button (pip mode, smaller) */}
           {!playing && !loading && !error && isHlsType && mode === 'pip' && (
-            <div role="button" className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer" onClick={togglePlay}>
+            <div role="button" aria-label="Reproducir" className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer" onClick={togglePlay}>
               <div className="w-10 h-10 rounded-full bg-primary/90 flex items-center justify-center shadow-lg shadow-neutral/50 transition-transform hover:scale-105 active:scale-95">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" className="text-primary-content"><path d="M8 5v14l11-7z" /></svg>
               </div>
@@ -660,10 +664,10 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <button onClick={togglePlay} className="p-1 text-white hover:text-base-content/80 transition-colors" title={playing ? 'Pausar' : 'Reproducir'}>
+                  <button onClick={togglePlay} className="p-1 text-white hover:text-base-content/80 transition-colors" aria-label={playing ? 'Pausar' : 'Reproducir'} title={playing ? 'Pausar' : 'Reproducir'}>
                     {playing ? PAUSE_ICON : PLAY_ICON}
                   </button>
-                  <button onClick={toggleMute} className="p-1 text-white/70 hover:text-base-content transition-colors" title={muted ? 'Activar sonido' : 'Silenciar'}>
+                  <button onClick={toggleMute} className="p-1 text-white/70 hover:text-base-content transition-colors" aria-label={muted ? 'Activar sonido' : 'Silenciar'} title={muted ? 'Activar sonido' : 'Silenciar'}>
                     {muted ? VOLUME_OFF : VOLUME_HIGH}
                   </button>
                   <div className="hidden sm:flex items-center">
@@ -673,7 +677,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                   <span className="text-[9px] text-white/70 font-mono tabular-nums ml-0.5">{formatTime(currentTime)}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={toggleFullscreen} className="p-1 text-white/70 hover:text-base-content transition-colors" title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}>{FULLSCREEN_ICON}</button>
+                  <button onClick={toggleFullscreen} className="p-1 text-white/70 hover:text-base-content transition-colors" aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'} title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}>{FULLSCREEN_ICON}</button>
                 </div>
               </div>
             </div>
