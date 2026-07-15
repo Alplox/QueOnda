@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { POPULAR_STOPS } from '../../lib/transport';
 import type { StopPrediction, StopInfo, PopularStop } from '../../lib/transport';
+import { idbGet, idbSet } from '../../lib/idb-cache';
 
 interface MetroLine {
   name: string;
@@ -632,12 +633,24 @@ function StopCombobox() {
 export function TransportWidget() {
   const [data, setData] = useState<TransportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cachedTimestamp, setCachedTimestamp] = useState<string | null>(null);
 
   useEffect(() => {
+    idbGet<TransportData>('transport-santiago').then(cached => {
+      if (cached) {
+        setData(cached.data);
+        setCachedTimestamp(new Date(cached.timestamp).toLocaleString('es-CL'));
+        setLoading(false);
+      }
+    });
     fetch('/api/transport?city=santiago')
       .then(r => r.json())
-      .then(d => setData(d))
-      .catch(() => setData(null))
+      .then(d => {
+        setData(d);
+        idbSet('transport-santiago', d, 10 * 60 * 1000);
+        setCachedTimestamp(null);
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -679,6 +692,7 @@ export function TransportWidget() {
       {data.metro && <MetroGrid lines={data.metro.lines} source={data.metro.source} />}
       <StopCombobox />
       <div className="mt-2 text-right text-[10px] text-base-content/50">
+        {cachedTimestamp && <p className="mb-0.5">Datos desde las {cachedTimestamp}</p>}
         Fuentes:{' '}
         <a href="https://www.red.cl/predictorPlus/prediccion" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Red.cl</a>
         {' · '}

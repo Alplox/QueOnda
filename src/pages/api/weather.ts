@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCached, setCache } from '../../lib/cache';
+import { dedupeFetch } from '../../lib/cache';
 
 const DEFAULT_CITIES = [
   { name: 'Santiago', lat: -33.45, lon: -70.67 },
@@ -30,8 +30,6 @@ const ICAO_MAP: Record<string, string> = {
   'Iquique': 'SCDA',
   'Punta Arenas': 'SCCI',
 };
-
-const CACHE_TTL = 10 * 60 * 1000; // 10 min
 
 async function fetchOpenMeteo(
   cities: { name: string; lat: number; lon: number }[]
@@ -71,19 +69,15 @@ async function fetchOpenMeteo(
 async function fetchGaelCloud(cityName: string): Promise<any | null> {
   const icao = ICAO_MAP[cityName];
   if (!icao) return null;
-
   try {
     const res = await fetch(`https://api.gael.cloud/general/public/clima/${icao}`, {
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
-
     const data = await res.json();
     if (!data?.Temp) return null;
-
     const temp = parseFloat(data.Temp);
     if (isNaN(temp)) return null;
-
     return {
       city: cityName,
       temp: Math.round(temp),
@@ -92,21 +86,17 @@ async function fetchGaelCloud(cityName: string): Promise<any | null> {
       weatherCode: mapGaelEstado(data.Estado ?? ''),
       wind: 0,
     };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function mapGaelEstado(estado: string): number {
   const c = estado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   if (c.includes('despejado') || c.includes('soleado')) return 0;
   if (c.includes('parcial') || c.includes('nubes') || c.includes('nubosidad')) return 2;
-  if (c.includes('nublado') || c.includes('cubierto') || c.includes('nubla'))
-    return 3;
+  if (c.includes('nublado') || c.includes('cubierto') || c.includes('nubla')) return 3;
   if (c.includes('niebla') || c.includes('bruma')) return 45;
   if (c.includes('llovizna') || c.includes('lluvia')) return 61;
-  if (c.includes('tormenta') || c.includes('chubasco') || c.includes('temporal'))
-    return 95;
+  if (c.includes('tormenta') || c.includes('chubasco') || c.includes('temporal')) return 95;
   if (c.includes('nieve') || c.includes('nevada')) return 71;
   return 2;
 }
@@ -114,16 +104,13 @@ function mapGaelEstado(estado: string): number {
 async function fetchBoostr(cityName: string): Promise<any | null> {
   const icao = ICAO_MAP[cityName];
   if (!icao) return null;
-
   try {
     const res = await fetch(`https://api.boostr.cl/weather/${icao}.json`, {
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
-
     const data = await res.json();
     if (!data?.weather) return null;
-
     const w = data.weather;
     return {
       city: cityName,
@@ -133,9 +120,7 @@ async function fetchBoostr(cityName: string): Promise<any | null> {
       weatherCode: mapBoostrCode(w.condition ?? ''),
       wind: w.wind_kph ?? w.wind_speed ?? 0,
     };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function mapBoostrCode(condition: string): number {
@@ -162,105 +147,70 @@ async function geocode(query: string): Promise<{ name: string; lat: number; lon:
     const result = data.results?.[0];
     if (!result) return null;
     return { name: result.name, lat: result.latitude, lon: result.longitude };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-export const GET: APIRoute = async ({ url, request }) => {
+export const GET: APIRoute = async ({ url }) => {
   const searchQuery = url.searchParams.get('q');
   const citiesParam = url.searchParams.get('cities');
-
   const cacheKey = (searchQuery ?? citiesParam ?? '__default__').toLowerCase().trim();
 
-  const cached = await getCached<Record<string, unknown>>(cacheKey);
-  if (cached) {
-    return new Response(JSON.stringify({ weather: cached }), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
-    });
-  }
+  const weather = await dedupeFetch<Record<string, unknown> | null>(`weather:${cacheKey}`, async () => {
+    try {
+      if (searchQuery) {
+        const geo = await geocode(searchQuery);
+        if (!geo) return null;
+        let weatherMap = await fetchOpenMeteo([geo]);
+        if (!weatherMap) {
+          const gael = await fetchGaelCloud(geo.name);
+          if (gael) weatherMap = { [geo.name]: gael };
+        }
+        if (!weatherMap) {
+          const boostr = await fetchBoostr(geo.name);
+          if (boostr) weatherMap = { [geo.name]: boostr };
+        }
+        return weatherMap;
+      }
 
-  try {
-    if (searchQuery) {
-      const geo = await geocode(searchQuery);
-      if (!geo) {
-        return new Response(JSON.stringify({ weather: null, error: 'Ciudad no encontrada' }), {
-          headers: { 'Content-Type': 'application/json' },
+      let cities = DEFAULT_CITIES;
+      if (citiesParam) {
+        const names = citiesParam.split(',').map(s => s.trim()).filter(Boolean);
+        const resolved: { name: string; lat: number; lon: number }[] = [];
+        for (const name of names) {
+          const existing = DEFAULT_CITIES.find(c => c.name.toLowerCase() === name.toLowerCase());
+          if (existing) { resolved.push(existing); }
+          else { const geo = await geocode(name); if (geo) resolved.push(geo); }
+        }
+        if (resolved.length > 0) cities = resolved;
+      }
+
+      let weatherMap = await fetchOpenMeteo(cities);
+
+      if (!weatherMap) {
+        const gaelResults = await Promise.allSettled(cities.map(city => fetchGaelCloud(city.name)));
+        weatherMap = {};
+        gaelResults.forEach((r, i) => {
+          if (r.status === 'fulfilled' && r.value) weatherMap![cities[i].name] = r.value;
+        });
+        if (Object.keys(weatherMap).length === 0) weatherMap = null;
+      }
+
+      if (!weatherMap || Object.keys(weatherMap).length === 0) {
+        const boostrResults = await Promise.allSettled(cities.map(city => fetchBoostr(city.name)));
+        weatherMap = {};
+        boostrResults.forEach((r, i) => {
+          if (r.status === 'fulfilled' && r.value) weatherMap![cities[i].name] = r.value;
         });
       }
-      let weatherMap = await fetchOpenMeteo([geo]);
-      if (!weatherMap) {
-        const gael = await fetchGaelCloud(geo.name);
-        if (gael) weatherMap = { [geo.name]: gael };
-      }
-      if (!weatherMap) {
-        const boostr = await fetchBoostr(geo.name);
-        if (boostr) weatherMap = { [geo.name]: boostr };
-      }
-      if (weatherMap) await setCache(cacheKey, weatherMap, CACHE_TTL);
-      return new Response(JSON.stringify({ weather: weatherMap }), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
-      });
+
+      if (Object.keys(weatherMap).length === 0) return null;
+      return weatherMap;
+    } catch {
+      return null;
     }
+  });
 
-    let cities = DEFAULT_CITIES;
-
-    if (citiesParam) {
-      const names = citiesParam.split(',').map(s => s.trim()).filter(Boolean);
-      const resolved: { name: string; lat: number; lon: number }[] = [];
-      for (const name of names) {
-        const existing = DEFAULT_CITIES.find(c => c.name.toLowerCase() === name.toLowerCase());
-        if (existing) {
-          resolved.push(existing);
-        } else {
-          const geo = await geocode(name);
-          if (geo) resolved.push(geo);
-        }
-      }
-      if (resolved.length > 0) cities = resolved;
-    }
-
-    let weatherMap = await fetchOpenMeteo(cities);
-
-    if (!weatherMap) {
-      const gaelResults = await Promise.allSettled(
-        cities.map(city => fetchGaelCloud(city.name))
-      );
-      weatherMap = {};
-      gaelResults.forEach((r, i) => {
-        if (r.status === 'fulfilled' && r.value) weatherMap![cities[i].name] = r.value;
-      });
-      if (Object.keys(weatherMap).length === 0) weatherMap = null;
-    }
-
-    if (!weatherMap || Object.keys(weatherMap).length === 0) {
-      const boostrResults = await Promise.allSettled(
-        cities.map(city => fetchBoostr(city.name))
-      );
-      weatherMap = {};
-      boostrResults.forEach((r, i) => {
-        if (r.status === 'fulfilled' && r.value) weatherMap![cities[i].name] = r.value;
-      });
-    }
-
-    if (Object.keys(weatherMap).length === 0) {
-      throw new Error('All weather sources failed');
-    }
-
-    await setCache(cacheKey, weatherMap, CACHE_TTL);
-
-    return new Response(JSON.stringify({ weather: weatherMap }), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
-    });
-  } catch {
-    const stale = await getCached<Record<string, unknown>>(cacheKey);
-    if (stale) {
-      return new Response(JSON.stringify({ weather: stale, cached: true }), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
-      });
-    }
-    return new Response(JSON.stringify({ weather: null }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  return new Response(JSON.stringify({ weather }), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
+  });
 };

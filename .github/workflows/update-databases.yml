@@ -19,14 +19,15 @@ jobs:
       - run: npm ci
       - run: npm run update-feeds
       - run: npm run update-stops
+      - run: npm run update-holidays
       - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/lib/feeds-database.json src/lib/stops-database.json
+          git add src/lib/feeds-database.json src/lib/stops-database.json src/lib/holidays.json
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "chore: update feeds + stops databases [skip ci]"
+            git commit -m "chore: update feeds, stops + holidays databases [skip ci]"
             git push
           fi

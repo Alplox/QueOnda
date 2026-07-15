@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCached, setCache } from '../../lib/cache';
+import { dedupeFetch } from '../../lib/cache';
 
 interface ChileanEarthquake {
   Fecha: string;
@@ -47,9 +47,6 @@ interface EmergencyItem {
   depth?: number;
 }
 
-const CACHE_TTL = 5 * 60 * 1000;
-const CACHE_KEY = 'emergency';
-
 const MIN_MAGNITUDE = 5.0;
 
 function getSeverity(mag: number): 'low' | 'moderate' | 'high' | 'critical' {
@@ -60,7 +57,6 @@ function getSeverity(mag: number): 'low' | 'moderate' | 'high' | 'critical' {
 }
 
 function parseDate(dateStr: string): number {
-  // Format: "2026-06-07 00:18:22"
   return new Date(dateStr).getTime();
 }
 
@@ -69,12 +65,8 @@ async function fetchGaelCloud(): Promise<EmergencyItem[]> {
     const chileRes = await fetch('https://api.gael.cloud/general/public/sismos', {
       signal: AbortSignal.timeout(10000),
     });
-    
     if (!chileRes.ok) throw new Error(`API returned ${chileRes.status}`);
-    
     const chileData = await chileRes.json() as ChileanEarthquake[];
-
-    // Filter first, then sort — fewer items to sort
     const filteredData = chileData.filter(eq => parseFloat(eq.Magnitud) >= MIN_MAGNITUDE);
     filteredData.sort((a, b) => parseDate(b.Fecha) - parseDate(a.Fecha));
 
@@ -90,9 +82,7 @@ async function fetchGaelCloud(): Promise<EmergencyItem[]> {
         time: parseDate(eq.Fecha),
         url: 'https://www.csn.uchile.cl/',
         severity: getSeverity(mag),
-        mag: mag,
-        place: eq.RefGeografica,
-        depth: depth,
+        mag, place: eq.RefGeografica, depth,
       });
     }
     return items;
@@ -107,14 +97,11 @@ async function fetchBoostr(): Promise<EmergencyItem[]> {
     const res = await fetch('https://api.boostr.cl/earthquakes/recent.json', {
       signal: AbortSignal.timeout(10000),
     });
-    
     if (!res.ok) throw new Error(`API returned ${res.status}`);
-    
     const json = await res.json();
     if (json.status !== 'success' || !Array.isArray(json.data)) throw new Error('Boostr: invalid response');
-    
     const data = json.data as BoostrEarthquake[];
-    
+
     const items: EmergencyItem[] = [];
     for (const eq of data) {
       const mag = parseFloat(eq.magnitude);
@@ -127,15 +114,11 @@ async function fetchBoostr(): Promise<EmergencyItem[]> {
         type: 'earthquake',
         title: `M ${mag.toFixed(1)} — ${eq.place}`,
         description: `${eq.place}. Profundidad: ${depth} km.`,
-        time: time,
-        url: eq.info || '',
+        time, url: eq.info || '',
         severity: getSeverity(mag),
-        mag: mag,
-        place: eq.place,
-        depth: depth,
+        mag, place: eq.place, depth,
       });
     }
-    
     items.sort((a, b) => b.time - a.time);
     return items.slice(0, 10);
   } catch (err) {
@@ -151,11 +134,10 @@ async function fetchUSGS(): Promise<EmergencyItem[]> {
       { signal: AbortSignal.timeout(10000) }
     );
     const data = await res.json() as { features: Array<{ properties: USGSEarthquake['properties']; geometry: USGSEarthquake['geometry']; id: string }> };
-
     return data.features
       .filter(f => {
         const place = f.properties.place || '';
-        return (f.properties.mag >= MIN_MAGNITUDE) && 
+        return (f.properties.mag >= MIN_MAGNITUDE) &&
                (place.toLowerCase().includes('chile') || place.toLowerCase().includes('south america'));
       })
       .slice(0, 20)
@@ -178,33 +160,15 @@ async function fetchUSGS(): Promise<EmergencyItem[]> {
 }
 
 export const GET: APIRoute = async () => {
-  const cached = await getCached<EmergencyItem[]>(CACHE_KEY);
-  if (cached) {
-    return new Response(JSON.stringify({ items: cached, cached: true }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const items = await dedupeFetch<EmergencyItem[]>('emergency', async () => {
+    let result = await fetchGaelCloud();
+    if (result.length === 0) result = await fetchBoostr();
+    if (result.length === 0) result = await fetchUSGS();
+    result.sort((a, b) => b.time - a.time);
+    return result;
+  });
 
-  let items: EmergencyItem[] = [];
-
-  items = await fetchGaelCloud();
-
-  if (items.length === 0) {
-    items = await fetchBoostr();
-  }
-
-  if (items.length === 0) {
-    items = await fetchUSGS();
-  }
-
-  items.sort((a, b) => b.time - a.time);
-
-  await setCache(CACHE_KEY, items, CACHE_TTL);
-
-  return new Response(JSON.stringify({ items, cached: false }), {
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=300',
-    },
+  return new Response(JSON.stringify({ items }), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
   });
 };

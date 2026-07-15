@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { idbGet, idbSet } from '../../lib/idb-cache';
-import fallbackData from '../../lib/holidays-fallback.json';
+import fallbackData from '../../lib/holidays.json';
 
 const IDB_KEY = 'holidays';
 const IDB_TTL = 365 * 24 * 60 * 60 * 1000; // 1 year — holidays change once a year

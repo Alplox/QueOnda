@@ -13,6 +13,7 @@ npm run build     # dist/
 npm run preview   # npx astro preview
 npm run update-feeds  # Regenerate src/lib/feeds-database.json from remote DB
 npm run update-stops  # Regenerate src/lib/stops-database.json from DTPM GTFS
+npm run update-holidays  # Regenerate src/lib/holidays.json from nager.at API
 ```
 
 ## Directory Structure
@@ -89,6 +90,7 @@ src/
     channels.ts              # Channel fetch + cache logic
     feeds-database.json      # @generated local fallback of ~2056 active/verified RSS feeds (regenerate via `npm run update-feeds`)
     stops-database.json      # @generated RED bus routes + stops from DTPM GTFS (regenerate via `npm run update-stops`)
+    holidays.json            # @generated Chilean holidays fallback from nager.at (regenerate via `npm run update-holidays`)
     rss.ts                   # RSS parser + feeds DB loader (local-first fallback: feeds-database.json → async GitHub raw → CDN)
     clustering.ts            # Pure functions: extractKeywords, clusterArticles, extractTrendingFromArticles (server + client; code-split via dynamic import in ClientNewsFeed)
     radios.ts                # Radio station data + extraction
@@ -97,6 +99,7 @@ src/
   scripts/
     update-feeds-db.mjs      # Fetches awesome-chilean-rss DB and regenerates src/lib/feeds-database.json
     update-stops-db.mjs      # Downloads DTPM GTFS and regenerates src/lib/stops-database.json
+    update-holidays-db.mjs   # Fetches nager.at API and regenerates src/lib/holidays.json
   styles/
     global.css               # Tailwind + DaisyUI base styles + scrollbar
 ```
@@ -312,7 +315,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 | Google Trends | [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` |
 | Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GRJmY7SUz` (Top 50 Chile) |
 | Sports RSS | awesome-chilean-rss DB (categoría `sports`) | múltiples fuentes RSS deportivas chilenas |
-| Holidays | [Nager.Date](https://date.nager.at) | `date.nager.at/api/v3/publicholidays/{year}/CL` — bundled fallback JSON |
+| Holidays | [Nager.Date](https://date.nager.at) | `date.nager.at/api/v3/publicholidays/{year}/CL` — bundled fallback JSON (auto-updated via `update-holidays-db.mjs`) |
 | Article proxy | [cheerio](https://cheerio.js.org) scraping | URL enviada por el cliente |
 | RED routes DB | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` (build-time via `update-stops-db.mjs`) |
 | Weather widget geolocation | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` |

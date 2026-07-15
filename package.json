@@ -9,6 +9,7 @@
     "preview": "astro preview",
     "update-feeds": "node scripts/update-feeds-db.mjs",
     "update-stops": "node scripts/update-stops-db.mjs",
+    "update-holidays": "node scripts/update-holidays-db.mjs",
     "astro": "astro"
   },
   "dependencies": {

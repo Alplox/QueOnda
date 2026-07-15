@@ -3,7 +3,7 @@ import { getCached, setCache, dedupeFetch } from '../../lib/cache';
 import { fetchAllSports, deduplicateArticles } from '../../lib/rss';
 import type { SourceResult } from '../../types';
 
-const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_TTL = 30 * 60 * 1000;
 
 interface Article {
   title: string;

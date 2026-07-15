@@ -115,7 +115,7 @@ export const GET: APIRoute = async ({ url, request }) => {
     predictionError: predictionError,
     routeStops: routeStops,
   };
-  await setCache(cacheKey, data, 5 * 60 * 1000);
+  await setCache(cacheKey, data, 15 * 60 * 1000);
 
   return new Response(JSON.stringify(data), {
     headers: {

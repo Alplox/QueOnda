@@ -1,4 +1,4 @@
-const DB_NAME = 'quconda-cache';
+const DB_NAME = 'queonda-cache';
 const STORE_NAME = 'cache';
 const DB_VERSION = 1;
 

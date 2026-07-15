@@ -6,7 +6,7 @@ import { getCached, setCache } from '../../../lib/cache';
 import { validateFetchUrl } from '../../../lib/url-validator';
 import { checkRateLimit } from '../../../lib/rate-limit';
 
-const SOURCE_CACHE_TTL = 15 * 60 * 1000;
+const SOURCE_CACHE_TTL = 60 * 60 * 1000;
 
 function assembleResult(cached: Array<{ articles: Article[]; sourceResult: SourceResult }>) {
   const articles: Article[] = [];

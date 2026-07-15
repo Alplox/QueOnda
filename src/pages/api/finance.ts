@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { XMLParser } from 'fast-xml-parser';
-import { getCached, getStaleCached, setCache } from '../../lib/cache';
+import { dedupeFetch } from '../../lib/cache';
 
 const MINDICADOR_URL = 'https://mindicador.cl/api';
 const BOOSTR_URL = 'https://api.boostr.cl/economy/indicators.json';
@@ -109,44 +109,35 @@ async function fetchDolarApi(): Promise<Partial<FinanceData>> {
 }
 
 export const GET: APIRoute = async () => {
-  const cached = await getCached<FinanceData>('finance');
-  if (cached) {
-    return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' },
-    });
-  }
+  const finance = await dedupeFetch<FinanceData | null>('finance', async () => {
+    const merged: Partial<FinanceData> = {};
+    let anySuccess = false;
+    const fetchers = [fetchMindicador, fetchBoostr, fetchFindic, fetchSiiRss, fetchDolarApi];
 
-  const merged: Partial<FinanceData> = {};
-  let anySuccess = false;
-  const fetchers = [fetchMindicador, fetchBoostr, fetchFindic, fetchSiiRss, fetchDolarApi];
-
-  for (const fetchFn of fetchers) {
-    try {
-      const data = await fetchFn();
-      anySuccess = true;
-      for (const key of ALL_KEYS) {
-        if (!merged[key] && data[key]?.value != null) {
-          merged[key] = data[key] as Indicator;
+    for (const fetchFn of fetchers) {
+      try {
+        const data = await fetchFn();
+        anySuccess = true;
+        for (const key of ALL_KEYS) {
+          if (!merged[key] && data[key]?.value != null) {
+            merged[key] = data[key] as Indicator;
+          }
         }
+        if (ALL_KEYS.every(k => merged[k]?.value != null)) break;
+      } catch (err) {
+        console.error(`Finance: ${fetchFn.name} failed:`, err);
       }
-      if (ALL_KEYS.every(k => merged[k]?.value != null)) break;
-    } catch (err) {
-      console.error(`Finance: ${fetchFn.name} failed:`, err);
     }
-  }
 
-  if (anySuccess && ALL_KEYS.some(k => merged[k]?.value != null)) {
-    const finance = merged as FinanceData;
-    await setCache('finance', finance, 30 * 60 * 1000);
+    if (anySuccess && ALL_KEYS.some(k => merged[k]?.value != null)) {
+      return merged as FinanceData;
+    }
+    return null;
+  });
+
+  if (finance) {
     return new Response(JSON.stringify(finance), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' },
-    });
-  }
-
-  const stale = await getStaleCached<FinanceData>('finance');
-  if (stale) {
-    return new Response(JSON.stringify({ ...stale, stale: true }), {
-      headers: { 'Content-Type': 'application/json' },
     });
   }
 

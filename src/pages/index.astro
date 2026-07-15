@@ -60,7 +60,6 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <style>@font-face{font-family:'Figtree Fallback';src:local('Arial');size-adjust:107%;ascent-override:91%;descent-override:22%;line-gap-override:0%}</style>
     <link rel="preload" as="image" href={todayBg.url} fetchpriority="high" />
-    <link rel="preload" as="fetch" href="/api/emergency" crossorigin="anonymous" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap"
@@ -230,17 +229,10 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     </script>
 
     <script>
-      // Pre-warm server cache in two phases:
-      // Phase 1 (immediate): above-fold APIs so data arrives before widgets hydrate.
-      // Phase 2 (idle): below-fold APIs without saturating the network.
+      // Pre-warm server cache: only endpoints fetched server-side by widgets
       (function() {
-        var critical = [
-          '/api/emergency',
-        ];
         var deferred = [
-          '/api/trends',
           '/api/transport',
-          '/api/youtube',
           '/api/sports',
         ];
         function warm(list: string[]) {
@@ -248,13 +240,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
             try { fetch(list[i]); } catch(e) {}
           }
         }
-        // Phase 1: fire critical fetches as soon as the browser can (after paint)
-        if ('requestAnimationFrame' in window) {
-          requestAnimationFrame(function() { warm(critical); });
-        } else {
-          setTimeout(function() { warm(critical); }, 100);
-        }
-        // Phase 2: defer non-critical to idle
+        // Defer to idle — transport and sports are server-only (no IDB on client)
         if ('requestIdleCallback' in window) {
           requestIdleCallback(function() { warm(deferred); }, { timeout: 5000 });
         } else {

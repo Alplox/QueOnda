@@ -13,6 +13,31 @@ const CHUNK_SIZE = 250;
 const STORAGE_SELECTION = 'all-sources-selection';
 const BATCH_CACHE_TTL_HINT = 'Artículos duplicados se muestran una sola vez; Si dos fuentes distintas tienen el mismo artículo con la misma URL, solo se muestra uno.';
 
+const REGION_LABELS: Record<string, string> = {
+  'arica-y-parinacota': 'XV Arica y Parinacota',
+  tarapaca: 'I Tarapacá',
+  antofagasta: 'II Antofagasta',
+  atacama: 'III Atacama',
+  coquimbo: 'IV Coquimbo',
+  valparaiso: 'V Valparaíso',
+  metropolitana: 'RM Metropolitana',
+  ohiggins: "VI O'Higgins",
+  maule: 'VII Maule',
+  nuble: 'XVI Ñuble',
+  biobio: 'VIII Biobío',
+  araucania: 'IX La Araucanía',
+  'los-rios': 'XIV Los Ríos',
+  'los-lagos': 'X Los Lagos',
+  aysen: 'XI Aysén',
+  magallanes: 'XII Magallanes',
+};
+
+const ALL_REGIONS_ORDERED = [
+  'arica-y-parinacota', 'tarapaca', 'antofagasta', 'atacama', 'coquimbo',
+  'valparaiso', 'metropolitana', 'ohiggins', 'maule', 'nuble',
+  'biobio', 'araucania', 'los-rios', 'los-lagos', 'aysen', 'magallanes',
+];
+
 type PageStatus = 'loading' | 'selecting' | 'fetching' | 'results';
 
 function SourceCheckbox({ source, checked, onChange }: {
@@ -56,6 +81,10 @@ export function AllSourcesPage() {
   const [addingSources, setAddingSources] = useState<Set<string>>(new Set());
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(true);
+  const [retryingSources, setRetryingSources] = useState<Set<string>>(new Set());
+  const [failedPanelExpanded, setFailedPanelExpanded] = useState(false);
+  const [addSourceRegion, setAddSourceRegion] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | '3d' | 'week'>('all');
   const abortRef = useRef<AbortController | null>(null);
   const cancelledRef = useRef(false);
 
@@ -77,7 +106,6 @@ export function AllSourcesPage() {
           setSourceResults(cached.data.sourceResults);
           setCachedTimestamp(new Date(cached.timestamp).toLocaleString('es-CL'));
           setStatus('results');
-          return;
         }
         loadInventory();
       });
@@ -99,22 +127,34 @@ export function AllSourcesPage() {
       if (validSelection.length > 0) {
         setSelected(new Set(validSelection));
       }
-      setStatus('selecting');
+      setStatus(prev => prev === 'results' ? 'results' : 'selecting');
     } catch {
-      setStatus('selecting');
+      setStatus(prev => prev === 'results' ? 'results' : 'selecting');
     }
   }
 
   // Compute clusters + trending whenever articles change
   // Filter by active tag
+  const dateCutoff = useMemo(() => {
+    if (dateFilter === 'all') return 0;
+    const days = { today: 1, '3d': 3, week: 7 }[dateFilter];
+    return Date.now() - days * 86400000;
+  }, [dateFilter]);
+
   const filteredArticles = useMemo(() => {
-    if (!activeTag) return articles;
-    const q = activeTag.toLowerCase();
-    return articles.filter(a =>
-      a.title.toLowerCase().includes(q) ||
-      a.description.toLowerCase().includes(q)
-    );
-  }, [articles, activeTag]);
+    let filtered = articles;
+    if (activeTag) {
+      const q = activeTag.toLowerCase();
+      filtered = filtered.filter(a =>
+        a.title.toLowerCase().includes(q) ||
+        a.description.toLowerCase().includes(q)
+      );
+    }
+    if (dateCutoff > 0) {
+      filtered = filtered.filter(a => new Date(a.pubDate).getTime() >= dateCutoff);
+    }
+    return filtered;
+  }, [articles, activeTag, dateCutoff]);
 
   // Search within filtered results
   const searchedArticles = useMemo(() => {
@@ -137,7 +177,7 @@ export function AllSourcesPage() {
     return map;
   }, [searchedArticles]);
 
-  const hasActiveFilter = useMemo(() => !!(activeTag || resultsSearch), [activeTag, resultsSearch]);
+  const hasActiveFilter = useMemo(() => !!(activeTag || resultsSearch || dateFilter !== 'all'), [activeTag, resultsSearch, dateFilter]);
 
   useEffect(() => {
     if (!clusteringMod || status !== 'results') return;
@@ -200,15 +240,24 @@ export function AllSourcesPage() {
   }, [allSources, searchQuery, selectedRegion]);
 
   const addFilteredSources = useMemo(() => {
-    if (!addSourceQuery) return allSources;
+    let sources = allSources;
+    if (addSourceRegion) {
+      sources = sources.filter(s => s.region === addSourceRegion);
+    }
+    if (!addSourceQuery) return sources;
     const q = addSourceQuery.toLowerCase();
-    return allSources.filter(s =>
+    return sources.filter(s =>
       s.name.toLowerCase().includes(q) ||
       s.source.toLowerCase().includes(q) ||
       s.sourceKey.toLowerCase().includes(q) ||
       extractHost(s.url).includes(q)
     );
-  }, [allSources, addSourceQuery]);
+  }, [allSources, addSourceQuery, addSourceRegion]);
+
+  const availableRegions = useMemo(() => {
+    const regionSet = new Set(allSources.filter(s => s.region).map(s => s.region!));
+    return ALL_REGIONS_ORDERED.filter(r => regionSet.has(r));
+  }, [allSources]);
 
   function makeCacheKey(sourceKeys: string[]): string {
     return 'all-sources:' + [...sourceKeys].sort().join(',');
@@ -275,6 +324,59 @@ export function AllSourcesPage() {
         return next;
       });
     }
+  }
+
+  async function handleRetrySource(sourceKey: string) {
+    const source = allSources.find(s => s.sourceKey === sourceKey);
+    if (!source) return;
+
+    setRetryingSources(prev => new Set(prev).add(sourceKey));
+
+    try {
+      const res = await fetch('/api/news/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources: [source] }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+
+      const newArticles: Article[] = (data.articles || []).filter(
+        (a: Article) => !articles.some(existing => existing.link === a.link)
+      );
+      const newResults: SourceResult[] = data.sourceResults || [];
+
+      setArticles(prev => [...prev, ...newArticles]);
+      setSourceResults(prev => {
+        const filtered = prev.filter(sr => !newResults.some(nr => nr.name === sr.name));
+        return [...filtered, ...newResults];
+      });
+
+      const selectedArr = [...selected];
+      if (selectedArr.length > 0) {
+        const cacheKey = makeCacheKey(selectedArr);
+        await idbSet(cacheKey, {
+          articles: [...articles, ...newArticles],
+          sourceResults: [...sourceResults.filter(sr => sr.name !== source.name), ...newResults],
+        }, CACHE_TTL);
+      }
+    } catch {
+      // silent
+    } finally {
+      setRetryingSources(prev => {
+        const next = new Set(prev);
+        next.delete(sourceKey);
+        return next;
+      });
+    }
+  }
+
+  async function handleRetryAllFailed() {
+    const failed = sourceResults.filter(r => !r.success);
+    const sourceKeys = failed
+      .map(f => allSources.find(s => s.name === f.name)?.sourceKey)
+      .filter((k): k is string => !!k);
+    await Promise.all(sourceKeys.map(k => handleRetrySource(k)));
   }
 
   async function handleFetch() {
@@ -557,52 +659,87 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 ? `${articles.length} artículos de ${sourceResults.length} fuentes`
                 : 'Sin resultados'}
             </h2>
-            {hasActiveFilter && (
-              <p className="text-[10px] text-base-content/40 mt-0.5">
-                {searchedArticles.length > 0
-                  ? `mostrando ${searchedArticles.length} con filtro`
-                  : 'ninguna coincidencia con el filtro actual'}
-              </p>
-            )}
             {cachedTimestamp && (
               <p className="text-[10px] text-base-content/40">Resultados cacheados desde las {cachedTimestamp}</p>
             )}
-            {failedSources.length > 0 && (
-              <p className="text-[10px] text-error/70 mt-0.5">
-                {failedSources.length} {failedSources.length === 1 ? 'fuente falló' : 'fuentes fallaron'}
-              </p>
-            )}
           </div>
-          <div className="relative w-full sm:w-56">
-            <input
-              type="text"
-              value={resultsSearch}
-              onChange={e => setResultsSearch(e.target.value)}
-              placeholder="Buscar en resultados..."
-               className="w-full text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2 pl-9 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary transition-colors"
-            />
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            {resultsSearch && (
-              <button
-                onClick={() => { play('interaction.tap'); setResultsSearch(''); }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-base-content/30 hover:text-base-content transition-colors cursor-pointer"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            )}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none sm:w-56">
+              <input
+                type="text"
+                value={resultsSearch}
+                onChange={e => setResultsSearch(e.target.value)}
+                placeholder="Buscar en resultados..."
+                className="w-full text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2 pl-9 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary transition-colors"
+              />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              {resultsSearch && (
+                <button
+                  onClick={() => { play('interaction.tap'); setResultsSearch(''); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-base-content/30 hover:text-base-content transition-colors cursor-pointer"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => { play('interaction.tap'); setStatus('selecting'); loadInventory(); }}
+              className="shrink-0 px-3 py-2 text-[11px] font-medium bg-base-300 text-base-content/70 hover:text-base-content rounded-xl transition-colors cursor-pointer"
+            >
+              Cambiar selección
+            </button>
           </div>
-          <button
-            onClick={() => { play('interaction.tap'); setStatus('selecting'); loadInventory(); }}
-            className="shrink-0 px-3 py-1.5 text-[11px] font-medium bg-base-300 text-base-content/70 hover:text-base-content rounded-lg transition-colors cursor-pointer"
-          >
-            Cambiar selección
-          </button>
         </div>
+
+        {/* Date filter pills */}
+        <div className="flex gap-1 flex-wrap">
+          {([
+            { value: 'all' as const, label: 'Todo' },
+            { value: 'today' as const, label: 'Hoy' },
+            { value: '3d' as const, label: '3 días' },
+            { value: 'week' as const, label: 'Semana' },
+          ]).map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { play('interaction.tap'); setDateFilter(opt.value); }}
+              className={`px-3 py-1.5 text-[11px] rounded-lg transition-all cursor-pointer ${
+                dateFilter === opt.value
+                  ? 'bg-primary text-primary-content font-medium'
+                  : 'bg-base-200 text-base-content/60 border border-base-300 hover:border-primary/50 hover:text-base-content'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter status — below pills to avoid layout shift */}
+        {hasActiveFilter && (
+          <p className="text-[10px] text-base-content/40">
+            {searchedArticles.length > 0
+              ? `mostrando ${searchedArticles.length} con filtro`
+              : 'ninguna coincidencia con el filtro actual'}
+            {dateFilter !== 'all' ? ' · filtro de fecha' : ''}
+          </p>
+        )}
+
+        {/* Failed sources panel — full width row */}
+        {failedSources.length > 0 && (
+          <FailedSourcesPanel
+            failedSources={failedSources}
+            allSources={allSources}
+            retryingSources={retryingSources}
+            expanded={failedPanelExpanded}
+            onToggle={() => setFailedPanelExpanded(v => !v)}
+            onRetryOne={handleRetrySource}
+            onRetryAll={handleRetryAllFailed}
+          />
+        )}
 
         {/* Clickable trending tags */}
         {trending.length > 0 && (
@@ -684,6 +821,20 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
             <div>
               {showAddSource ? (
                 <div className="bg-base-200 border border-base-300 rounded-xl overflow-hidden">
+                  {availableRegions.length > 0 && (
+                    <div className="px-3 pt-3 pb-2 border-b border-base-300">
+                      <select
+                        value={addSourceRegion ?? ''}
+                        onChange={e => { setAddSourceRegion(e.target.value || null); setAddSourceQuery(''); }}
+                        className="w-full text-xs bg-base-100 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                      >
+                        <option value="">Todas las regiones</option>
+                        {availableRegions.map(r => (
+                          <option key={r} value={r}>{REGION_LABELS[r] || r}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="relative p-3 border-b border-base-300">
                     <input
                       type="text"
@@ -712,14 +863,14 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                         </button>
                       ))
                     ) : (
-                      <div className="px-3 py-4 text-center text-[11px] text-base-content/40">
+            <div className="px-3 py-4 text-center text-[11px] text-base-content/40 h-full flex items-center justify-center">
                         {addSourceQuery ? 'Sin resultados' : 'Todas las fuentes ya están agregadas'}
                       </div>
                     )}
                   </div>
                   <div className="border-t border-base-300 px-3 py-2">
                     <button
-                    onClick={() => { play('overlay.close'); setShowAddSource(false); setAddSourceQuery(''); }}
+                    onClick={() => { play('overlay.close'); setShowAddSource(false); setAddSourceQuery(''); setAddSourceRegion(null); }}
                     className="text-[11px] text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
                     >
                       Cancelar
@@ -776,6 +927,68 @@ function NavBar({ onBack }: { onBack: () => void }) {
   );
 }
 
+function FailedSourcesPanel({ failedSources, allSources, retryingSources, expanded, onToggle, onRetryOne, onRetryAll }: {
+  failedSources: SourceResult[];
+  allSources: SourceFeed[];
+  retryingSources: Set<string>;
+  expanded: boolean;
+  onToggle: () => void;
+  onRetryOne: (sourceKey: string) => void;
+  onRetryAll: () => void;
+}) {
+  const anyRetrying = retryingSources.size > 0;
+  return (
+    <div className="rounded-xl border border-error/20 bg-error/5 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-error shrink-0">
+          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span className="text-[11px] text-error/80 font-medium">
+          {failedSources.length} {failedSources.length === 1 ? 'fuente falló' : 'fuentes fallaron'}
+        </span>
+        <div className="flex items-center gap-2 ml-auto">
+          <button onClick={onToggle} className="text-[10px] text-base-content/50 hover:text-base-content cursor-pointer transition-colors">
+            {expanded ? 'Ocultar' : 'Detalles'}
+          </button>
+          <button
+            onClick={onRetryAll}
+            disabled={anyRetrying}
+            className="text-[10px] text-primary hover:text-primary font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Reintentar todo
+          </button>
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-error/10 divide-y divide-error/10">
+          {failedSources.map(f => {
+            const sourceKey = allSources.find(s => s.name === f.name)?.sourceKey ?? '';
+            const retrying = retryingSources.has(sourceKey);
+            return (
+              <div key={f.name} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2">
+                <FaviconImg domain={extractHost(f.url)} />
+                <span className="text-xs text-base-content/80 truncate">{f.name}</span>
+                <span className="text-[10px] text-error/60">
+                  {f.statusCode ? `${f.statusCode} ` : ''}{f.error ?? 'Error desconocido'}
+                </span>
+                <button
+                  onClick={() => { play('interaction.tap'); onRetryOne(sourceKey); }}
+                  disabled={retrying}
+                  className="ml-auto shrink-0 text-[10px] text-primary hover:text-primary font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {retrying ? (
+                    <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 border border-primary border-t-transparent rounded-full animate-spin" /> Retry</span>
+                  ) : 'Reintentar'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActiveFilter }: {
   sourceResult: SourceResult;
   articles: Article[];
@@ -784,14 +997,13 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
   hasActiveFilter: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-base-200 border border-base-300 overflow-hidden">
-      <div className="px-3 py-2.5 border-b border-base-300 flex items-center gap-1.5">
+    <div className="rounded-xl bg-base-200 border border-base-300 overflow-hidden min-h-[473px] h-full flex flex-col">
+      <div className="px-3 py-2.5 border-b border-base-300 flex items-center gap-1.5 flex-shrink-0">
         <FaviconImg domain={extractHost(sourceResult.url)} />
         <span className="text-sm font-semibold truncate text-base-content">{sourceResult.name}</span>
-        <span className="shrink-0 text-[10px] text-base-content/40 ml-auto">{articles.length} artículos</span>
         <button
           onClick={() => { play('interaction.tap'); onRemove(sourceResult.name); }}
-          className="shrink-0 p-1 rounded-md text-base-content/30 hover:text-error hover:bg-base-300 transition-colors cursor-pointer"
+          className="shrink-0 p-1 rounded-md text-base-content/30 hover:text-error hover:bg-base-300 transition-colors cursor-pointer ml-auto"
           title="Quitar fuente"
           aria-label={`Quitar ${sourceResult.name}`}
         >
@@ -800,39 +1012,72 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
           </svg>
         </button>
       </div>
-      <div className="divide-y divide-base-300 max-h-80 overflow-y-auto">
+      <div className="relative flex-1">
         {articles.length > 0 ? (
-          articles.map((a, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-1 group hover:bg-base-300/50 transition-colors"
-            >
-              <button
-                onClick={() => { play('interaction.tap'); window.open(a.link, '_blank', 'noopener,noreferrer'); }}
-                className="flex-1 text-left min-w-0 px-3 py-2 cursor-pointer"
-              >
-                <p className="text-xs text-base-content/80 leading-snug line-clamp-2 group-hover:text-base-content transition-colors">
-                  {a.title}
-                </p>
-              </button>
-              <button
-                onClick={(e) => { play('interaction.tap'); e.stopPropagation(); onOpenArticle(a); }}
-                className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/40 hover:text-base-content transition-all cursor-pointer"
-                title="Leer en ventana flotante"
-                aria-label="Leer en modal"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-                </svg>
-              </button>
+          <div className="max-h-[400px] overflow-y-auto h-full">
+            <div className="divide-y divide-base-300">
+              {articles.map((a, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-1 group hover:bg-base-300 transition-colors"
+                >
+                  <button
+                    onClick={() => { play('interaction.tap'); window.open(a.link, '_blank', 'noopener,noreferrer'); }}
+                    className="flex-1 text-left min-w-0 px-3 py-2 cursor-pointer"
+                  >
+                    <p className="text-xs text-base-content leading-snug line-clamp-2">
+                      {a.title}
+                    </p>
+                  </button>
+                  <button
+                    onClick={(e) => { play('interaction.tap'); e.stopPropagation(); onOpenArticle(a); }}
+                    className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/40 hover:text-base-content/80 transition-all cursor-pointer"
+                    title="Leer en ventana flotante"
+                    aria-label="Leer en modal"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
             </div>
-          ))
-          ) : (
-            <div className="px-3 py-4 text-center text-[11px] text-base-content/40">
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full py-8 px-4 text-center">
+            <p className="text-xs text-base-content/40">
               {hasActiveFilter ? 'Sin coincidencias' : 'Sin artículos disponibles'}
-            </div>
-          )}
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="px-3 py-1.5 border-t border-base-300 text-[10px] text-base-content/50 flex items-center justify-between gap-2 flex-shrink-0">
+        <span className="text-base-content/40">
+          {articles.length} artículos
+        </span>
+        <div className="flex items-center gap-2 min-w-0">
+          <a
+            href={`https://${extractHost(sourceResult.url)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => play('interaction.tap')}
+            className="hover:text-base-content underline underline-offset-2 transition-colors truncate"
+          >
+            {extractHost(sourceResult.url)}
+          </a>
+          <span className="text-base-content/20">·</span>
+          <a
+            href={sourceResult.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => play('interaction.tap')}
+            className="hover:text-base-content underline underline-offset-2 transition-colors truncate"
+            title={sourceResult.url}
+          >
+            Feed RSS
+          </a>
+        </div>
       </div>
     </div>
   );
