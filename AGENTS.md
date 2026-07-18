@@ -42,6 +42,7 @@ src/
       emergency.ts           # Sismos (server-cached 5 min)
       holidays.ts            # Chilean holidays (server-cached 30 min)
       article.ts             # Article proxy via cheerio (server-cached 10 min per URL)
+      cron.ts                # Cache pre-warming cron endpoint (sports, youtube, trends) — Bearer auth
       radio-stations.ts      # Radio stations from radio-browser.info + json-teles fallback (server-cached 1 hour)
   components/
     layout/
@@ -58,6 +59,8 @@ src/
       FaviconImg.tsx          # Favicon image helper
       ChileMap.tsx            # Chile region map for source filtering
       AllSourcesPage.tsx      # Full sources list page
+      chile-outline.ts        # Chile SVG outline data for ChileMap
+    Emoji.tsx                 # Root-level emoji rendering component
     tv/
       ClientTV.tsx            # TV orchestrator (state management, client:load)
       ChannelSelector.tsx     # Category filter bar
@@ -67,7 +70,6 @@ src/
       ClientRadios.tsx        # Client wrapper (client:load)
       RadioPlayer.tsx         # Boombox-style radio player (hls.js loaded per-play)
     widgets/
-      ClientTrending.tsx       # Trending tags client wrapper (client:load)
       TrendingTags.tsx         # Tag chips
       FinanceWidget.tsx        # UF, USD, EUR, IPC, UTM (client:visible)
       ThemeSwitcher.tsx        # Theme selector dropdown (client:visible)
@@ -83,10 +85,11 @@ src/
       EmergencyAlertBar.tsx    # Auto-scrolling alert ticker bar
       HolidaysWidget.tsx       # Chilean holidays calendar (client:visible)
       FiestasCountdown.tsx     # Fiestas Patrias countdown (client:visible)
+      EmojiCard.tsx           # Card component for FiestasCountdown (client:visible)
       RouteMap.tsx             # Transit route map component (client:visible)
       ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
   lib/
-    cache.ts                 # Shared server-side in-memory cache utility
+    cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch
     channels.ts              # Channel fetch + cache logic
     feeds-database.json      # @generated local fallback of ~2056 active/verified RSS feeds (regenerate via `npm run update-feeds`)
     stops-database.json      # @generated RED bus routes + stops from DTPM GTFS (regenerate via `npm run update-stops`)
@@ -94,12 +97,30 @@ src/
     rss.ts                   # RSS parser + feeds DB loader (local-first fallback: feeds-database.json → async GitHub raw → CDN)
     clustering.ts            # Pure functions: extractKeywords, clusterArticles, extractTrendingFromArticles (server + client; code-split via dynamic import in ClientNewsFeed)
     radios.ts                # Radio station data + extraction
+    sound.ts                 # Web Audio API sound engine — oscillator + noise synthesis
     transport.ts             # City configs, stop predictions, Metro API, POPULAR_STOPS list
     ua.ts                    # BROWSER_UA constant (shared by rss.ts + radios.ts, client-safe)
+    backgrounds.ts            # Hero background images data
+    emoji.ts                  # Emoji-to-SVG-path helper + text splitter
+    festivities.ts            # Date-range-based festivity/theming logic
+    idb-cache.ts              # IndexedDB client-side caching utility (idbGet/idbSet/cacheGet/cacheSet)
+    rate-limit.ts             # In-memory sliding window rate limiter
+    sections.ts               # Section ID/label constants for nav
+    storage.ts                # localStorage JSON get/set helpers
+    url.ts                    # extractHost() URL helper
+    url-validator.ts          # SSRF protection / private IP validation
+    jobs/
+      index.ts                # Job fetching orchestration
+      types.ts                # Job/JobSource type definitions
+      sources/
+        getonbrd.ts           # Getonboard.cl scraper
+        workanywhere.ts       # Workanywhere.com scraper
+        remotive.ts           # Remotive.com scraper
   scripts/
     update-feeds-db.mjs      # Fetches awesome-chilean-rss DB and regenerates src/lib/feeds-database.json
     update-stops-db.mjs      # Downloads DTPM GTFS and regenerates src/lib/stops-database.json
     update-holidays-db.mjs   # Fetches nager.at API and regenerates src/lib/holidays.json
+    download-emoji-svgs.mjs  # Downloads Twemoji SVGs for FiestasCountdown card collection
   styles/
     global.css               # Tailwind + DaisyUI base styles + scrollbar
 ```
@@ -129,6 +150,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/radio-stations`             | 1 hour | `{ stations }` — **fallback only** (ClientRadios fetches radio-browser.info directly)                                   |
 | `GET /api/jobs`                       | 1 hour | `{ jobs }` — Job listings from multiple sources                                                                         |
 | `GET /api/spotify`                    | 30 min | `{ tracks }` — Spotify Chile top tracks                                                                                 |
+| `GET /api/cron`                       | —      | Cache pre-warming (sports, youtube, trends) — Bearer auth via `CRON_SECRET`                                              |
 
 ## Architecture & Conventions
 
@@ -322,11 +344,11 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 
 ## Sound System (Web Audio API)
 
-Module-level singleton using raw Web Audio API (no library). Exports `play(role)`, `setMuted()`, `setVolume()`, `getConfig()`, `toggleMuted()`, `cleanup()`.
+Module-level singleton using raw Web Audio API (no library). Exports `play(role)`, `toggleMuted()`, `isMuted()`.
 
 ### Implementation
 
-- `src/lib/sound.ts` — Self-contained ~140 lines: oscillator + noise synthesis, no external imports, 17 sound roles (tap, toggle, confirm, overlay open/close, navigation, notifications, hero effects, etc.)
+- `src/lib/sound.ts` — Self-contained ~146 lines: oscillator + noise synthesis, no external imports, 20 sound roles (interaction.tap, interaction.subtle, interaction.toggle, interaction.confirm, navigation.forward/backward/tab, notification.info/success/warning/error, overlay.open/close/expand/collapse, hero.complete/milestone, media.volume/play/stop)
 - AudioContext created lazily on first `play()` call (browser policy)
 - Default volume: 0.5
 - Triangle wave + bandpass-filtered noise for crisp, tactile feedback (same character as old crisp pack)
@@ -344,6 +366,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 - **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate
   - Critical (rAF): `/api/emergency`
   - Deferred (idle): `/api/trends`, `/api/transport`, `/api/youtube`, `/api/sports`
+  - Scheduled: `/api/cron` (external cron job for persistent cache warming)
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)
 - **ClientNewsFeed** hydrates at idle (`client:idle`) instead of eagerly (`client:load`)
 - All 35 DaisyUI themes are bundled (no reduction — user preference)
@@ -353,7 +376,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 - **Plataforma**: Cloudflare Pages Functions (SSR), deploy automático via Git integration
 - **Build command**: `npm run build && node scripts/post-build-pages.mjs`
 - **Adapter**: `@astrojs/cloudflare` v14+, `mode: 'directory'`, `output: 'server'`
-- **`nodejs_compat`** flag activado en dashboard de Pages (requerido para KV)
+- **`nodejs_compat`** flag activado en dashboard de Pages
 
 ### Post-build (`scripts/post-build-pages.mjs`)
 
@@ -364,12 +387,6 @@ El build de Astro genera `dist/server/` + `dist/client/`. El script reestructura
 3. `client/*` → `dist/` (merge de assets estáticos)
 4. Elimina `dist/_worker.js/wrangler.json` (conflicto con ASSETS binding de Pages)
 5. Elimina `.wrangler/` (apunta al `server/` eliminado)
-
-### KV Bindings (dashboard de Pages)
-
-| Binding | Nombre KV |
-|---------|-----------|
-| `KV_CACHE` | Cache de API routes |
 
 ### Notas
 
