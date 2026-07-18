@@ -229,18 +229,36 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     </script>
 
     <script>
-      // Pre-warm server cache: only endpoints fetched server-side by widgets
+      // Pre-warm server cache: all API routes, so the edge cache is hot before widgets hydrate
       (function() {
+        var critical = [
+          '/api/emergency',
+        ];
         var deferred = [
+          '/api/news?mode=inventory',
+          '/api/channels?source=json-teles',
+          '/api/channels?source=iptv-org',
+          '/api/radio-stations',
+          '/api/youtube',
+          '/api/trends',
           '/api/transport',
           '/api/sports',
+          '/api/futbol',
+          '/api/jobs',
+          '/api/spotify',
         ];
         function warm(list: string[]) {
           for (var i = 0; i < list.length; i++) {
             try { fetch(list[i]); } catch(e) {}
           }
         }
-        // Defer to idle — transport and sports are server-only (no IDB on client)
+        // Critical (rAF): emergency is above the fold
+        if ('requestAnimationFrame' in window) {
+          requestAnimationFrame(function() { warm(critical); });
+        } else {
+          warm(critical);
+        }
+        // Deferred to idle: the rest
         if ('requestIdleCallback' in window) {
           requestIdleCallback(function() { warm(deferred); }, { timeout: 5000 });
         } else {

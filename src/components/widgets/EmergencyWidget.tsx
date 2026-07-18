@@ -27,73 +27,13 @@ function getSeverity(mag: number): 'low' | 'moderate' | 'high' | 'critical' {
   return 'low';
 }
 
-// ponytail: all 3 sources are CORS-enabled — no server proxy needed
-async function fetchGaelCloud(): Promise<EmergencyItem[]> {
+// ponytail: server-side /api/emergency aggregates Gael → Boostr → USGS (CORS + edge cache)
+async function fetchEmergency(): Promise<EmergencyItem[]> {
   try {
-    const res = await fetch('https://api.gael.cloud/general/public/sismos', { signal: AbortSignal.timeout(10000) });
+    const res = await fetch('/api/emergency', { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return [];
     const data = await res.json();
-    return data
-      .filter((eq: any) => parseFloat(eq.Magnitud) >= MIN_MAGNITUDE)
-      .sort((a: any, b: any) => new Date(b.Fecha).getTime() - new Date(a.Fecha).getTime())
-      .slice(0, 10)
-      .map((eq: any) => {
-        const mag = parseFloat(eq.Magnitud);
-        const depth = parseFloat(eq.Profundidad);
-        return {
-          id: `${eq.Fecha}-${eq.RefGeografica}`, type: 'earthquake' as const,
-          title: `M ${mag.toFixed(1)} — ${eq.RefGeografica}`,
-          description: `${eq.RefGeografica}. Profundidad: ${depth} km.`,
-          time: new Date(eq.Fecha).getTime(), url: 'https://www.csn.uchile.cl/',
-          severity: getSeverity(mag), mag, place: eq.RefGeografica, depth,
-        };
-      });
-  } catch { return []; }
-}
-
-async function fetchBoostr(): Promise<EmergencyItem[]> {
-  try {
-    const res = await fetch('https://api.boostr.cl/earthquakes/recent.json', { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return [];
-    const json = await res.json();
-    if (json.status !== 'success' || !Array.isArray(json.data)) return [];
-    return json.data
-      .map((eq: any) => {
-        const mag = parseFloat(eq.magnitude);
-        if (isNaN(mag) || mag < MIN_MAGNITUDE) return null;
-        const depth = parseFloat(eq.depth.replace(' km', ''));
-        const time = new Date(`${eq.date} ${eq.hour}`).getTime();
-        if (isNaN(time)) return null;
-        return {
-          id: `${eq.date}-${eq.hour}-${eq.place}`, type: 'earthquake' as const,
-          title: `M ${mag.toFixed(1)} — ${eq.place}`,
-          description: `${eq.place}. Profundidad: ${depth} km.`,
-          time, url: eq.info || '', severity: getSeverity(mag), mag, place: eq.place, depth,
-        };
-      })
-      .filter(Boolean)
-      .sort((a: any, b: any) => b.time - a.time)
-      .slice(0, 10);
-  } catch { return []; }
-}
-
-async function fetchUSGS(): Promise<EmergencyItem[]> {
-  try {
-    const res = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson', { signal: AbortSignal.timeout(10000) });
-    const data = await res.json();
-    return data.features
-      .filter((f: any) => {
-        const place = f.properties.place || '';
-        return f.properties.mag >= MIN_MAGNITUDE && (place.toLowerCase().includes('chile') || place.toLowerCase().includes('south america'));
-      })
-      .slice(0, 20)
-      .map((f: any) => ({
-        id: f.id, type: 'earthquake' as const,
-        title: `M ${f.properties.mag.toFixed(1)} — ${f.properties.place}`,
-        description: f.properties.place, time: f.properties.time, url: f.properties.url,
-        severity: getSeverity(f.properties.mag), mag: f.properties.mag,
-        place: f.properties.place, depth: f.geometry.coordinates[2],
-      }));
+    return (data.items || []) as EmergencyItem[];
   } catch { return []; }
 }
 
@@ -144,10 +84,7 @@ export function EmergencyWidget() {
     });
 
     async function load() {
-      let eqs = await fetchGaelCloud();
-      if (eqs.length === 0) eqs = await fetchBoostr();
-      if (eqs.length === 0) eqs = await fetchUSGS();
-      eqs.sort((a, b) => b.time - a.time);
+      const eqs = await fetchEmergency();
       if (cancelled) return;
       setItems(eqs);
       setLoading(false);

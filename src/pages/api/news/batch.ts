@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { fetchSingleSource } from '../../../lib/rss';
 import type { SourceFeed } from '../../../types';
 import type { Article, SourceResult } from '../../../types';
-import { getCached, setCache } from '../../../lib/cache';
+import { getCached, setCache, edgeCacheHeaders } from '../../../lib/cache';
 import { validateFetchUrl } from '../../../lib/url-validator';
 import { checkRateLimit } from '../../../lib/rate-limit';
 
@@ -75,7 +75,7 @@ export const POST: APIRoute = async ({ request }) => {
 
       const assembled = assembleResult(results);
       return new Response(JSON.stringify(assembled), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' },
+        headers: edgeCacheHeaders(900),
       });
     }
 
@@ -84,7 +84,7 @@ export const POST: APIRoute = async ({ request }) => {
     const cached = await getCached<{ articles: Article[]; sourceResults: SourceResult[] }>(comboKey);
     if (cached) {
       return new Response(JSON.stringify(cached), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' },
+        headers: edgeCacheHeaders(900),
       });
     }
 
@@ -93,7 +93,7 @@ export const POST: APIRoute = async ({ request }) => {
     await setCache(comboKey, { articles: assembled.articles, sourceResults: assembled.sourceResults }, SOURCE_CACHE_TTL);
 
     return new Response(JSON.stringify(assembled), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' },
+      headers: edgeCacheHeaders(900),
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: 'Failed to fetch batch', articles: [], sourceResults: [] }), {

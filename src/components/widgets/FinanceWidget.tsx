@@ -132,14 +132,14 @@ function SkeletonCard() {
 function ValueCard({ item, value, date, index }: { item: ItemDef; value: number; date: string; index: number }) {
   return (
     <div
-      className="rounded-xl bg-base-200 border border-base-300 p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-md opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]"
+      className="rounded-xl bg-base-200 border border-base-300 p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-md opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards] min-w-0"
       style={{ animationDelay: `${index * 70}ms` }}
     >
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-base-content/40">{item.icon}</span>
         <span className="text-xs text-base-content/70 uppercase tracking-wider">{item.label}</span>
       </div>
-      <p className="text-2xl font-semibold text-base-content font-mono tabular-nums tracking-tight">
+      <p className="text-xl sm:text-2xl font-semibold text-base-content font-mono tabular-nums tracking-tight break-words leading-tight">
         {item.prefix}
         {value.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         {item.suffix}
@@ -213,7 +213,7 @@ export function FinanceWidget() {
   if (loading) {
     return (
       <div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           {ITEMS.map((item) => <SkeletonCard key={item.key} />)}
         </div>
         <SourceAttribution />
@@ -235,7 +235,7 @@ export function FinanceWidget() {
       {stale && (
         <p className="text-xs text-warning mb-2">Datos con posible retraso</p>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         {ITEMS.map((item, i) => {
           const indicator = data?.[item.key];
           if (!indicator?.value) return null;

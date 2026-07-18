@@ -99,9 +99,26 @@ const SKELETON_LINE_WIDTHS = ['w-full', 'w-4/5', 'w-3/4', 'w-5/6', 'w-2/3', 'w-1
 
 function LoadingSkeleton() {
   return (
+    <ResponsiveSkeleton />
+  );
+}
+
+function ResponsiveSkeleton() {
+  const [count, setCount] = useState(6);
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth < 640) setCount(1);
+      else if (window.innerWidth < 1024) setCount(2);
+      else setCount(3);
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: count }).map((_, i) => (
           <div key={i} className="rounded-xl bg-base-200 border border-base-300 overflow-hidden animate-pulse min-h-[473px]">
             <div className="px-4 py-3 border-b border-base-300 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-base-300 shrink-0" />

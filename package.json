@@ -33,11 +33,12 @@
     "tailwindcss": "^4.0.0"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "@types/leaflet": "^1.9.21",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "adm-zip": "^0.5.18",
-    "typescript": "^5.8.0",
+    "typescript": "^5.9.3",
     "yauzl": "^3.4.0"
   }
 }

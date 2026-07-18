@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { fetchChannels, fetchIPTVChannels } from '../../lib/channels';
+import { edgeCacheHeaders } from '../../lib/cache';
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -17,10 +18,7 @@ export const GET: APIRoute = async ({ request }) => {
     const categories = ['todas', ...new Set(data.channels.map((ch) => ch.category).filter(Boolean))];
 
     return new Response(JSON.stringify({ channels, categories }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=3600',
-      },
+      headers: edgeCacheHeaders(3600),
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: 'Failed to fetch channels' }), {

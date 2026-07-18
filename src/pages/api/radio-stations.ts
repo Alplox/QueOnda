@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { fetchChannels } from '../../lib/channels';
 import { extractRadios, fetchRadioBrowserStations, FALLBACK_RADIOS } from '../../lib/radios';
 import type { RadioStation } from '../../lib/radios';
-import { getCached, setCache } from '../../lib/cache';
+import { getCached, setCache, edgeCacheHeaders } from '../../lib/cache';
 
 const CACHE_TTL = 60 * 60 * 1000;
 const CACHE_KEY = 'radio-stations';
@@ -18,7 +18,7 @@ export const GET: APIRoute = async () => {
   const cached = await getCached<CacheData>(CACHE_KEY);
   if (cached) {
     return new Response(JSON.stringify({ ...cached, total: cached.stations.length }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: edgeCacheHeaders(3600),
     });
   }
 
@@ -53,9 +53,6 @@ export const GET: APIRoute = async () => {
   await setCache(CACHE_KEY, { stations, tags, states, stateCounts }, CACHE_TTL);
 
   return new Response(JSON.stringify({ stations, tags, states, stateCounts, total: stations.length }), {
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=3600',
-    },
+    headers: edgeCacheHeaders(3600),
   });
 };

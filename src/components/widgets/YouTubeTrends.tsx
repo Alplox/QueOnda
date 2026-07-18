@@ -26,6 +26,35 @@ const PER_CHANNEL_OPTIONS = [1, 2, 3, 6, 10];
 const IDB_KEY = 'youtube-trends';
 const IDB_TTL = 30 * 60 * 1000; // 30 min
 
+function YouTubeSkeleton() {
+  const [count, setCount] = useState(10);
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth < 640) setCount(2);
+      else if (window.innerWidth < 768) setCount(3);
+      else if (window.innerWidth < 1024) setCount(4);
+      else setCount(5);
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-xl overflow-hidden bg-base-200 border border-base-300 animate-pulse">
+          <div className="aspect-video bg-base-300" />
+          <div className="p-2 space-y-2">
+            <div className="h-3 bg-base-300 rounded w-full" />
+            <div className="h-3 bg-base-300 rounded w-3/4" />
+            <div className="h-2.5 bg-base-300 rounded w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function VideoCard({ video, isCompact }: { video: Video; isCompact?: boolean }) {
   return (
     <a
@@ -124,7 +153,7 @@ export function YouTubeTrends() {
   const [channels, setChannels] = useState<ChannelStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [perChannel, setPerChannel] = useState(() => loadJSON<number>(PER_CHANNEL_KEY, 1));
-  const [gridLimit, setGridLimit] = useState(15);
+  const [gridLimit, setGridLimit] = useState(10);
   const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -279,20 +308,7 @@ export function YouTubeTrends() {
   }, [channels, search]);
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {Array.from({ length: 15 }).map((_, i) => (
-          <div key={i} className="rounded-xl overflow-hidden bg-base-200 border border-base-300 animate-pulse">
-            <div className="aspect-video bg-base-300" />
-            <div className="p-2 space-y-2">
-              <div className="h-3 bg-base-300 rounded w-full" />
-              <div className="h-3 bg-base-300 rounded w-3/4" />
-              <div className="h-2.5 bg-base-300 rounded w-1/2" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <YouTubeSkeleton />;
   }
 
   if (videos.length === 0) {
@@ -469,14 +485,14 @@ export function YouTubeTrends() {
               Mostrar más ({displayVideos.length - gridLimit})
             </button>
           )}
-          {gridLimit > 15 && (
-            <button onClick={() => setGridLimit(s => Math.max(s - 6, 15))}
+          {gridLimit > 10 && (
+            <button onClick={() => setGridLimit(s => Math.max(s - 6, 10))}
               className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.96] cursor-pointer">
               Mostrar menos
             </button>
           )}
-          {gridLimit > 15 && (
-            <button onClick={() => setGridLimit(15)}
+          {gridLimit > 10 && (
+            <button onClick={() => setGridLimit(10)}
               className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.96] cursor-pointer">
               Ocultar todo
             </button>

@@ -3,22 +3,15 @@ import type { Channel } from '../../types';
 import { ChannelSelector } from './ChannelSelector';
 import { ChannelGrid } from './ChannelGrid';
 import { UnifiedPlayer } from './UnifiedPlayer';
+import { MultiviewGrid } from './MultiviewGrid';
+import type { MultiviewLayout } from './MultiviewGrid';
+import { maxSlots } from './MultiviewGrid';
 import { Emoji } from '../Emoji';
 import { play } from '@/lib/sound';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 
 const IDB_KEY = 'tv-channels';
 const IDB_TTL = 24 * 60 * 60 * 1000; // 24 hours
-
-const JSON_TELES_URLS = [
-  'https://raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json',
-  'https://cdn.jsdelivr.net/gh/Alplox/json-teles@main/countries/cl.json',
-];
-
-const IPTV_ORG_URLS = [
-  'https://iptv-org.github.io/iptv/countries/cl.m3u',
-  'https://cdn.jsdelivr.net/gh/iptv-org/iptv@gh-pages/countries/cl.m3u',
-];
 
 function loadFavorites(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem('tv-favorites') || '[]')); } catch { return new Set(); }
@@ -28,23 +21,11 @@ function saveFavorites(favs: Set<string>) {
   localStorage.setItem('tv-favorites', JSON.stringify([...favs]));
 }
 
-async function fetchJSON(urls: string[]): Promise<any> {
-  for (const url of urls) {
-    try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (r.ok) return await r.json();
-    } catch {}
-  }
-  return null;
-}
-
-async function fetchText(urls: string[]): Promise<string | null> {
-  for (const url of urls) {
-    try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (r.ok) return await r.text();
-    } catch {}
-  }
+async function fetchChannelsApi(source: 'json-teles' | 'iptv-org'): Promise<{ channels: Channel[]; categories: string[] } | null> {
+  try {
+    const r = await fetch(`/api/channels?source=${source}`, { signal: AbortSignal.timeout(10000) });
+    if (r.ok) return await r.json();
+  } catch {}
   return null;
 }
 
@@ -69,6 +50,20 @@ export function ClientTV() {
   const [textInput, setTextInput] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+
+  // Multiview state
+  const [viewMode, setViewMode] = useState<'single' | 'multiview'>(() => {
+    try { return localStorage.getItem('tv-view-mode') === 'multiview' ? 'multiview' : 'single'; } catch { return 'single'; }
+  });
+  const [multiviewLayout, setMultiviewLayout] = useState<MultiviewLayout>(() => {
+    try { const v = localStorage.getItem('tv-multiview-layout'); return v === '2x3' || v === '3x3' || v === '1x3' ? v : '2x2'; } catch { return '2x2'; }
+  });
+  const [multiviewSlots, setMultiviewSlots] = useState<Array<{ channel: Channel; signalIndex: number }>>(() => {
+    try { return JSON.parse(localStorage.getItem('tv-multiview-slots') || '[]'); } catch { return []; }
+  });
+  const [focusedSlot, setFocusedSlot] = useState<number | null>(null);
+  const multiviewGridRef = useRef<HTMLDivElement>(null);
+  const dragChannelRef = useRef<{ ch: Channel; ghost: HTMLElement; pointerId: number } | null>(null);
 
   playerRef.current = player;
   autoPipRef.current = autoPipEnabled;
@@ -212,42 +207,14 @@ export function ClientTV() {
       setLoading(false);
     });
 
-    // Phase 1: background fetch → update
+    // Phase 1: background fetch → update (server-cached endpoint)
     async function loadChannels() {
-      if (source === 'iptv-org') {
-        const text = await fetchText(IPTV_ORG_URLS);
-        if (cancelled) return;
-        // ponytail: reuses parseCustomM3U from this component (same M3U format)
-        const channels = text ? parseCustomM3U(text) : [];
-        const cats = ['todas', ...new Set(channels.map((c) => c.category).filter(Boolean))];
-        idbSet(idbKey, { channels, categories: cats }, IDB_TTL);
-        setChannels(channels);
-        setCategories(cats);
-      } else {
-        const data = await fetchJSON(JSON_TELES_URLS);
-        if (cancelled) return;
-        const raw: Channel[] = data?.channels || [];
-        const channels = raw
-          .filter((ch: Channel) => ch.signals?.length > 0 || ch.youtube || ch.twitch)
-          .map((ch: Channel) => {
-            const signals = (ch.signals || []).filter((s) => s.type === 'm3u8' || s.type === 'iframe');
-            if (ch.youtube) {
-              (ch.last_youtube_livestreams || []).forEach((vid: string) => {
-                signals.push({ type: 'youtube-vod', url: `https://www.youtube.com/embed/${vid}?autoplay=1` });
-              });
-              signals.push({ type: 'youtube', url: `https://www.youtube.com/embed/live_stream?channel=${ch.youtube}&autoplay=1` });
-            }
-            if (ch.twitch) {
-              signals.push({ type: 'twitch', url: `https://player.twitch.tv/?channel=${ch.twitch}&parent=localhost&parent=queonda.vercel.app` });
-            }
-            return { ...ch, signals };
-          })
-          .filter((ch: Channel) => ch.signals.length > 0);
-        const cats = ['todas', ...new Set(channels.map((c) => c.category).filter(Boolean))];
-        idbSet(idbKey, { channels, categories: cats }, IDB_TTL);
-        setChannels(channels);
-        setCategories(cats);
-      }
+      const apiSource = source === 'iptv-org' ? 'iptv-org' : 'json-teles';
+      const data = await fetchChannelsApi(apiSource);
+      if (cancelled || !data?.channels) return;
+      idbSet(idbKey, { channels: data.channels, categories: data.categories }, IDB_TTL);
+      setChannels(data.channels);
+      setCategories(data.categories);
       if (!resolved) setLoading(false);
       resolved = true;
     }
@@ -309,12 +276,153 @@ export function ClientTV() {
     localStorage.setItem('tv-auto-pip', String(autoPipEnabled));
   }, [autoPipEnabled]);
 
+  // Persist multiview state
+  useEffect(() => { localStorage.setItem('tv-view-mode', viewMode); }, [viewMode]);
+  useEffect(() => { localStorage.setItem('tv-multiview-layout', multiviewLayout); }, [multiviewLayout]);
+  useEffect(() => { localStorage.setItem('tv-multiview-slots', JSON.stringify(multiviewSlots)); }, [multiviewSlots]);
+
+  // Truncate slots when layout shrinks
+  useEffect(() => {
+    const max = maxSlots(multiviewLayout);
+    setMultiviewSlots(prev => prev.slice(0, max));
+    setFocusedSlot(prev => prev !== null && prev >= max ? null : prev);
+  }, [multiviewLayout]);
+
+  // Multiview handlers
+  const handleToggleViewMode = useCallback(() => {
+    play('interaction.tap');
+    setViewMode(prev => {
+      const next = prev === 'single' ? 'multiview' : 'single';
+      if (next === 'single') {
+        setPlayer(null);
+        setFocusedSlot(null);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleAddToMultiview = useCallback((ch: Channel) => {
+    play('interaction.tap');
+    let removed = false;
+    let swapIndex = -1;
+    setMultiviewSlots(prev => {
+      const existing = prev.findIndex(s => s.channel.id === ch.id);
+      if (existing !== -1) {
+        removed = true;
+        return prev.filter((_, i) => i !== existing);
+      }
+      const max = maxSlots(multiviewLayout);
+      if (prev.length < max) return [...prev, { channel: ch, signalIndex: 0 }];
+      // full: replace focused slot, or last slot
+      const target = focusedSlot !== null && focusedSlot < prev.length ? focusedSlot : prev.length - 1;
+      swapIndex = target;
+      const next = [...prev];
+      next[target] = { channel: ch, signalIndex: 0 };
+      return next;
+    });
+    if (removed) setFocusedSlot(null);
+  }, [multiviewLayout, focusedSlot]);
+
+  const handleRemoveFromMultiview = useCallback((index: number) => {
+    setMultiviewSlots(prev => prev.filter((_, i) => i !== index));
+    setFocusedSlot(prev => {
+      if (prev === index) return null;
+      if (prev !== null && prev > index) return prev - 1;
+      return prev;
+    });
+  }, []);
+
+  const handleFocusSlot = useCallback((index: number) => {
+    setFocusedSlot(prev => prev === index ? null : index);
+  }, []);
+
+  const handleReorderSlots = useCallback((fromIndex: number, toIndex: number) => {
+    setMultiviewSlots(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+    setFocusedSlot(prev => {
+      if (prev === null) return null;
+      if (prev === fromIndex) return toIndex;
+      if (fromIndex < toIndex) {
+        if (prev > fromIndex && prev <= toIndex) return prev - 1;
+      } else {
+        if (prev >= toIndex && prev < fromIndex) return prev + 1;
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleMultiviewSignalChange = useCallback((index: number, signalIndex: number) => {
+    setMultiviewSlots(prev => prev.map((s, i) => i === index ? { ...s, signalIndex } : s));
+  }, []);
+
+  const handleDragChannelStart = useCallback((ch: Channel, e: React.PointerEvent) => {
+    if (viewMode !== 'multiview') return;
+    e.preventDefault();
+    const ghost = document.createElement('div');
+    ghost.className = 'fixed z-[9999] w-20 h-20 rounded-xl bg-primary/80 text-primary-content flex items-center justify-center text-[9px] font-bold shadow-2xl pointer-events-none';
+    ghost.textContent = ch.name.slice(0, 20);
+    ghost.style.left = `${e.clientX - 40}px`;
+    ghost.style.top = `${e.clientY - 40}px`;
+    document.body.appendChild(ghost);
+    dragChannelRef.current = { ch, ghost, pointerId: e.pointerId };
+
+    const onMove = (ev: PointerEvent) => {
+      if (!dragChannelRef.current) return;
+      dragChannelRef.current.ghost.style.left = `${ev.clientX - 40}px`;
+      dragChannelRef.current.ghost.style.top = `${ev.clientY - 40}px`;
+    };
+    const onUp = (ev: PointerEvent) => {
+      if (!dragChannelRef.current) return;
+      dragChannelRef.current.ghost.remove();
+      const chDropped = dragChannelRef.current.ch;
+      dragChannelRef.current = null;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const slotEl = el?.closest('[data-slot-index]');
+      if (slotEl) {
+        const idx = parseInt(slotEl.getAttribute('data-slot-index') ?? '', 10);
+        if (!isNaN(idx)) {
+          setMultiviewSlots(prev => {
+            const existing = prev.findIndex(s => s.channel.id === chDropped.id);
+            if (existing !== -1) return prev;
+            const max = maxSlots(multiviewLayout);
+            if (prev.length >= max) {
+              const next = [...prev];
+              next[idx] = { channel: chDropped, signalIndex: 0 };
+              return next;
+            }
+            if (idx <= prev.length) {
+              const next = [...prev];
+              next.splice(idx, 0, { channel: chDropped, signalIndex: 0 });
+              return next.slice(0, max);
+            }
+            return [...prev, { channel: chDropped, signalIndex: 0 }];
+          });
+          play('interaction.confirm');
+        }
+      }
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  }, [viewMode, multiviewLayout]);
+
   const handleSelect = useCallback((ch: Channel) => {
+    if (viewMode === 'multiview') {
+      handleAddToMultiview(ch);
+      return;
+    }
     setPlayer((prev) => {
       if (prev && prev.channel.id === ch.id && prev.mode === 'inline') return null;
       return { channel: ch, signalIndex: 0, mode: 'inline' };
     });
-  }, []);
+  }, [viewMode, handleAddToMultiview]);
 
   const toggleFavorite = useCallback((id: string) => {
     setFavorites((prev) => {
@@ -476,6 +584,34 @@ export function ClientTV() {
             />
           )}
 
+          {/* View mode toggle */}
+          <div className="flex items-center gap-1.5">
+            <button onClick={handleToggleViewMode}
+              className={`flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                viewMode === 'multiview'
+                  ? 'bg-primary/15 text-primary font-medium'
+                  : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+              }`}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Multi
+            </button>
+            {viewMode === 'multiview' && (
+              <div className="flex items-center gap-0.5 ml-1">
+                {(['1x3', '2x2', '2x3', '3x3'] as const).map((l) => (
+                  <button key={l} onClick={() => { play('interaction.tap'); setMultiviewLayout(l); }}
+                    className={`text-[9px] px-1.5 py-1 rounded transition-colors cursor-pointer ${
+                      multiviewLayout === l ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
+                    }`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Row label + count */}
           <div className="flex items-center justify-between px-0.5">
             <p className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider">
@@ -494,15 +630,26 @@ export function ClientTV() {
           <div key={`${selectedCat}-${showFavorites}-${search}`} className="transition-opacity duration-200">
             <ChannelGrid
               channels={filtered}
-              selectedId={player?.channel.id ?? null}
+              selectedIds={viewMode === 'multiview' ? multiviewSlots.map(s => s.channel.id) : (player ? [player.channel.id] : [])}
               favorites={favorites}
               onSelect={handleSelect}
               onToggleFavorite={toggleFavorite}
+              onDragChannelStart={viewMode === 'multiview' ? handleDragChannelStart : undefined}
             />
           </div>
 
           {/* Player */}
-          {player ? (
+          {viewMode === 'multiview' ? (
+            <MultiviewGrid
+              slots={multiviewSlots}
+              layout={multiviewLayout}
+              focusedSlot={focusedSlot}
+              onFocus={handleFocusSlot}
+              onRemove={handleRemoveFromMultiview}
+              onSignalChange={handleMultiviewSignalChange}
+              onReorder={handleReorderSlots}
+            />
+          ) : player ? (
             <UnifiedPlayer
               channel={player.channel}
               signalIndex={player.signalIndex}

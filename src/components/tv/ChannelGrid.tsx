@@ -4,13 +4,14 @@ import { play } from '@/lib/sound';
 
 interface Props {
   channels: Channel[];
-  selectedId: string | null;
+  selectedIds: string[];
   favorites: Set<string>;
   onSelect: (channel: Channel) => void;
   onToggleFavorite: (id: string) => void;
+  onDragChannelStart?: (channel: Channel, e: React.PointerEvent) => void;
 }
 
-export function ChannelGrid({ channels, selectedId, favorites, onSelect, onToggleFavorite }: Props) {
+export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onToggleFavorite, onDragChannelStart }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -65,7 +66,7 @@ export function ChannelGrid({ channels, selectedId, favorites, onSelect, onToggl
         {/* Inner padded wrapper — pushes content away from clip edges */}
         <div className="flex gap-2 py-1.5 px-1.5">
           {channels.map((ch, index) => {
-            const isSelected = ch.id === selectedId;
+            const isSelected = selectedIds.includes(ch.id);
             const isFav = favorites.has(ch.id);
 
             return (
@@ -82,7 +83,21 @@ export function ChannelGrid({ channels, selectedId, favorites, onSelect, onToggl
                     : 'bg-base-200 hover:bg-base-200 ring-1 ring-base-content/[0.07]'
                 }`}
               >
-                {/* Heart button */}
+                {/* Drag handle */}
+                {onDragChannelStart && (
+                  <button
+                    onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onDragChannelStart(ch, e); }}
+                    className="absolute -top-1 -left-1 z-20 w-4 h-4 flex items-center justify-center rounded-full bg-base-300 border border-base-300 text-base-content/50 hover:text-base-content hover:bg-base-200 cursor-grab active:cursor-grabbing touch-none transition-colors"
+                    style={{ touchAction: 'none' }}
+                    title="Arrastrar al multiview"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+                      <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                      <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                    </svg>
+                  </button>
+                )}
                 <button
                   onClick={(e) => { e.stopPropagation(); play('interaction.toggle'); onToggleFavorite(ch.id); }}
                   aria-label={isFav ? `Quitar ${ch.name} de favoritos` : `Agregar ${ch.name} a favoritos`}

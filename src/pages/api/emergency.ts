@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { dedupeFetch } from '../../lib/cache';
+import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 
 interface ChileanEarthquake {
   Fecha: string;
@@ -169,6 +169,6 @@ export const GET: APIRoute = async () => {
   });
 
   return new Response(JSON.stringify({ items }), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
+    headers: edgeCacheHeaders(300),
   });
 };

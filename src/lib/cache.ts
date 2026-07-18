@@ -50,10 +50,26 @@ export async function setCache<T>(key: string, data: T, ttlMs: number): Promise<
   const entry = { data, expiry: Date.now() + ttlMs };
   store.set(key, entry as CacheEntry<unknown>);
   try {
+    const seconds = Math.ceil(ttlMs / 1000);
     await caches.default.put(cacheReq(key), new Response(JSON.stringify(entry), {
-      headers: { 'Cache-Control': `max-age=${Math.ceil(ttlMs / 1000)}` },
+      headers: {
+        'Content-Type': 'application/json',
+        // ponytail: CDN-Cache-Control is what Cloudflare edge honors for caches.default writes
+        'Cache-Control': `public, max-age=${seconds}`,
+        'CDN-Cache-Control': `public, max-age=${seconds}, stale-while-revalidate=${seconds}`,
+      },
     }));
   } catch { /* fail silently */ }
+}
+
+// Cache headers for an API JSON Response so the Cloudflare CDN edge (not just
+// caches.default) serves subsequent hits without hitting the origin/worker.
+export function edgeCacheHeaders(ttlSeconds: number): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    'Cache-Control': `public, max-age=${ttlSeconds}`,
+    'CDN-Cache-Control': `public, max-age=${ttlSeconds}, stale-while-revalidate=${ttlSeconds}`,
+  };
 }
 
 export function dedupeFetch<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
