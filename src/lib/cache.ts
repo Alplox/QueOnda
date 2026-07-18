@@ -6,41 +6,29 @@ interface CacheEntry<T> {
 const store = new Map<string, CacheEntry<unknown>>();
 const pending = new Map<string, Promise<unknown>>();
 
-let kvBinding: any = null;
-let kvPromise: Promise<any> | null = null;
+// ponytail: Cache API replaces KV — free, unlimited, per-edge
+// L1: in-memory Map (same isolate), L2: caches.default (same datacenter)
 
-async function getKV(): Promise<any> {
-  if (kvBinding !== null) return kvBinding;
-  if (kvPromise) return kvPromise;
-  kvPromise = (async () => {
-    try {
-      const { env } = await import('cloudflare:workers');
-      kvBinding = env.KV_CACHE;
-      return kvBinding;
-    } catch {
-      kvBinding = undefined;
-      return undefined;
-    }
-  })();
-  return kvPromise;
+function cacheReq(key: string) {
+  return new Request(`https://cache.internal/${key}`);
 }
 
 export async function getCached<T>(key: string): Promise<T | null> {
   const entry = store.get(key);
   if (entry && Date.now() < entry.expiry) return entry.data as T;
 
-  const kv = await getKV();
-  if (kv) {
-    try {
-      const val = await kv.get(key, { type: 'json' });
+  try {
+    const res = await caches.default.match(cacheReq(key));
+    if (res) {
+      const val = await res.json() as CacheEntry<unknown>;
       if (val && Date.now() < val.expiry) {
-        store.set(key, val as CacheEntry<unknown>);
+        store.set(key, val);
         return val.data as T;
       }
-      if (val) store.delete(key);
-    } catch { /* fall through */ }
-  }
-  if (entry) store.delete(key);
+    }
+  } catch { /* fall through */ }
+
+  if (entry && Date.now() >= entry.expiry) store.delete(key);
   return null;
 }
 
@@ -48,28 +36,24 @@ export async function getStaleCached<T>(key: string): Promise<T | null> {
   const entry = store.get(key);
   if (entry) return entry.data as T;
 
-  const kv = await getKV();
-  if (kv) {
-    try {
-      const val = await kv.get(key, { type: 'json' });
-      if (val) {
-        store.set(key, val as CacheEntry<unknown>);
-        return val.data as T;
-      }
-    } catch { /* fall through */ }
-  }
+  try {
+    const res = await caches.default.match(cacheReq(key));
+    if (res) {
+      const val = await res.json() as CacheEntry<unknown>;
+      if (val) { store.set(key, val); return val.data as T; }
+    }
+  } catch { /* fall through */ }
   return null;
 }
 
 export async function setCache<T>(key: string, data: T, ttlMs: number): Promise<void> {
   const entry = { data, expiry: Date.now() + ttlMs };
   store.set(key, entry as CacheEntry<unknown>);
-  const kv = await getKV();
-  if (kv) {
-    try {
-      await kv.put(key, JSON.stringify(entry), { expirationTtl: Math.ceil(ttlMs / 1000) });
-    } catch { /* fail silently */ }
-  }
+  try {
+    await caches.default.put(cacheReq(key), new Response(JSON.stringify(entry), {
+      headers: { 'Cache-Control': `max-age=${Math.ceil(ttlMs / 1000)}` },
+    }));
+  } catch { /* fail silently */ }
 }
 
 export function dedupeFetch<T>(key: string, fetcher: () => Promise<T>): Promise<T> {

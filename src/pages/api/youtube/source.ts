@@ -88,9 +88,9 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   const result = { videos, channelId, name, status, errorMessage };
-  await setCache(ck, result, 5 * 60 * 1000);
+  await setCache(ck, result, 15 * 60 * 1000);
 
   return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' },
   });
 };

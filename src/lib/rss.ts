@@ -466,7 +466,9 @@ async function fetchSources(
 
 export async function fetchAllSports(): Promise<FetchResult> {
   const { categories } = await loadFeedsDatabase();
-  return fetchSources(categories.get('sports') || []);
+  // ponytail: cap at MAX_FEEDS_FALLBACK — free tier limits 50 subrequests/invocation,
+  // 177 sports feeds would exceed that on cache miss
+  return fetchSources((categories.get('sports') || []).slice(0, MAX_FEEDS_FALLBACK));
 }
 
 export async function getAllNewsSources(): Promise<SourceFeed[]> {

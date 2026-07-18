@@ -199,7 +199,7 @@ export function ClientJobList() {
       <div className="p-3">
         {loading ? (
           <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="animate-pulse rounded-xl bg-base-300/50 p-3 space-y-2">
                 <div className="h-4 bg-base-300 rounded w-3/5" />
                 <div className="h-3 bg-base-300 rounded w-2/5" />

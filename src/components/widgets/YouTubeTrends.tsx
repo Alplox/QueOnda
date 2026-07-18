@@ -281,7 +281,7 @@ export function YouTubeTrends() {
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {Array.from({ length: 10 }).map((_, i) => (
+        {Array.from({ length: 15 }).map((_, i) => (
           <div key={i} className="rounded-xl overflow-hidden bg-base-200 border border-base-300 animate-pulse">
             <div className="aspect-video bg-base-300" />
             <div className="p-2 space-y-2">

@@ -73,6 +73,6 @@ export const GET: APIRoute = async () => {
   });
 
   return new Response(JSON.stringify({ holidays: data }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' },
   });
 };

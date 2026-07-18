@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { BROWSER_UA } from '../../lib/rss';
 import * as cheerio from 'cheerio';
-import { dedupeFetch } from '../../lib/cache';
+import { getCached, setCache, dedupeFetch } from '../../lib/cache';
 import { validateFetchUrl } from '../../lib/url-validator';
 import { checkRateLimit } from '../../lib/rate-limit';
 
@@ -75,6 +75,8 @@ function extractWithCheerio($: cheerio.CheerioAPI): { bodyHtml: string; bodyText
   return { bodyHtml, bodyText };
 }
 
+const ARTICLE_CACHE_TTL = 60 * 60 * 1000;
+
 export const GET: APIRoute = async ({ url, request }) => {
   const rateLimited = checkRateLimit(request, 'article', 30);
   if (rateLimited) return rateLimited;
@@ -84,8 +86,6 @@ export const GET: APIRoute = async ({ url, request }) => {
     return new Response(JSON.stringify({ error: 'Missing url param' }), { status: 400 });
   }
 
-  // ponytail: no KV cache — each unique URL = 1 KV write, unbounded cardinality.
-  // dedupeFetch (in-memory) handles concurrent + same-session re-opens.
   const check = validateFetchUrl(target);
   if (!check.valid) {
     return new Response(JSON.stringify({ error: check.error }), { status: 400 });
@@ -95,6 +95,14 @@ export const GET: APIRoute = async ({ url, request }) => {
       error: 'google_news_unsupported',
       message: 'Google News utiliza URLs de redirect internos en su RSS (news.google.com/rss/articles/...) que no permiten acceder directamente al contenido de la fuente original. Esta es una limitación del sistema de RSS de Google News. Para leer el artículo completo, ábrelo en el sitio original.'
     }), { status: 400 });
+  }
+
+  // ponytail: Cache API — cross-isolate caching for parsed articles (avoids re-fetch + re-parse)
+  const cached = await getCached<any>(`article:${target}`);
+  if (cached) {
+    return new Response(JSON.stringify(cached), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+    });
   }
 
   try {
@@ -167,17 +175,12 @@ export const GET: APIRoute = async ({ url, request }) => {
     publishedTime,
     bodyHtml,
     body: bodyText.slice(0, 30000),
-      url: target,
-    };
-    return new Response(
-      JSON.stringify(result),
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=3600',
-        },
-      }
-    );
+    url: target,
+  };
+  await setCache(`article:${target}`, result, ARTICLE_CACHE_TTL);
+  return new Response(JSON.stringify(result), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+  });
   } catch (err) {
     return new Response(JSON.stringify({ error: 'Failed to fetch article' }), { status: 502 });
   }

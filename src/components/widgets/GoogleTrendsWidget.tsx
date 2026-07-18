@@ -61,7 +61,7 @@ export function GoogleTrendsWidget() {
   if (loading) {
     return (
       <div className="space-y-1">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl animate-pulse">
             <span className="text-xs font-mono text-base-content/70 w-5 text-right shrink-0">
               {String(i + 1).padStart(2, '0')}
