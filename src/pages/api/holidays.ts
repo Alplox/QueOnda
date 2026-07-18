@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { dedupeFetch } from '../../lib/cache';
+import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 import fallbackData from '../../lib/holidays.json';
 
 const BOOSTR_URL = 'https://api.boostr.cl/holidays.json';
@@ -73,6 +73,6 @@ export const GET: APIRoute = async () => {
   });
 
   return new Response(JSON.stringify({ holidays: data }), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' },
+    headers: edgeCacheHeaders(86400),
   });
 };

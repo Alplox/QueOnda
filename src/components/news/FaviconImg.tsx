@@ -14,6 +14,8 @@ export function FaviconImg({ domain, className }: { domain: string; className?: 
       src={src}
       alt=""
       className={className ?? 'w-4 h-4 rounded shrink-0'}
+      loading="lazy"
+      decoding="async"
       onError={() => setIndex(i => Math.min(i + 1, FALLBACKS.length - 1))}
     />
   );

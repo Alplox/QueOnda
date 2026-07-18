@@ -19,7 +19,6 @@
     "@playform/compress": "^0.2.3",
     "@tailwindcss/vite": "^4.0.0",
     "astro": "^7.0.6",
-    "astro-critters": "^2.2.1",
     "cheerio": "^1.2.0",
     "daisyui": "^5.5.23",
     "fast-xml-parser": "^5.0.0",

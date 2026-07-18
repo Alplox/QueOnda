@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { XMLParser } from 'fast-xml-parser';
-import { getCached, setCache } from '../../../lib/cache';
-import { BROWSER_UA } from '../../../lib/rss';
+import { getCached, setCache, edgeCacheHeaders } from '../../../lib/cache';
+import { BROWSER_UA, pMap } from '../../../lib/rss';
 
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 const MAX_PER_CHANNEL = 10;
@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ url }) => {
   const cached = await getCached<{ videos: any[]; status: string; errorMessage?: string }>(ck);
   if (cached) {
     return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
+      headers: edgeCacheHeaders(300),
     });
   }
 
@@ -91,6 +91,6 @@ export const GET: APIRoute = async ({ url }) => {
   await setCache(ck, result, 15 * 60 * 1000);
 
   return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' },
+    headers: edgeCacheHeaders(900),
   });
 };

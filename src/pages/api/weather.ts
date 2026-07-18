@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { dedupeFetch } from '../../lib/cache';
+import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 
 const DEFAULT_CITIES = [
   { name: 'Santiago', lat: -33.45, lon: -70.67 },
@@ -211,6 +211,6 @@ export const GET: APIRoute = async ({ url }) => {
   });
 
   return new Response(JSON.stringify({ weather }), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
+    headers: edgeCacheHeaders(600),
   });
 };

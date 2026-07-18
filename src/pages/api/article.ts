@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { BROWSER_UA } from '../../lib/rss';
 import * as cheerio from 'cheerio';
-import { getCached, setCache, dedupeFetch } from '../../lib/cache';
+import { getCached, setCache, dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 import { validateFetchUrl } from '../../lib/url-validator';
 import { checkRateLimit } from '../../lib/rate-limit';
 
@@ -101,7 +101,7 @@ export const GET: APIRoute = async ({ url, request }) => {
   const cached = await getCached<any>(`article:${target}`);
   if (cached) {
     return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+      headers: edgeCacheHeaders(3600),
     });
   }
 
@@ -179,7 +179,7 @@ export const GET: APIRoute = async ({ url, request }) => {
   };
   await setCache(`article:${target}`, result, ARTICLE_CACHE_TTL);
   return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+    headers: edgeCacheHeaders(3600),
   });
   } catch (err) {
     return new Response(JSON.stringify({ error: 'Failed to fetch article' }), { status: 502 });

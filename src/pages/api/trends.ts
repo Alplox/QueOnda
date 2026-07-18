@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { BROWSER_UA } from '../../lib/rss';
-import { getCached, getStaleCached, setCache } from '../../lib/cache';
+import { getCached, getStaleCached, setCache, edgeCacheHeaders } from '../../lib/cache';
 
 const TRENDS_SOURCES = [
   { url: 'https://trends.google.com/trending/rss?geo=CL', label: 'Google Trends RSS', daily: false },
@@ -39,7 +39,7 @@ export const GET: APIRoute = async () => {
   const cached = await getCached<{ trends: any[] }>('trends');
   if (cached) {
     return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' },
+      headers: edgeCacheHeaders(1800),
     });
   }
 
@@ -49,7 +49,7 @@ export const GET: APIRoute = async () => {
       const data = { trends: result.trends };
       await setCache('trends', data, 30 * 60 * 1000);
       return new Response(JSON.stringify(data), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' },
+        headers: edgeCacheHeaders(1800),
       });
     }
   }
@@ -58,11 +58,11 @@ export const GET: APIRoute = async () => {
   const stale = await getStaleCached<{ trends: any[] }>('trends');
   if (stale) {
     return new Response(JSON.stringify(stale), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' },
+      headers: edgeCacheHeaders(60),
     });
   }
 
   return new Response(JSON.stringify({ trends: [], error: 'No se pudo obtener tendencias de Google. Las fuentes no respondieron.' }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: edgeCacheHeaders(60),
   });
 };

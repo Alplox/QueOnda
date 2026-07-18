@@ -64,7 +64,7 @@ const STAR_EMPTY = (
 function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; playing: boolean; loading: boolean }) {
   const cdRef = useRef<HTMLDivElement>(null);
   const rotRef = useRef({ angle: 0, speed: 0, aid: 0, did: 0 });
-  const CDs = ['/cd-disc-1.png', '/cd-disc-2.png', '/cd-disc-3.png', '/cd-disc-4.png', '/cd-disc-5.png'];
+  const CDs = ['/cd-disc-1.webp', '/cd-disc-2.webp', '/cd-disc-3.webp', '/cd-disc-4.webp', '/cd-disc-5.webp'];
   const cdSrc = useMemo(() => CDs[Math.floor(Math.random() * CDs.length)], [station.id]);
 
   useEffect(() => {

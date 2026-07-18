@@ -62,12 +62,12 @@ src/
       chile-outline.ts        # Chile SVG outline data for ChileMap
     Emoji.tsx                 # Root-level emoji rendering component
     tv/
-      ClientTV.tsx            # TV orchestrator (state management, client:load)
+      ClientTV.tsx            # TV orchestrator (state management, client:visible)
       ChannelSelector.tsx     # Category filter bar
       ChannelGrid.tsx         # Channel grid with hover/selected states
       UnifiedPlayer.tsx       # Single player for both inline + PiP modes (hls.js loaded per-play)
     radio/
-      ClientRadios.tsx        # Client wrapper (client:load)
+      ClientRadios.tsx        # Client wrapper (client:visible)
       RadioPlayer.tsx         # Boombox-style radio player (hls.js loaded per-play)
     widgets/
       TrendingTags.tsx         # Tag chips
@@ -89,7 +89,7 @@ src/
       RouteMap.tsx             # Transit route map component (client:visible)
       ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
   lib/
-    cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch
+    cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch. Exports edgeCacheHeaders(ttlSeconds) for CDN-level edge caching with stale-while-revalidate
     channels.ts              # Channel fetch + cache logic
     feeds-database.json      # @generated local fallback of ~2056 active/verified RSS feeds (regenerate via `npm run update-feeds`)
     stops-database.json      # @generated RED bus routes + stops from DTPM GTFS (regenerate via `npm run update-stops`)
@@ -133,7 +133,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | ------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/news?mode=inventory`        | 15 min | `{ allSources }` — OPML source list                                                                                     |
 | `POST /api/news/batch`                | per-source 15 min | `{ articles, sourceResults }` — per-source caching (`rss:{url}`), only fetches uncached sources              |
-| `GET /api/channels?category=`         | 1 hour | `{ channels, categories }` — **no longer used by ClientTV** (fetched client-side with IDB cache)                        |
+| `GET /api/channels?category=`         | 1 hour | `{ channels, categories }` — **used by ClientTV** (server endpoint avoids CORS + subrequest limits)                        |
 | `GET /api/finance`                    | 30 min | `{ uf, dolar, euro, ipc, utm }` — **fallback only** (FinanceWidget fetches mindicador/dolarapi directly)               |
 | `GET /api/youtube`                    | 60 min | `{ videos, channelStatuses }` — YouTube Chile trending via RSS                                                          |
 | `GET /api/youtube/source?channelId=&name=` | 5 min | `{ videos, status }` — retry single channel                                                                        |
@@ -147,7 +147,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/emergency`                  | 5 min  | `{ items }` — Gael Cloud → Boostr → USGS fallback chain                                                                 |
 | `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
 | `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
-| `GET /api/radio-stations`             | 1 hour | `{ stations }` — **fallback only** (ClientRadios fetches radio-browser.info directly)                                   |
+| `GET /api/radio-stations`             | 1 hour | `{ stations }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits)                              |
 | `GET /api/jobs`                       | 1 hour | `{ jobs }` — Job listings from multiple sources                                                                         |
 | `GET /api/spotify`                    | 30 min | `{ tracks }` — Spotify Chile top tracks                                                                                 |
 | `GET /api/cron`                       | —      | Cache pre-warming (sports, youtube, trends) — Bearer auth via `CRON_SECRET`                                              |
@@ -158,18 +158,18 @@ All routes return JSON. CORS is not needed (same-origin).
 
 - Components use Astro `client:*` directives for partial hydration
 - **Above-fold** (load eagerly): `Header`, `SideIndex`, `EmergencyWidget` — `client:load`
-- **Mid-fold** (load at idle): `ClientNewsFeed`, `ClientTV`, `ClientRadios` — all `client:idle` (hydrate via `requestIdleCallback` when browser is free)
-- **Below-fold** widgets: `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `FiestasCountdown` — all `client:visible` (hydrate when scrolled into view)
+- **Mid-fold** (load at idle): `ClientNewsFeed` — `client:idle` (hydrate via `requestIdleCallback` when browser is free)
+- **Below-fold** widgets: `ClientTV`, `ClientRadios`, `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `FiestasCountdown` — all `client:visible` (hydrate when scrolled into view)
 - **hls.js** is loaded lazily via `import('hls.js')` only when a user plays an m3u8 stream, not at hydration time
 - **clustering.ts** is code-split via dynamic `import()` in ClientNewsFeed (not in main bundle)
 
 ### Data flow
 
 1. Astro SSR serves the main page shell (no SSR data — all fetching is client-driven)
-2. On page load, an inline script fires minimal `fetch()` calls via `requestIdleCallback` — critical (emergency) + deferred (trends, transport, youtube, sports). Most widgets fetch directly from client-side APIs
-3. React components mount and either fetch directly from external APIs (CORS-enabled) or from `/api/...` server endpoints
+2. On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` — critical (emergency) + deferred (news, channels, radios, youtube, trends, transport, sports, futbol, jobs, spotify). Server cache is hot before widgets hydrate
+3. React components mount and either fetch directly from external APIs (CORS-enabled) or from `/api/...` server endpoints (channels, radios, emergency use server endpoints to avoid CORS/subrequest limits)
 4. **IDB caching (IndexedDB)**: All major widgets cache results in IDB for instant reload. Pattern: render from IDB first, fetch in background, update IDB
-5. API routes remain for sources without CORS (RSS feeds, YouTube) or as fallback chains
+5. API routes serve for: CORS-blocked sources (RSS feeds, YouTube), fallback chains (emergency, weather), or client-side CORS avoidance (channels, radios)
 
 ### Component patterns
 
@@ -192,7 +192,7 @@ All routes return JSON. CORS is not needed (same-origin).
 - PiP mode: compact controls (play/pause, mute, expand, close), draggable via title bar (pointer events with `setPointerCapture`), centered signal selector
 - m3u8 playback uses `hls.js` (dynamically imported via `import('hls.js')`); iframe/YT/Twitch channels use `<iframe>` directly
 - Video starts unmuted (assumes user-initiated play); `error` state clears on `canplay`/`play` events
-- Channels fetched client-side with jsDelivr CDN fallbacks + IDB cache (24h TTL)
+- Channels fetched via `/api/channels` server endpoint (avoids CORS + subrequest limits), with IDB cache (24h TTL)
 
 ### Radio system
 
@@ -200,7 +200,7 @@ All routes return JSON. CORS is not needed (same-origin).
 - Falls back to hardcoded `FALLBACK_RADIOS` if API fails
 - Boombox layout: player panel (left) + station list (right) on desktop, stacked on mobile
 - HLS audio uses hidden `<video>` + hls.js; direct audio streams use `<audio>` element
-- Stations fetched client-side from radio-browser.info directly (CORS-enabled), with IDB cache (24h TTL)
+- Stations fetched via `/api/radio-stations` server endpoint (avoids CORS + subrequest limits), with IDB cache (24h TTL)
 
 ### News system — 6 slots with dropdown
 
@@ -310,7 +310,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 3. **`FALLBACK_RADIOS`** (terciario, hardcoded) — Cooperativa, Duna, ADN
 
 #### CD disc images (radio player animation)
-- `public/cd-disc-1.png`–`cd-disc-5.png` — PNGImg (CC BY-NC 4.0)
+- `public/cd-disc-1.webp`–`cd-disc-5.webp` — PNGImg (CC BY-NC 4.0)
   - [cd_dvd_PNG9081](https://pngimg.com/image/9081), [cd_dvd_PNG9079](https://pngimg.com/image/9079), [cd_dvd_PNG9075](https://pngimg.com/image/9075), [cd_dvd_PNG9080](https://pngimg.com/image/9080), [cd_dvd_PNG9065](https://pngimg.com/image/9065)
 - Randomly picked per station in `BoomboxDisplay` component
 
@@ -363,9 +363,10 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 
 - **`@playform/compress`** minifies HTML and JS in the build pipeline (`astro.config.mjs`; CSS compression disabled — was stripping responsive `@media` rules)
 - **Google Fonts** loaded non-blocking via `media="print" onload="this.media='all'"` (`index.astro`)
+- **Static asset caching**: `public/_headers` sets immutable cache for `/_astro/*`, `/emoji/*`, `/cd-disc-*.webp` (1 year) and 86400 for favicons/og-image
 - **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate
   - Critical (rAF): `/api/emergency`
-  - Deferred (idle): `/api/trends`, `/api/transport`, `/api/youtube`, `/api/sports`
+  - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`
   - Scheduled: `/api/cron` (external cron job for persistent cache warming)
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)
 - **ClientNewsFeed** hydrates at idle (`client:idle`) instead of eagerly (`client:load`)
@@ -383,8 +384,8 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 El build de Astro genera `dist/server/` + `dist/client/`. El script reestructura para Pages:
 
 1. `dist/server/` → `dist/_worker.js/`
-2. `entry.mjs` → `index.js` (Pages espera `_worker.js/index.js`)
-3. `client/*` → `dist/` (merge de assets estáticos)
+2. `entry.mjs` → `index.js` (Pages expects `_worker.js/index.js`)
+3. `client/*` → `dist/` (merge de assets estáticos, including `_headers`)
 4. Elimina `dist/_worker.js/wrangler.json` (conflicto con ASSETS binding de Pages)
 5. Elimina `.wrangler/` (apunta al `server/` eliminado)
 

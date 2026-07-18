@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { XMLParser } from 'fast-xml-parser';
-import { dedupeFetch } from '../../lib/cache';
+import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 
 const MINDICADOR_URL = 'https://mindicador.cl/api';
 const BOOSTR_URL = 'https://api.boostr.cl/economy/indicators.json';
@@ -137,7 +137,7 @@ export const GET: APIRoute = async () => {
 
   if (finance) {
     return new Response(JSON.stringify(finance), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' },
+      headers: edgeCacheHeaders(1800),
     });
   }
 

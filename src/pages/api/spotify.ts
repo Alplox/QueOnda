@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { dedupeFetch } from '../../lib/cache';
+import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 
 const OEMBED_URL = 'https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/37i9dQZEVXbL0GavIqMTeb';
 
@@ -16,6 +16,6 @@ export const GET: APIRoute = async () => {
   });
 
   return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+    headers: edgeCacheHeaders(3600),
   });
 };

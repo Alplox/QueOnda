@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import stopsDb from '../../lib/stops-database.json';
 import { BROWSER_UA } from '../../lib/rss';
-import { getCached, setCache } from '../../lib/cache';
+import { getCached, setCache, edgeCacheHeaders } from '../../lib/cache';
 import { LINE_COLORS, fetchStopPredictions } from '../../lib/transport';
 
 interface StopsDB {
@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ url, request }) => {
   const cached = await getCached<any>(cacheKey);
   if (cached) {
     return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
+      headers: edgeCacheHeaders(300),
     });
   }
 
@@ -77,7 +77,7 @@ export const GET: APIRoute = async ({ url, request }) => {
     const data = { routes: Object.keys(db.routes).sort() };
     await setCache(cacheKey, data, 60 * 60 * 1000);
     return new Response(JSON.stringify(data), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+      headers: edgeCacheHeaders(3600),
     });
   }
 
@@ -118,9 +118,6 @@ export const GET: APIRoute = async ({ url, request }) => {
   await setCache(cacheKey, data, 15 * 60 * 1000);
 
   return new Response(JSON.stringify(data), {
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=300',
-    },
+      headers: edgeCacheHeaders(3600),
   });
 };

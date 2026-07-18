@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCached, setCache, dedupeFetch } from '../../lib/cache';
+import { getCached, setCache, dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 import { fetchAllSports, deduplicateArticles } from '../../lib/rss';
 import type { SourceResult } from '../../types';
 
@@ -25,7 +25,7 @@ export const GET: APIRoute = async () => {
   const cached = await getCached<FutbolResponse>('futbol');
   if (cached) {
     return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
+      headers: edgeCacheHeaders(600),
     });
   }
 
@@ -53,6 +53,6 @@ export const GET: APIRoute = async () => {
   await setCache('futbol', data, CACHE_TTL);
 
   return new Response(JSON.stringify(data), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
+    headers: edgeCacheHeaders(600),
   });
 };

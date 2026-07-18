@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { XMLParser } from 'fast-xml-parser';
-import { getCached, setCache } from '../../lib/cache';
+import { getCached, setCache, edgeCacheHeaders } from '../../lib/cache';
 import { BROWSER_UA, pMap } from '../../lib/rss';
 import { fetchChannels } from '../../lib/channels';
 
@@ -17,7 +17,7 @@ export const GET: APIRoute = async () => {
   const cached = await getCached<{ videos: any[]; channelStatuses: { id: string; name: string; status: string; count: number }[] }>(CACHE_KEY);
   if (cached) {
     return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' },
+      headers: edgeCacheHeaders(1800),
     });
   }
 
@@ -29,7 +29,8 @@ export const GET: APIRoute = async () => {
       if (a.category === 'news' && b.category !== 'news') return -1;
       if (a.category !== 'news' && b.category === 'news') return 1;
       return 0;
-    });
+    })
+    .slice(0, 40);
 
   const statusMap = new Map<string, { status: string; count: number; errorMessage?: string }>();
   for (const t of targets) {
@@ -116,6 +117,6 @@ export const GET: APIRoute = async () => {
   await setCache(CACHE_KEY, result, 60 * 60 * 1000);
 
   return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+    headers: edgeCacheHeaders(3600),
   });
 };

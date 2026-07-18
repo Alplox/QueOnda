@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { fetchAllSports, deduplicateArticles } from '../../lib/rss';
-import { getCached, setCache, dedupeFetch } from '../../lib/cache';
+import { getCached, setCache, dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 import type { SourceResult, Article } from '../../types';
 
 interface SportArticle {
@@ -21,7 +21,7 @@ export const GET: APIRoute = async () => {
   const cached = await getCached<SportsResponse>('sports');
   if (cached) {
     return new Response(JSON.stringify(cached), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
+      headers: edgeCacheHeaders(600),
     });
   }
 
@@ -39,10 +39,7 @@ export const GET: APIRoute = async () => {
     await setCache('sports', data, 30 * 60 * 1000);
 
     return new Response(JSON.stringify(data), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=1800',
-      },
+      headers: edgeCacheHeaders(1800),
     });
   } catch {
     return new Response(JSON.stringify({ articles: [], sourceResults: [], totalSources: 0, displayedSources: 0 }), {
