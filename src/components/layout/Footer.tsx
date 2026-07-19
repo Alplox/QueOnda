@@ -33,7 +33,7 @@ export function Footer() {
         {/* Background image */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: 'url(/img-footer.avif)' }}
+          style={{ backgroundImage: 'url(/img-footer.webp)' }}
           aria-hidden="true"
         />
         {/* Dark overlay for readability */}
