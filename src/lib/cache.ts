@@ -3,6 +3,7 @@ interface CacheEntry<T> {
   expiry: number;
 }
 
+const cache = (caches as CacheStorage & { default: Cache }).default;
 const store = new Map<string, CacheEntry<unknown>>();
 const pending = new Map<string, Promise<unknown>>();
 
@@ -18,7 +19,7 @@ export async function getCached<T>(key: string): Promise<T | null> {
   if (entry && Date.now() < entry.expiry) return entry.data as T;
 
   try {
-    const res = await caches.default.match(cacheReq(key));
+    const res = await cache.match(cacheReq(key));
     if (res) {
       const val = await res.json() as CacheEntry<unknown>;
       if (val && Date.now() < val.expiry) {
@@ -37,7 +38,7 @@ export async function getStaleCached<T>(key: string): Promise<T | null> {
   if (entry) return entry.data as T;
 
   try {
-    const res = await caches.default.match(cacheReq(key));
+    const res = await cache.match(cacheReq(key));
     if (res) {
       const val = await res.json() as CacheEntry<unknown>;
       if (val) { store.set(key, val); return val.data as T; }
@@ -51,7 +52,7 @@ export async function setCache<T>(key: string, data: T, ttlMs: number): Promise<
   store.set(key, entry as CacheEntry<unknown>);
   try {
     const seconds = Math.ceil(ttlMs / 1000);
-    await caches.default.put(cacheReq(key), new Response(JSON.stringify(entry), {
+    await cache.put(cacheReq(key), new Response(JSON.stringify(entry), {
       headers: {
         'Content-Type': 'application/json',
         // ponytail: CDN-Cache-Control is what Cloudflare edge honors for caches.default writes

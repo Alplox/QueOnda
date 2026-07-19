@@ -310,8 +310,11 @@ export function ClientNewsFeed() {
 
   async function fetchSingleSourceFeed(source: SourceFeed): Promise<{ articles: Article[]; error: string | null }> {
     const idbKey = `news-source:${source.sourceKey}`;
-    // Try IDB first for instant slot render
-    const cached = await idbGet<{ articles: Article[]; error: string | null }>(idbKey);
+    // ponytail: 3s IDB timeout — Edge Tracking Prevention can hang indexedDB.open()
+    const cached = await Promise.race([
+      idbGet<{ articles: Article[]; error: string | null }>(idbKey),
+      new Promise<null>(r => setTimeout(() => r(null), 3000)),
+    ]);
     if (cached?.data) return cached.data;
 
     try {
@@ -319,6 +322,7 @@ export function ClientNewsFeed() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sources: [{ url: source.url, name: source.name }] }),
+        signal: AbortSignal.timeout(15000),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Error');
@@ -475,7 +479,8 @@ export function ClientNewsFeed() {
     if (addedSource) {
       const result = await fetchSingleSourceFeed(addedSource);
       setSlots(prev => {
-        const idx = prev.findIndex(s => s.source?.sourceKey === addedSource!.sourceKey && s.loading);
+        // ponytail: don't require s.loading — applyBatchResults can clear it before we resolve
+        const idx = prev.findIndex(s => s.source?.sourceKey === addedSource!.sourceKey);
         if (idx === -1) return prev;
         const next = [...prev];
         next[idx] = { ...next[idx], articles: result.articles, loading: false, error: result.error };

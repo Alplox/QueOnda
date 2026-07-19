@@ -27,7 +27,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(!focused);
   const [showControls, setShowControls] = useState(false);
-  const controlsTimer = useRef<ReturnType<typeof setTimeout>>();
+  const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const mountedRef = useRef(false);
 
   const signals = channel.signals.filter(s => isPlayable(s.type));
@@ -136,7 +136,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
   const handleFullscreen = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     play('overlay.expand');
-    const el = videoRef.current?.parentElement;
+    const el = e.currentTarget.closest('.relative.rounded-xl');
     if (!el) return;
     if (document.fullscreenElement) document.exitFullscreen();
     else el.requestFullscreen();
@@ -219,30 +219,34 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
       </div>
 
       {/* Bottom controls */}
-      <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/95 via-neutral/50 to-transparent px-1.5 pb-1 pt-6 transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/95 via-neutral/50 to-transparent px-1.5 pb-1 pt-6 transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'} ${!isHlsType ? 'pointer-events-none' : ''}`}>
         <div className="flex items-center justify-between gap-1">
-          <div className="flex items-center gap-0.5">
-            <button onClick={(e) => { e.stopPropagation(); togglePlay(e); }}
-              className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title={playing ? 'Pausar' : 'Reproducir'}>
-              {playing
-                ? <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                : <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-              }
-            </button>
-            <button onClick={toggleMute}
-              className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title={muted ? 'Activar sonido' : 'Silenciar'}>
-              {muted
-                ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-                : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-              }
-            </button>
+          <div className="flex items-center gap-0.5 pointer-events-auto">
+            {isHlsType && (
+              <>
+                <button onClick={(e) => { e.stopPropagation(); togglePlay(e); }}
+                  className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title={playing ? 'Pausar' : 'Reproducir'}>
+                  {playing
+                    ? <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                    : <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                  }
+                </button>
+                <button onClick={toggleMute}
+                  className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title={muted ? 'Activar sonido' : 'Silenciar'}>
+                  {muted
+                    ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+                    : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                  }
+                </button>
+              </>
+            )}
             <button onClick={handleFullscreen}
               className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title="Pantalla completa">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
             </button>
           </div>
           {hasMultipleSignals && (
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-0.5 pointer-events-auto">
               {signals.map((s, i) => (
                 <button key={i} onClick={(e) => { e.stopPropagation(); play('interaction.tap'); onSignalChange(i); }}
                   className={`text-[7px] px-1 py-0.5 rounded transition-colors cursor-pointer ${

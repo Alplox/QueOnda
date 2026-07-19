@@ -21,11 +21,13 @@ import '../styles/global.css';
 import { getTodayBg } from '../lib/backgrounds';
 import { getTodayFestivity } from '../lib/festivities';
 import { emojiToPath } from '../lib/emoji';
+import { ClientRouter } from 'astro:transitions';
 
 const hour = new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Santiago' });
+const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long', timeZone: 'America/Santiago' });
 const todayBg = getTodayBg();
 const festivity = getTodayFestivity();
-const greeting = festivity?.message ?? (Number(hour) < 12 ? 'Buenos días' : Number(hour) < 19 ? 'Buenas tardes' : 'Buenas noches');
+const greeting = festivity?.message ?? (dayOfWeek === 'Monday' && Number(hour) === 10 ? 'Se me hizo larga esta semana' : Number(hour) === 23 ? 'A trabajar con el nóctulo' : Number(hour) < 12 ? 'Buenos días' : Number(hour) < 19 ? 'Buenas tardes' : 'Buenas noches');
 
 const SITE_TITLE = '¿Qué Onda? - Chile en una sola página';
 const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más de Chile en un solo lugar. Sin anuncios, sin ruido.';
@@ -70,8 +72,9 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap" />
     </noscript>
     <script>
-      (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
+      (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);document.documentElement.classList.toggle('light-theme',getComputedStyle(document.documentElement).colorScheme.includes('light'));})();
     </script>
+    <ClientRouter />
   </head>
   <body class="bg-base-100 text-base-content min-h-screen pt-14">
     <svg style="position:absolute;width:0;height:0" aria-hidden="true">
@@ -87,7 +90,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
 
     <EmergencyWidget client:load />
 
-    <main class="max-w-7xl mx-auto px-4 py-6 space-y-8 md:space-y-12">
+    <main class="max-w-7xl mx-auto px-4 py-6 pb-56 space-y-8 md:space-y-12">
       <!-- Hero -->
       <section class="relative overflow-hidden text-center py-32 md:py-40 rounded-t-2xl">
         <div class="absolute inset-0 animate-[heroBgIn_0.8s_ease-out] will-animate">

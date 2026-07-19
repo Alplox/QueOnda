@@ -5,6 +5,7 @@ import { ArticleReader } from './ArticleReader';
 import { extractHost } from '../../lib/url';
 import { loadJSON, saveJSON } from '../../lib/storage';
 import { play } from '@/lib/sound';
+import { navigate } from 'astro:transitions/client';
 import { ChileMap } from './ChileMap';
 import { FaviconImg } from './FaviconImg';
 
@@ -486,7 +487,7 @@ export function AllSourcesPage() {
   }
 
   const handleBack = useCallback(() => {
-    window.location.href = '/';
+    navigate('/');
   }, []);
 
   const selectedCount = selected.size;

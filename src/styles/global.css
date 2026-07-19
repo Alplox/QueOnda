@@ -358,6 +358,45 @@ section[id][data-visible] h2 .letter {
   .emoji-card { --hover-tilt-opacity: 1; }
 }
 
+/* Light theme: patterns baked into .emoji-card__art background (bypasses ::after opacity) */
+.light-theme {
+
+
+  .emoji-card__art::before {  
+    background: radial-gradient(
+      circle at calc(var(--hover-tilt-x, 0.5) * 100%) calc(var(--hover-tilt-y, 0.5) * 100%),
+      rgba(0, 0, 0, 0.12) 0%,
+      rgba(0, 0, 0, 0.06) 15%,
+      rgba(0, 0, 0, 0.02) 35%,
+      transparent 80%
+    );
+  }
+
+  .emoji-card.common .emoji-card__art {
+    background:
+      conic-gradient(from 90deg at 1px 1px, hsla(40, 50%, 48%, 0.288) 25%, transparent 0) 0 0 / 12px 12px,
+      linear-gradient(135deg, var(--color-base-300), var(--color-base-200));
+  }
+
+  .emoji-card.rare .emoji-card__art {
+    background:
+      radial-gradient(circle 2.5px, hsla(210, 50%, 55%, 0.5) 90%, transparent),
+      radial-gradient(circle 2.5px, hsla(270, 45%, 52%, 0.445) 90%, transparent),
+      linear-gradient(135deg, var(--color-base-300), var(--color-base-200));
+    background-size: 14px 14px, 14px 14px, 100% 100%;
+    background-position: 0 0, 7px 7px, 0 0;
+  }
+
+  .emoji-card.epic .emoji-card__art {
+    background:
+      repeating-linear-gradient(-45deg,
+        hsla(270, 40%, 48%, 0.3) 0px, hsla(280, 35%, 52%, 0.3) 3px,
+        hsla(260, 45%, 42%, 0.3) 6px, hsla(250, 30%, 40%, 0.3) 9px,
+        hsla(280, 40%, 48%, 0.3) 12px),
+      linear-gradient(135deg, var(--color-base-300), var(--color-base-200));
+  }
+}
+
 /* Name overlay — top of art */
 .emoji-card__name-overlay {
   position: absolute;
@@ -420,7 +459,7 @@ section[id][data-visible] h2 .letter {
   justify-content: space-between;
   align-items: center;
   padding: 0.35rem 0.5rem;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
 }
 
 .emoji-card__attack-name {
@@ -522,4 +561,14 @@ input[type="range"].range-thumb::-moz-range-thumb {
   cursor: pointer;
   border: 2px solid var(--color-base-100);
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* footer */
+.footer-reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.footer-reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* Multiview fullscreen: video area fills full height instead of 16:9 */
+:fullscreen > .aspect-video {
+  aspect-ratio: unset;
+  height: 100%;
 }

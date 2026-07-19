@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { AllSourcesPage } from '../components/news/AllSourcesPage';
+import { ClientRouter } from 'astro:transitions';
 ---
 <!doctype html>
 <html lang="es-CL" data-theme="dark">
@@ -39,8 +40,9 @@ import { AllSourcesPage } from '../components/news/AllSourcesPage';
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap" />
     </noscript>
     <script>
-      (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
+      (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);document.documentElement.classList.toggle('light-theme',getComputedStyle(document.documentElement).colorScheme.includes('light'));})();
     </script>
+    <ClientRouter />
   </head>
   <body class="bg-base-100 text-base-content min-h-screen">
     <AllSourcesPage client:load />

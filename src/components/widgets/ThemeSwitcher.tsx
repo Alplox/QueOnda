@@ -49,6 +49,7 @@ export function ThemeSwitcher() {
     if (saved && THEMES.some(t => t.id === saved)) {
       setCurrent(saved);
       document.documentElement.setAttribute('data-theme', saved);
+      document.documentElement.classList.toggle('light-theme', getComputedStyle(document.documentElement).colorScheme.includes('light'));
     }
   }, []);
 
@@ -67,6 +68,7 @@ export function ThemeSwitcher() {
     play('interaction.tap');
     setCurrent(id);
     document.documentElement.setAttribute('data-theme', id);
+    document.documentElement.classList.toggle('light-theme', getComputedStyle(document.documentElement).colorScheme.includes('light'));
     localStorage.setItem('theme', id);
     setOpen(false);
   }

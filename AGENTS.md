@@ -245,6 +245,7 @@ All routes return JSON. CORS is not needed (same-origin).
   - Body text uses `text-base-content` and its opacity modifiers (`/70`, `/50`) for universal readability
   - Emergency low severity uses `bg-warning` / `border-t-warning` instead of `accent`
 - Theme switching via `data-theme` attribute on `<html>` (set by `index.astro` init script + `ThemeSwitcher`), persisted in `localStorage.theme`
+- **`.light-theme` class**: toggled on `<html>` by init script + `ThemeSwitcher` based on `getComputedStyle().colorScheme.includes('light')`. Use `.light-theme` for light-theme-specific CSS — `@media (color-scheme: light)` does NOT work because the browser evaluates it at initial render (dark default) and doesn't re-evaluate when JS changes `data-theme` dynamically.
 - DaisyUI generates all `[data-theme="..."]` CSS blocks automatically
 - DaisyUI CSS variable names: `--color-base-100/200/300`, `--color-base-content`, `--color-primary`, `--color-primary-content`
 

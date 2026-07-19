@@ -26,7 +26,7 @@ if (existsSync(clientDir)) {
   const entries = ['_astro', '.assetsignore', 'android-chrome-192x192.png',
     'android-chrome-512x512.png', 'apple-touch-icon.png', 'chile-flag.svg',
     'favicon-16x16.png', 'favicon-32x32.png', 'favicon.ico', 'og-image.webp',
-    'screenshot.jpeg', 'site.webmanifest', '_headers',
+    'screenshot.webp', 'site.webmanifest', '_headers',
     'cd-disc-1.webp', 'cd-disc-2.webp', 'cd-disc-3.webp', 'cd-disc-4.webp', 'cd-disc-5.webp', 'emoji'];
   for (const entry of entries) {
     const src = join(clientDir, entry);

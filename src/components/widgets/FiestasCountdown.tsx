@@ -366,10 +366,10 @@ const CELEBRATION_MESSAGES = [
 ];
 
 const PREP_STATUS: { threshold: number; emoji: string; text: string; color: string }[] = [
-  { threshold: 120, emoji: '🧊', text: 'Aún falta bastante', color: 'text-primary/50' },
-  { threshold: 60, emoji: '🪁', text: 'Ya se empieza a sentir septiembre', color: 'text-primary/60' },
-  { threshold: 30, emoji: '🥟', text: 'Hora de pensar en las empanadas', color: 'text-primary/70' },
-  { threshold: 15, emoji: '🔥', text: 'Prendan la parrilla', color: 'text-primary/80' },
+  { threshold: 120, emoji: '🧊', text: 'Aún falta bastante', color: 'text-base-content/50' },
+  { threshold: 60, emoji: '🪁', text: 'Ya se empieza a sentir septiembre', color: 'text-base-content/60' },
+  { threshold: 30, emoji: '🥟', text: 'Hora de pensar en las empanadas', color: 'text-base-content/70' },
+  { threshold: 15, emoji: '🔥', text: 'Prendan la parrilla', color: 'text-base-content/80' },
   { threshold: 7, emoji: '🍷', text: 'Comprando el terremoto', color: 'text-primary' },
   { threshold: 3, emoji: '💃', text: '¡Ensayando cueca!', color: 'text-primary' },
   { threshold: 1, emoji: '🇨🇱', text: '¡Mañana comienza la fiesta!', color: 'text-primary' },
