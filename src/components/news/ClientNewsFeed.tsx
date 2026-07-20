@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import type { NewsCluster, Article, SourceResult, SourceFeed, PinnedSource } from '../../types';
 import { NewsFeed } from './NewsFeed';
 import type { clusterArticles, extractTrendingFromArticles } from '../../lib/clustering';
-import { idbGet, idbSet } from '../../lib/idb-cache';
+import { idbGet, idbSet, cacheGet, cacheSet } from '../../lib/idb-cache';
 import { loadJSON, saveJSON } from '../../lib/storage';
 
 interface SlotData {
@@ -144,10 +144,10 @@ export function ClientNewsFeed() {
 
       const toFetch = builtSlots.filter(s => s.source).map(s => s.source!);
       if (toFetch.length > 0) {
-        // Try batch IDB cache for instant article render
-        idbGet<BatchCacheEntry[]>(batchCacheKey(toFetch)).then(batchCached => {
-          if (cancelled || !batchCached?.data) return;
-          const cachedMap = new Map(batchCached.data.map(e => [e.sourceKey, e]));
+        // ponytail: cacheGet (no TTL) — always serve stale articles, network revalidates
+        cacheGet<BatchCacheEntry[]>(batchCacheKey(toFetch)).then(batchCached => {
+          if (cancelled || !batchCached?.length) return;
+          const cachedMap = new Map(batchCached.map(e => [e.sourceKey, e]));
           setSlots(prev => prev.map(slot => {
             if (!slot.source) return slot;
             const entry = cachedMap.get(slot.source.sourceKey);
@@ -158,6 +158,8 @@ export function ClientNewsFeed() {
 
         fetchBatch(toFetch).then(results => {
           if (cancelled) return;
+          // ponytail: skip on total failure — preserve IDB-cached articles
+          if (results.every(r => r.error && !r.articles.length)) return;
           applyBatchResults(results);
           saveBatchToIDB(toFetch, results);
           startAutoSkip(results, builtSlots, sources);
@@ -281,7 +283,7 @@ export function ClientNewsFeed() {
         };
       });
     } catch (err) {
-      return sources.map(s => ({ name: s.name, articles: [], error: err instanceof Error ? err.message : 'Error' }));
+      return sources.map(s => ({ name: s.source || s.name, articles: [], error: err instanceof Error ? err.message : 'Error' }));
     }
   }
 
@@ -305,7 +307,7 @@ export function ClientNewsFeed() {
       articles: results[i]?.articles || [],
       error: results[i]?.error || null,
     }));
-    idbSet(batchCacheKey(sources), entries, CACHE_BATCH_TTL);
+    cacheSet(batchCacheKey(sources), entries);
   }
 
   async function fetchSingleSourceFeed(source: SourceFeed): Promise<{ articles: Article[]; error: string | null }> {
