@@ -32,10 +32,10 @@ function EmptySlot({ index }: { index: number }) {
   return (
     <div className="relative rounded-xl border-2 border-dashed border-base-300/50 flex items-center justify-center aspect-video bg-base-100/50">
       <div className="text-center pointer-events-none">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mx-auto mb-1 text-base-content/30">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mx-auto mb-1 text-base-content/50">
           <path d="M12 5v14M5 12h14" />
         </svg>
-        <p className="text-[9px] text-base-content/40">Agregar canal</p>
+        <p className="text-[9px] text-base-content/50">Agregar canal</p>
       </div>
     </div>
   );

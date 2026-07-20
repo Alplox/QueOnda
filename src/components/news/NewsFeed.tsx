@@ -244,12 +244,12 @@ export function NewsFeed({
             <h3 className="text-xs text-base-content/60 uppercase tracking-wider font-semibold">
               {activeTag ? `"${activeTag}" en medios` : 'Últimas noticias'}
             </h3>
-            <span className="text-[10px] text-base-content/30">{slotCount}/12</span>
+            <span className="text-[10px] text-base-content/50">{slotCount}/12</span>
             <div className="flex gap-0.5">
               <button
                 onClick={() => { play('interaction.toggle'); onAddSlot(); }}
                 disabled={slotCount >= 12}
-                className="p-0.5 rounded hover:bg-base-300 text-base-content/30 hover:text-base-content transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
+                className="p-0.5 rounded hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
                 title="Añadir bloque"
                 aria-label="Añadir bloque"
               >
@@ -261,7 +261,7 @@ export function NewsFeed({
               <button
                 onClick={() => { play('interaction.toggle'); onRemoveSlot(); }}
                 disabled={slotCount <= 1}
-                className="p-0.5 rounded hover:bg-base-300 text-base-content/30 hover:text-base-content transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
+                className="p-0.5 rounded hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
                 title="Quitar bloque"
                 aria-label="Quitar bloque"
               >
@@ -278,13 +278,13 @@ export function NewsFeed({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Buscar en noticias..."
-                className="w-full text-xs bg-base-300 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary transition-colors"
+                className="w-full text-xs bg-base-300 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   aria-label="Limpiar búsqueda"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-base-content/30 hover:text-base-content"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
                 >
                   <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="18" y1="6" x2="6" y2="18" />

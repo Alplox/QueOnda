@@ -343,7 +343,7 @@ export function YouTubeTrends() {
             </>
           )}
           {errorCount > 0 && <span className="text-warning"> · {errorCount} con error{emptyCount > 0 && <> · {emptyCount} sin videos hoy</>}</span>}
-          {errorCount === 0 && emptyCount > 0 && <span className="text-base-content/30"> · {emptyCount} sin videos hoy</span>}
+          {errorCount === 0 && emptyCount > 0 && <span className="text-base-content/50"> · {emptyCount} sin videos hoy</span>}
           {isRetryingAll && (
             <span className="inline-flex items-center gap-1 ml-1">
               <span className="w-3 h-3 rounded-full border-2 border-warning border-t-transparent animate-spin" />
@@ -379,7 +379,7 @@ export function YouTubeTrends() {
               <div className="p-2 border-b border-base-300 space-y-1.5">
                 <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar canal..."
-                  className="w-full px-2.5 py-1.5 text-xs bg-base-100 border border-base-300 rounded-lg outline-none focus:border-primary placeholder:text-base-content/30" />
+                  className="w-full px-2.5 py-1.5 text-xs bg-base-100 border border-base-300 rounded-lg outline-none focus:border-primary placeholder:text-base-content/50" />
                 <div className="flex gap-1.5">
                   <button onClick={() => { play('interaction.tap'); setSelectedIds(null); saveJSON(STORAGE_KEY, null); }}
                     className="flex-1 px-2 py-1 text-[10px] font-medium text-base-content bg-base-100 border border-base-300 rounded-lg hover:bg-base-300 transition-colors cursor-pointer">
@@ -417,13 +417,13 @@ export function YouTubeTrends() {
                           )}
                           {ch.status === 'empty' && (
                             <span className="shrink-0 ml-1" title="Sin videos hoy">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-base-content/30"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-base-content/50"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
                             </span>
                           )}
                           {ch.status === 'error' && (
                             <span className="shrink-0 ml-1 flex items-center gap-1" title="Error al cargar">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-warning"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
-                              <svg className={`w-3 h-3 text-base-content/30 transition-transform ${expanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                              <svg className={`w-3 h-3 text-base-content/50 transition-transform ${expanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                             </span>
                           )}
                         </button>
@@ -449,7 +449,7 @@ export function YouTubeTrends() {
                   );
                 })}
                 {filteredChannels.length === 0 && (
-                  <p className="text-[10px] text-base-content/40 text-center py-4">Sin resultados</p>
+                  <p className="text-[10px] text-base-content/50 text-center py-4">Sin resultados</p>
                 )}
               </div>
             </div>
@@ -459,12 +459,12 @@ export function YouTubeTrends() {
 
       {displayVideos.length === 0 ? (
         <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-base-content/30">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-base-content/50">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
           </svg>
           <p className="text-sm text-base-content/70">Todos los canales están desactivados</p>
-          <p className="text-[10px] text-base-content/40 mt-1">Abre el selector y activa al menos un canal para ver videos</p>
+          <p className="text-[10px] text-base-content/50 mt-1">Abre el selector y activa al menos un canal para ver videos</p>
         </div>
       ) : (
         <>

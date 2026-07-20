@@ -437,7 +437,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
       {/* Sentinel: maintains layout when player is fixed (pip mode or during FLIP animation) */}
       {(mode === 'pip' || (animating && animStyle.position === 'fixed')) && (
         <div data-tv-sentinel className="w-full rounded-xl bg-base-100 border-2 border-dashed border-base-300/50 flex items-center justify-center gap-1.5 select-none" style={{ height: inlineRectRef.current?.height ?? PIP_HEIGHT }}>
-          <span className="flex items-center gap-1.5 text-base-content/40 text-[10px]">
+          <span className="flex items-center gap-1.5 text-base-content/50 text-[10px]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <rect x="10" y="8" width="10" height="9" rx="1" />

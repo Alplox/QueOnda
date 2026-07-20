@@ -268,7 +268,7 @@ export const SlotCard = memo(function SlotCard({
             className="relative cursor-pointer"
           >
             <div className="w-12 h-12 rounded-full bg-base-300 flex items-center justify-center mb-3 mx-auto hover:bg-primary/20 hover:border-primary/50 transition-colors border-2 border-transparent">
-              <svg className="w-5 h-5 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-5 h-5 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="16" />
                 <line x1="8" y1="12" x2="16" y2="12" />
@@ -326,7 +326,7 @@ export const SlotCard = memo(function SlotCard({
               className="text-sm font-semibold text-left text-balance text-base-content cursor-pointer hover:text-base-content/80 transition-colors inline-flex items-center gap-1 min-w-0"
             >
               <span className="truncate">{selectedSource.name}</span>
-              <svg className={`shrink-0 w-3 h-3 mt-0.5 text-base-content/40 transition-transform duration-200 ${dropdownOpen || closingDropdown ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className={`shrink-0 w-3 h-3 mt-0.5 text-base-content/50 transition-transform duration-200 ${dropdownOpen || closingDropdown ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
@@ -339,7 +339,7 @@ export const SlotCard = memo(function SlotCard({
 
           <button
             onClick={() => { play('interaction.toggle'); onTogglePin(slotIndex, selectedSource); }}
-            className={`group shrink-0 p-1 rounded-md hover:bg-base-300 transition-colors cursor-pointer ${pinnedSource?.sourceKey === selectedSource.sourceKey ? 'text-primary' : 'text-base-content/30 hover:text-base-content/60'}`}
+            className={`group shrink-0 p-1 rounded-md hover:bg-base-300 transition-colors cursor-pointer ${pinnedSource?.sourceKey === selectedSource.sourceKey ? 'text-primary' : 'text-base-content/50 hover:text-base-content/60'}`}
             title={pinnedSource?.sourceKey === selectedSource.sourceKey ? 'Fijado — siempre cargado aquí' : 'Fijar a este bloque'}
             aria-label={pinnedSource?.sourceKey === selectedSource.sourceKey ? 'Desfijar' : 'Fijar'}
           >
@@ -350,7 +350,7 @@ export const SlotCard = memo(function SlotCard({
 
           <button
             onClick={handleClear}
-            className="shrink-0 p-1 rounded-md hover:bg-base-300 text-base-content/30 hover:text-error transition-colors cursor-pointer"
+            className="shrink-0 p-1 rounded-md hover:bg-base-300 text-base-content/50 hover:text-error transition-colors cursor-pointer"
             title="Vaciar slot"
             aria-label="Vaciar slot"
           >
@@ -412,7 +412,7 @@ export const SlotCard = memo(function SlotCard({
               </svg>
               <p className="text-xs text-error/60 mb-1">Error al cargar</p>
               {error && (
-                <p className="text-[10px] text-base-content/40 mb-3 max-w-[200px] truncate">{error}</p>
+                <p className="text-[10px] text-base-content/50 mb-3 max-w-[200px] truncate">{error}</p>
               )}
               <button
                 onClick={handleRetry}
@@ -440,7 +440,7 @@ export const SlotCard = memo(function SlotCard({
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderArticle(article); }}
-                      className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/40 hover:text-base-content/80 transition-all cursor-pointer"
+                      className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content/80 transition-all cursor-pointer"
                       title="Leer en ventana flotante"
                       aria-label="Leer en modal"
                     >
@@ -458,7 +458,7 @@ export const SlotCard = memo(function SlotCard({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full py-8 px-4 text-center">
-              <p className="text-xs text-base-content/40 mb-2">
+              <p className="text-xs text-base-content/50 mb-2">
                 {hasActiveFilter ? 'Sin coincidencias' : 'Vacío por ahora'}
               </p>
               {!hasActiveFilter && (
@@ -484,7 +484,7 @@ export const SlotCard = memo(function SlotCard({
         </div>
 
         <div className="px-3 py-1.5 border-t border-base-300 text-right text-[10px] text-base-content/50 flex items-center justify-between gap-2">
-          <span className="text-base-content/40">
+          <span className="text-base-content/50">
             {loading ? 'Cargando...' : error ? '' : `${articles.length} artículos`}
           </span>
           {selectedSource && (
@@ -608,7 +608,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
           value={searchQuery}
           onChange={e => onSearchChange(e.target.value)}
           placeholder="Buscar fuente..."
-          className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary transition-colors"
+          className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
         />
         <select
           value={regionFilter ?? ''}
@@ -624,7 +624,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
       </div>
       <div className="overflow-y-auto max-h-52">
         {sorted.pinned.length > 0 && (
-          <div className="px-3 pt-2 pb-1 text-[10px] text-base-content/40 uppercase tracking-wider font-semibold">
+          <div className="px-3 pt-2 pb-1 text-[10px] text-base-content/50 uppercase tracking-wider font-semibold">
             Fijados
           </div>
         )}
@@ -663,7 +663,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
                   </svg>
                 </button>
               ) : (
-                <span className="shrink-0 text-[10px] text-base-content/40 px-1 py-0.5 rounded bg-base-200/50">
+                <span className="shrink-0 text-[10px] text-base-content/50 px-1 py-0.5 rounded bg-base-200/50">
                   Slot {pinnedSlotIdx + 1}
                 </span>
               )}
@@ -690,7 +690,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
               </button>
               <button
                 onClick={() => { play('interaction.toggle'); onTogglePin(currentSlotIndex, source); onSelect(source); }}
-                className="shrink-0 p-1 rounded hover:bg-base-200 text-base-content/30 hover:text-base-content/80 transition-colors cursor-pointer"
+                className="shrink-0 p-1 rounded hover:bg-base-200 text-base-content/50 hover:text-base-content/80 transition-colors cursor-pointer"
                 title="Fijar a este bloque"
                 aria-label="Fijar"
               >
@@ -702,7 +702,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
           );
         })}
         {filteredSources.length === 0 && (
-          <div className="px-3 py-4 text-xs text-base-content/40 text-center">
+          <div className="px-3 py-4 text-xs text-base-content/50 text-center">
             {searchQuery ? 'Sin resultados' : 'No hay fuentes disponibles'}
           </div>
         )}

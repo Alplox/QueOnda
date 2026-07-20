@@ -105,7 +105,7 @@ function WeatherCard({ data, isUser, onRemove }: { data: CityWeather; isUser?: b
   return (
     <div className={`rounded-xl border p-4 relative ${isUser ? 'bg-primary/5 border-primary/30' : 'bg-base-200 border-base-300'}`}>
       {onRemove && (
-        <button onClick={onRemove} className="absolute top-1.5 right-1.5 p-0.5 rounded text-base-content/30 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer" title="Quitar ciudad">
+        <button onClick={onRemove} className="absolute top-1.5 right-1.5 min-w-[24px] min-h-[24px] flex items-center justify-center p-0.5 rounded text-base-content/50 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer" title="Quitar ciudad">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
       )}

@@ -179,7 +179,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
         )}
         <span className="text-[10px] text-white font-medium truncate flex-1 min-w-0">{channel.name}</span>
         {focused && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
-        <button onClick={handleClose} className="p-0.5 rounded text-white/60 hover:text-white hover:bg-white/15 transition-colors shrink-0" title="Quitar del multiview">
+        <button onClick={handleClose} className="min-w-[24px] min-h-[24px] flex items-center justify-center p-0.5 rounded text-white/60 hover:text-white hover:bg-white/15 transition-colors shrink-0" title="Quitar del multiview">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
       </div>

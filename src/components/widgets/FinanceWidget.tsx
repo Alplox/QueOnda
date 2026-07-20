@@ -136,7 +136,7 @@ function ValueCard({ item, value, date, index }: { item: ItemDef; value: number;
       style={{ animationDelay: `${index * 70}ms` }}
     >
       <div className="flex items-center gap-1.5 mb-1.5">
-        <span className="text-base-content/40">{item.icon}</span>
+        <span className="text-base-content/50">{item.icon}</span>
         <span className="text-xs text-base-content/70 uppercase tracking-wider">{item.label}</span>
       </div>
       <p className="text-xl sm:text-2xl font-semibold text-base-content font-mono tabular-nums tracking-tight break-words leading-tight">

@@ -530,7 +530,7 @@ export function ClientTV() {
             {/* Tab content */}
             {importMethod === 'file' && (
               <label className="flex flex-col items-center gap-2 py-6 px-4 rounded-lg border-2 border-dashed border-base-300 hover:border-primary/40 cursor-pointer transition-colors">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-base-content/40">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-base-content/50">
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                 </svg>
                 <span className="text-xs text-base-content/70">Seleccionar archivo .m3u</span>
@@ -567,7 +567,7 @@ export function ClientTV() {
               <p className="mt-3 text-[10px] text-error text-center">{importError}</p>
             )}
 
-            <p className="mt-4 text-[9px] text-base-content/40 text-center leading-relaxed">
+            <p className="mt-4 text-[9px] text-base-content/50 text-center leading-relaxed">
               Formatos soportados: M3U y M3U8. Si la URL falla por CORS, usa la opción Texto para pegar el contenido directamente.
             </p>
           </div>
@@ -664,7 +664,7 @@ export function ClientTV() {
             <div className="relative rounded-xl bg-base-100 border border-base-300">
               <div className="flex items-center gap-2.5 px-3 py-2 bg-base-100/95 backdrop-blur-sm border-b border-base-300 rounded-t-xl">
                 <div className="flex-1 min-w-0 flex items-center gap-2">
-                  <span className="text-xs text-base-content/40 font-medium">Selecciona un canal</span>
+                  <span className="text-xs text-base-content/50 font-medium">Selecciona un canal</span>
                 </div>
               </div>
               <div className="aspect-video rounded-b-xl bg-neutral flex items-center justify-center">

@@ -629,7 +629,7 @@ export function FiestasCountdown() {
             <div className="text-[11px] font-semibold text-base-content/70 mt-1 uppercase tracking-[0.2em]">
               días
             </div>
-            <div className="text-xs sm:text-sm text-base-content/40 mt-3 tabular-nums">
+            <div className="text-xs sm:text-sm text-base-content/50 mt-3 tabular-nums">
               {String(timeLeft.hours)}h <span className="mx-0.5">·</span>{' '}
               {String(timeLeft.minutes).padStart(2, '0')}m{' '}
               <span className="mx-0.5">·</span>{' '}
@@ -647,11 +647,11 @@ export function FiestasCountdown() {
               <span key={`h-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.hours).padStart(2, '0')}
               </span>
-              <span className="text-3xl sm:text-4xl align-middle text-base-content/30 mx-1">:</span>
+              <span className="text-3xl sm:text-4xl align-middle text-base-content/50 mx-1">:</span>
               <span key={`m-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.minutes).padStart(2, '0')}
               </span>
-              <span className="text-3xl sm:text-4xl align-middle text-base-content/30 mx-1">:</span>
+              <span className="text-3xl sm:text-4xl align-middle text-base-content/50 mx-1">:</span>
               <span key={`s-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.seconds).padStart(2, '0')}
               </span>

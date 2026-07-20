@@ -82,7 +82,7 @@ export function GoogleTrendsWidget() {
       <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center">
         <p className="text-sm text-base-content/70">Tendencias de Google no disponibles</p>
         {error && (
-          <p className="text-[10px] text-base-content/40 mt-1.5">{error}</p>
+          <p className="text-[10px] text-base-content/50 mt-1.5">{error}</p>
         )}
         <div className="mt-2">
           <a href="https://trends.google.com/trending?geo=CL" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')}            className="text-[10px] text-base-content/70 underline underline-offset-2 hover:text-base-content transition-colors">

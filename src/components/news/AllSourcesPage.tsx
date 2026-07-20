@@ -58,7 +58,7 @@ function SourceCheckbox({ source, checked, onChange }: {
         <FaviconImg domain={extractHost(source.siteUrl || source.url)} />
         <span className="text-xs text-base-content truncate">{source.name}</span>
       </div>
-      <span className="shrink-0 text-[10px] text-base-content/40">{extractHost(source.url)}</span>
+      <span className="shrink-0 text-[10px] text-base-content/50">{extractHost(source.url)}</span>
     </label>
   );
 }
@@ -519,9 +519,9 @@ export function AllSourcesPage() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Buscar fuentes..."
-                className="w-full text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2.5 pl-10 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary transition-colors"
+                className="w-full text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2.5 pl-10 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
               />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
@@ -588,7 +588,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 />
               ))
             ) : (
-              <div className="px-4 py-8 text-center text-xs text-base-content/40">
+              <div className="px-4 py-8 text-center text-xs text-base-content/50">
                 {searchQuery ? 'Sin resultados para esta búsqueda' : 'No hay fuentes disponibles'}
               </div>
             )}
@@ -639,7 +639,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
           >
             Cancelar
           </button>
-          <p className="text-[10px] text-base-content/40">{BATCH_CACHE_TTL_HINT}</p>
+          <p className="text-[10px] text-base-content/50">{BATCH_CACHE_TTL_HINT}</p>
         </div>
       </div>
     );
@@ -661,7 +661,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 : 'Sin resultados'}
             </h2>
             {cachedTimestamp && (
-              <p className="text-[10px] text-base-content/40">Resultados cacheados desde las {cachedTimestamp}</p>
+              <p className="text-[10px] text-base-content/50">Resultados cacheados desde las {cachedTimestamp}</p>
             )}
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -671,16 +671,16 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 value={resultsSearch}
                 onChange={e => setResultsSearch(e.target.value)}
                 placeholder="Buscar en resultados..."
-                className="w-full text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2 pl-9 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary transition-colors"
+                className="w-full text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2 pl-9 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
               />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               {resultsSearch && (
                 <button
                   onClick={() => { play('interaction.tap'); setResultsSearch(''); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-base-content/30 hover:text-base-content transition-colors cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-base-content/50 hover:text-base-content transition-colors cursor-pointer"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -721,7 +721,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
 
         {/* Filter status — below pills to avoid layout shift */}
         {hasActiveFilter && (
-          <p className="text-[10px] text-base-content/40">
+          <p className="text-[10px] text-base-content/50">
             {searchedArticles.length > 0
               ? `mostrando ${searchedArticles.length} con filtro`
               : 'ninguna coincidencia con el filtro actual'}
@@ -777,7 +777,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 Artículos por fuente
               </h3>
               {activeTag && (
-                <span className="text-[10px] text-base-content/40">
+                <span className="text-[10px] text-base-content/50">
                   filtrando por «{activeTag}»
                 </span>
               )}
@@ -842,10 +842,10 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                       value={addSourceQuery}
                       onChange={e => setAddSourceQuery(e.target.value)}
                       placeholder="Buscar fuente para agregar..."
-                      className="w-full text-sm bg-base-100 border border-base-300 rounded-lg px-3 py-2 pl-9 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary transition-colors"
+                      className="w-full text-sm bg-base-100 border border-base-300 rounded-lg px-3 py-2 pl-9 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
                       autoFocus
                     />
-                    <svg className="absolute left-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="absolute left-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="11" cy="11" r="8" />
                       <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
@@ -860,11 +860,11 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                         >
                           <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
                           <span className="truncate">{s.name}</span>
-                          <span className="shrink-0 text-[10px] text-base-content/40 ml-auto">{extractHost(s.url)}</span>
+                          <span className="shrink-0 text-[10px] text-base-content/50 ml-auto">{extractHost(s.url)}</span>
                         </button>
                       ))
                     ) : (
-            <div className="px-3 py-4 text-center text-[11px] text-base-content/40 h-full flex items-center justify-center">
+            <div className="px-3 py-4 text-center text-[11px] text-base-content/50 h-full flex items-center justify-center">
                         {addSourceQuery ? 'Sin resultados' : 'Todas las fuentes ya están agregadas'}
                       </div>
                     )}
@@ -1004,7 +1004,7 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
         <span className="text-sm font-semibold truncate text-base-content">{sourceResult.name}</span>
         <button
           onClick={() => { play('interaction.tap'); onRemove(sourceResult.name); }}
-          className="shrink-0 p-1 rounded-md text-base-content/30 hover:text-error hover:bg-base-300 transition-colors cursor-pointer ml-auto"
+          className="shrink-0 p-1 rounded-md text-base-content/50 hover:text-error hover:bg-base-300 transition-colors cursor-pointer ml-auto"
           title="Quitar fuente"
           aria-label={`Quitar ${sourceResult.name}`}
         >
@@ -1032,7 +1032,7 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
                   </button>
                   <button
                     onClick={(e) => { play('interaction.tap'); e.stopPropagation(); onOpenArticle(a); }}
-                    className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/40 hover:text-base-content/80 transition-all cursor-pointer"
+                    className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content/80 transition-all cursor-pointer"
                     title="Leer en ventana flotante"
                     aria-label="Leer en modal"
                   >
@@ -1047,14 +1047,14 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full py-8 px-4 text-center">
-            <p className="text-xs text-base-content/40">
+            <p className="text-xs text-base-content/50">
               {hasActiveFilter ? 'Sin coincidencias' : 'Sin artículos disponibles'}
             </p>
           </div>
         )}
       </div>
       <div className="px-3 py-1.5 border-t border-base-300 text-[10px] text-base-content/50 flex items-center justify-between gap-2 flex-shrink-0">
-        <span className="text-base-content/40">
+        <span className="text-base-content/50">
           {articles.length} artículos
         </span>
         <div className="flex items-center gap-2 min-w-0">

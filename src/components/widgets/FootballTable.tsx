@@ -252,7 +252,7 @@ export function FootballTable() {
       <div className="p-4 border-b border-base-300 flex items-baseline justify-between">
         <p className="text-xs text-base-content/70 uppercase tracking-wider">Fútbol chileno</p>
         {standings.length > 0 && (
-          <p className="text-[10px] text-base-content/40">{totalTeams} equipos</p>
+          <p className="text-[10px] text-base-content/50">{totalTeams} equipos</p>
         )}
       </div>
 
@@ -282,7 +282,7 @@ export function FootballTable() {
         <div className="overflow-x-auto">
           <table className="w-full text-[12px]">
             <thead>
-              <tr className="text-base-content/40 text-[10px] uppercase tracking-wider border-b border-base-300">
+              <tr className="text-base-content/50 text-[10px] uppercase tracking-wider border-b border-base-300">
                 <th className="text-left px-3 py-1.5 font-medium w-8">#</th>
                 <th className="text-left px-1 py-1.5 font-medium" colSpan={2}>Equipo</th>
                 <th className="text-center px-2 py-1.5 font-medium w-7">PJ</th>
@@ -442,7 +442,7 @@ export function FootballTable() {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 bg-base-300 rounded-lg px-3 py-1 min-w-[64px] justify-center">
                         <span className="text-sm font-bold font-mono tabular-nums text-base-content">{m.homeScore ?? '-'}</span>
-                        <span className="text-xs text-base-content/30">–</span>
+                        <span className="text-xs text-base-content/50">–</span>
                         <span className="text-sm font-bold font-mono tabular-nums text-base-content">{m.awayScore ?? '-'}</span>
                       </div>
                       <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
@@ -450,7 +450,7 @@ export function FootballTable() {
                         <span className="text-xs font-medium text-base-content truncate">{m.awayTeam}</span>
                       </div>
                     </div>
-                    <p className="text-[10px] text-base-content/40 text-center mt-1">{formatDate(m.date)}</p>
+                    <p className="text-[10px] text-base-content/50 text-center mt-1">{formatDate(m.date)}</p>
                   </div>
                 ))}
               </div>
@@ -481,7 +481,7 @@ export function FootballTable() {
                         <span className="text-xs font-medium text-base-content truncate">{m.awayTeam}</span>
                       </div>
                     </div>
-                    <p className="text-[10px] text-base-content/40 text-center mt-1">{dateStr}</p>
+                    <p className="text-[10px] text-base-content/50 text-center mt-1">{dateStr}</p>
                   </div>
                   );
                 })}
@@ -532,7 +532,7 @@ export function FootballTable() {
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderUrl(article.link); }}
-                  className="shrink-0 p-1 mr-2 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/40 hover:text-base-content/80 transition-all cursor-pointer"
+                  className="shrink-0 p-1 mr-2 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content/80 transition-all cursor-pointer"
                   title="Leer en ventana flotante"
                   aria-label="Leer en modal"
                 >

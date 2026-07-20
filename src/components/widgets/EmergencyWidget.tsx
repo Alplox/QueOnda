@@ -156,7 +156,7 @@ export function EmergencyWidget() {
             </div>
           </>
         ) : items.length === 0 ? (
-          <p className="text-xs text-base-content/40 pb-1 opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards]">
+          <p className="text-xs text-base-content/50 pb-1 opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards]">
             Sin sismos recientes (≥5.0) -{' '}
             <a
               href="https://www.sismologia.cl/"
@@ -190,7 +190,7 @@ export function EmergencyWidget() {
                         </span>
                       )}
                     </div>
-                    <span className="block text-[9px] text-base-content/40 mt-0.5">
+                    <span className="block text-[9px] text-base-content/50 mt-0.5">
                       {new Date(item.time).toLocaleDateString('es-CL', {
                         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                       })}
@@ -227,7 +227,7 @@ export function EmergencyWidget() {
                         </span>
                       )}
                     </div>
-                    <span className="block text-[9px] text-base-content/40 mt-0.5">
+                    <span className="block text-[9px] text-base-content/50 mt-0.5">
                       {new Date(item.time).toLocaleDateString('es-CL', {
                         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                       })}

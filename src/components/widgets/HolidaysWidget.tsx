@@ -155,7 +155,7 @@ export function HolidaysWidget() {
                   : 'hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] transition-colors'
               }`}
             >
-              <span className={`text-xs font-mono w-12 text-right shrink-0 ${past ? 'text-base-content/30' : 'text-base-content/70'}`}>
+              <span className={`text-xs font-mono w-12 text-right shrink-0 ${past ? 'text-base-content/50' : 'text-base-content/70'}`}>
                 {parseLocalDate(h.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
               </span>
               <div className="min-w-0 flex-1">

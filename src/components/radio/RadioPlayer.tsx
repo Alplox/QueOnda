@@ -131,7 +131,7 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => play('interaction.tap')}
-          className="mt-1 flex items-center gap-1 text-[10px] text-base-content/40 hover:text-base-content underline-offset-2 underline transition-colors"
+          className="mt-1 flex items-center gap-1 text-[10px] text-base-content/50 hover:text-base-content underline-offset-2 underline transition-colors"
         >
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -685,12 +685,12 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar radios..."
-                  className="w-full text-sm bg-base-100 border border-base-300 rounded-xl px-3 py-2 pr-8 text-base-content placeholder:text-base-content/30 focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full text-sm bg-base-100 border border-base-300 rounded-xl px-3 py-2 pr-8 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary/50 transition-colors"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => { play('interaction.subtle'); setSearchQuery(''); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/30 hover:text-base-content/70 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content/70 transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -719,7 +719,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   {activeTags.length > 0 && (
                     <button
                       onClick={() => { play('interaction.confirm'); setActiveTags([]); }}
-                      className="text-[10px] px-2 py-1 rounded-full border border-transparent text-base-content/30 hover:text-base-content/70 transition-colors"
+                      className="text-[10px] px-2 py-1 rounded-full border border-transparent text-base-content/50 hover:text-base-content/70 transition-colors"
                     >
                       Limpiar
                     </button>
@@ -742,7 +742,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   {activeState && (
                     <button
                       onClick={() => { play('interaction.confirm'); setActiveState(''); }}
-                      className="text-[10px] text-base-content/30 hover:text-base-content/70 ml-2 transition-colors"
+                      className="text-[10px] text-base-content/50 hover:text-base-content/70 ml-2 transition-colors"
                     >
                       Limpiar
                     </button>
@@ -757,10 +757,10 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                 onClick={() => { play('interaction.tap'); setFavExpanded((v) => !v); }}
                 className="w-full flex items-center justify-between px-1.5 py-1 rounded-lg hover:bg-base-100 transition-colors"
               >
-                <span className="text-[10px] text-base-content/40 font-semibold uppercase tracking-wider">
+                <span className="text-[10px] text-base-content/50 font-semibold uppercase tracking-wider">
                   Favoritos {favoriteStations.length > 0 ? `(${favoriteStations.length})` : ''}
                 </span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-base-content/30 transition-transform duration-200 ${favExpanded ? 'rotate-180' : ''}`}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-base-content/50 transition-transform duration-200 ${favExpanded ? 'rotate-180' : ''}`}>
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
@@ -781,7 +781,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-base-content/30 px-1.5 py-2 italic leading-relaxed">
+                    <p className="text-xs text-base-content/50 px-1.5 py-2 italic leading-relaxed">
                       Sin favoritos. Haz clic en ☆ para agregar.
                     </p>
                   )}
@@ -794,12 +794,12 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
             {/* Scrollable list area */}
             <div className="flex-1 max-h-[360px] min-h-[360px] overflow-y-auto -mx-1 px-1">
               <div className="sticky top-0 z-10 bg-base-200 pt-0.5 pb-1 flex items-center justify-between">
-                <p className="text-[10px] text-base-content/40 font-semibold uppercase tracking-wider px-1.5">
+                <p className="text-[10px] text-base-content/50 font-semibold uppercase tracking-wider px-1.5">
                   Todas ({otherStations.length})
                 </p>
                 <button
                   onClick={() => { play('interaction.tap'); setSortAZ((v) => !v); }}
-                  className="text-[10px] text-base-content/40 hover:text-base-content px-1.5 transition-colors"
+                  className="text-[10px] text-base-content/50 hover:text-base-content px-1.5 transition-colors"
                 >
                   {sortAZ ? 'A-Z' : 'Z-A'}
                 </button>

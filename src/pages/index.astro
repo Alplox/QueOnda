@@ -100,6 +100,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
             class="w-full h-full object-cover"
             style={`object-position: ${todayBg.focalPoint ?? 'center'}`}
             loading="eager"
+            fetchpriority="high"
           />
           <div class="absolute inset-0 bg-gradient-to-b from-base-100/30 via-base-100/50 to-base-100/80" />
         </div>
