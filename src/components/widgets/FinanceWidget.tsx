@@ -153,7 +153,7 @@ function ValueCard({ item, value, date, index }: { item: ItemDef; value: number;
 
 const SOURCES = [
   { name: 'mindicador.cl', url: 'https://mindicador.cl' },
-  { name: 'Boostr', url: 'https://docs.boostr.cl/reference/indicators' },
+  { name: 'Boostr', url: 'https://docs.boostr.cl/reference/economy-info' },
   { name: 'findic.cl', url: 'https://findic.cl' },
   { name: 'SII', url: 'https://zeus.sii.cl/admin/rss/sii_ind_rss.xml' },
   { name: 'DolarApi', url: 'https://dolarapi.com/docs/chile/' },

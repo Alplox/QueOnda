@@ -44,6 +44,7 @@ src/
       article.ts             # Article proxy via cheerio (server-cached 10 min per URL)
       cron.ts                # Cache pre-warming cron endpoint (sports, youtube, trends) — Bearer auth
       radio-stations.ts      # Radio stations from radio-browser.info + json-teles fallback (server-cached 1 hour)
+      forecast.ts            # DMC pronóstico 5 días parsing (server-cached 1 hour)
   components/
     layout/
       Header.tsx             # Fixed nav bar with section scroll links (client:load)
@@ -150,6 +151,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/radio-stations`             | 1 hour | `{ stations }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits)                              |
 | `GET /api/jobs`                       | 1 hour | `{ jobs }` — Job listings from multiple sources                                                                         |
 | `GET /api/spotify`                    | 30 min | `{ tracks }` — Spotify Chile top tracks                                                                                 |
+| `GET /api/forecast`                   | 1 hour | `{ forecasts }` — DMC pronóstico 5 días from pronostico.js (parsed client-side by WeatherWidget)                          |
 | `GET /api/cron`                       | —      | Cache pre-warming (sports, youtube, trends) — Bearer auth via `CRON_SECRET`                                              |
 
 ## Architecture & Conventions
@@ -342,6 +344,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 | Article proxy | [cheerio](https://cheerio.js.org) scraping | URL enviada por el cliente |
 | RED routes DB | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` (build-time via `update-stops-db.mjs`) |
 | Weather widget geolocation | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` |
+| Weather widget forecast | [DMC MeteoChile](https://www.meteochile.gob.cl) | `archivos.meteochile.gob.cl/portaldmc/meteochile/js/pronostico.js` — 5-day forecast for ~60 Chilean cities |
 
 ## Sound System (Web Audio API)
 

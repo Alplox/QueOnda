@@ -3,6 +3,8 @@ import { idbGet, idbSet } from '../../lib/idb-cache';
 
 const IDB_KEY = 'weather-default';
 const IDB_TTL = 10 * 60 * 1000; // 10 min
+const IDB_FORECAST_KEY = 'weather-forecast';
+const IDB_FORECAST_TTL = 60 * 60 * 1000; // 1 hour
 
 const DEFAULT_CITIES_COORDS = [
   { name: 'Santiago', lat: -33.45, lon: -70.67 },
@@ -20,6 +22,57 @@ const DEFAULT_CITIES_COORDS = [
 ];
 
 type CityWeatherData = { city: string; temp: number; feelsLike: number; humidity: number; weatherCode: number; wind: number };
+
+interface DmcForecast {
+  indice: string;
+  ciudad: string;
+  region: string;
+  fecha: string[];
+  temperatura: string[];
+  icono: string[][];
+  texto: string[][];
+}
+
+// Map our city names → DMC indice keys (for default cities, fast path)
+const CITY_TO_DMC: Record<string, string> = {
+  'Santiago': 'stgoc', 'Valparaiso': 'valpo', 'Concepcion': 'concepcion',
+  'Antofagasta': 'antofagasta', 'La Serena': 'serena', 'Temuco': 'temuco',
+  'Rancagua': 'rancagua', 'Talca': 'talca', 'Chillan': 'chillan',
+  'Puerto Montt': 'pmontt', 'Iquique': 'iquique', 'Punta Arenas': 'torres',
+};
+
+// Dynamic lookup: search forecast entries by normalized city name
+// ponytail: O(n) scan per card, n≈60 entries — trivial
+function findDmcForecast(cityName: string, forecastMap: Record<string, DmcForecast>): DmcForecast | undefined {
+  const key = CITY_TO_DMC[cityName];
+  if (key && forecastMap[key]) return forecastMap[key];
+  const norm = normalize(cityName);
+  for (const f of Object.values(forecastMap)) {
+    if (normalize(f.ciudad) === norm) return f;
+  }
+  // partial match — e.g. user "Puerto" matches "Puerto Montt"
+  for (const f of Object.values(forecastMap)) {
+    if (normalize(f.ciudad).includes(norm) || norm.includes(normalize(f.ciudad))) return f;
+  }
+  return undefined;
+}
+
+// Map DMC icon filenames → weather code for icon rendering
+const DMC_ICON_TO_CODE: Record<string, number> = {
+  'despejado.png': 0, 'despejadonoche.png': 0,
+  'parcial.png': 2, 'parcialalta.png': 2, 'parcialaltanoche.png': 2, 'parcialnoche.png': 2,
+  'cubierto.png': 3,
+  'niebla.png': 45,
+  'lluvia_debil.png': 51, 'llovizna.png': 51,
+  'lluvia.png': 61, 'chubascos.png': 80,
+  'viento3.png': 0, 'vientolluvia.png': 61,
+  'lluviaelectrica.png': 95, 'nieve.png': 71,
+};
+
+function dmcIconToCode(icon: string): number {
+  const filename = icon.split('/').pop() ?? icon;
+  return DMC_ICON_TO_CODE[filename] ?? 2;
+}
 
 async function fetchOpenMeteoDirect(cities: { name: string; lat: number; lon: number }[]): Promise<Record<string, CityWeatherData> | null> {
   try {
@@ -100,8 +153,22 @@ function normalize(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-function WeatherCard({ data, isUser, onRemove }: { data: CityWeather; isUser?: boolean; onRemove?: () => void }) {
+function WeatherCard({ data, isUser, onRemove, forecast, isExpanded, onToggle }: {
+  data: CityWeather;
+  isUser?: boolean;
+  onRemove?: () => void;
+  forecast?: DmcForecast;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+}) {
   const label = WMO_LABELS[data.weatherCode] || '—';
+  // DMC forecast: skip index 0 (rest of today), show days 1-4
+  const forecastDays = forecast?.fecha?.slice(1, 5) ?? [];
+  const forecastTemps = forecast?.temperatura?.slice(1, 5) ?? [];
+  const forecastIcons = forecast?.icono?.slice(1, 5) ?? [];
+  const forecastTexts = forecast?.texto?.slice(1, 5) ?? [];
+  const hasForecast = forecastDays.length > 0;
+
   return (
     <div className={`rounded-xl border p-4 relative ${isUser ? 'bg-primary/5 border-primary/30' : 'bg-base-200 border-base-300'}`}>
       {onRemove && (
@@ -124,6 +191,45 @@ function WeatherCard({ data, isUser, onRemove }: { data: CityWeather; isUser?: b
         <span>Humedad {data.humidity}%</span>
         <span>Viento {data.wind} km/h</span>
       </div>
+
+      {/* Forecast toggle */}
+      {hasForecast && onToggle && (
+        <button
+          onClick={onToggle}
+          className="mt-2 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-colors cursor-pointer"
+        >
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+            className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+          Pronóstico 5 días
+        </button>
+      )}
+
+      {/* Expanded forecast */}
+      {isExpanded && hasForecast && (
+        <div className="mt-2 pt-2 border-t border-base-300 space-y-1.5">
+          {forecastDays.map((day, i) => {
+            const temps = (forecastTemps[i] ?? '').split('/');
+            const min = temps[0];
+            const max = temps[1];
+            const icon = forecastIcons[i]?.[1] ?? forecastIcons[i]?.[0] ?? '';
+            const text = forecastTexts[i]?.[1] ?? forecastTexts[i]?.[0] ?? '';
+            const code = dmcIconToCode(icon);
+            return (
+              <div key={i} className="flex items-center gap-2 text-[10px]">
+                <span className="w-20 text-base-content/70 truncate font-medium">{day}</span>
+                <WeatherIcon code={code} />
+                <span className="tabular-nums text-base-content font-medium">
+                  {min && <>{min}°</>}{min && max && ' / '}{max && <>{max}°</>}
+                </span>
+                <span className="text-base-content/50 truncate flex-1">{text}</span>
+              </div>
+            );
+          })}
+          <p className="text-[9px] text-base-content/40 text-right">Fuente: DMC</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -139,6 +245,8 @@ export function WeatherWidget() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [filterCity, setFilterCity] = useState<string | null>(null);
+  const [forecastMap, setForecastMap] = useState<Record<string, DmcForecast>>({});
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   const [savedNames, setSavedNames] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('weather-saved-cities') || '[]'); } catch { return []; }
@@ -209,6 +317,24 @@ export function WeatherWidget() {
     }
 
     load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Load DMC forecast data
+  useEffect(() => {
+    let cancelled = false;
+    idbGet<Record<string, DmcForecast>>(IDB_FORECAST_KEY).then(cached => {
+      if (!cancelled && cached?.data) setForecastMap(cached.data);
+    });
+    fetch('/api/forecast')
+      .then(r => r.json())
+      .then(d => {
+        if (!cancelled && d.forecasts) {
+          setForecastMap(d.forecasts);
+          idbSet(IDB_FORECAST_KEY, d.forecasts, IDB_FORECAST_TTL);
+        }
+      })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
@@ -393,15 +519,21 @@ export function WeatherWidget() {
         <p className="text-xs text-base-content/70 py-4 text-center">No se encontró &ldquo;{filterCity}&rdquo; en la grilla.</p>
       ) : (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {visibleCities.map((w, i) => (
-          <div key={w.city} style={{ animationDelay: `${i * 50}ms` }} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]">
-            <WeatherCard
-              data={w}
-              isUser={userCity?.city === w.city}
-              onRemove={!defaultCities.includes(w) && userCity?.city !== w.city ? () => handleRemove(w.city) : undefined}
-            />
-          </div>
-        ))}
+        {visibleCities.map((w, i) => {
+          const forecast = findDmcForecast(w.city, forecastMap);
+          return (
+            <div key={w.city} style={{ animationDelay: `${i * 50}ms` }} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]">
+              <WeatherCard
+                data={w}
+                isUser={userCity?.city === w.city}
+                onRemove={!defaultCities.includes(w) && userCity?.city !== w.city ? () => handleRemove(w.city) : undefined}
+                forecast={forecast}
+                isExpanded={expandedCard === w.city}
+                onToggle={() => setExpandedCard(prev => prev === w.city ? null : w.city)}
+              />
+            </div>
+          );
+        })}
       </div>
       )}
 
@@ -435,6 +567,8 @@ export function WeatherWidget() {
           <a href="https://api.gael.cloud/#todos-los-climas" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Gael Cloud</a>
           {' · '}
           <a href="https://docs.boostr.cl/reference/weather-code" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Boostr.cl</a>
+          {' · '}
+          <a href="https://www.meteochile.gob.cl/" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">DMC</a>
         </span>
       </div>
     </div>

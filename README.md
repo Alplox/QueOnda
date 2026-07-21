@@ -65,6 +65,7 @@ npm run update-holidays # regenera src/lib/holidays.json (feriados)
 | [YouTube RSS](https://www.youtube.com/) | `youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) | YouTube | Único |
 | [GetOnBoard](https://www.getonbrd.com) + [Remotive](https://remotive.com) + [WorkAnywhere](https://workanywhere.com) | múltiples APIs | Trabajos | Agregado vía proxy |
 | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` | Geolocalización clima | Único |
+| [DMC MeteoChile](https://www.meteochile.gob.cl) | `archivos.meteochile.gob.cl/portaldmc/meteochile/js/pronostico.js` | Clima (pronóstico 5 días) | Único |
 | [cheerio](https://cheerio.js.org) | scraping vía `/api/article?url=` | Lector de artículos | Único |
 
 > Para detalle completo de cadenas de fallback (timeouts, criterios de corte), ver [`AGENTS.md`](./AGENTS.md#data-sources--fallback-chains).
