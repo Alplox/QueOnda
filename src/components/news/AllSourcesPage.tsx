@@ -208,7 +208,11 @@ export function AllSourcesPage() {
 
   function selectAll() {
     if (status !== 'selecting') return;
-    setSelected(new Set(filteredSources.map(s => s.sourceKey)));
+    setSelected(prev => {
+      const next = new Set(prev);
+      filteredSources.forEach(s => next.add(s.sourceKey));
+      return next;
+    });
   }
 
   function deselectAll() {
@@ -491,7 +495,7 @@ export function AllSourcesPage() {
   }, []);
 
   const selectedCount = selected.size;
-  const allSelected = allSources.length > 0 && selectedCount === allSources.length;
+  const allSelected = filteredSources.length > 0 && filteredSources.every(s => selected.has(s.sourceKey));
 
   // Loading Skeleton
   if (status === 'loading') {
@@ -535,14 +539,14 @@ export function AllSourcesPage() {
 
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => { play('interaction.tap'); (allSelected ? deselectAll() : selectAll()); }}
+              onClick={() => { play('interaction.tap'); (allSelected || selected.size > 0 ? deselectAll() : selectAll()); }}
               className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all cursor-pointer ${
-allSelected
+allSelected || selected.size > 0
                     ? 'bg-base-content/10 text-base-content/70 hover:text-base-content'
                     : 'bg-primary text-primary-content hover:bg-primary'
               }`}
             >
-              {allSelected ? 'Deseleccionar todo' : 'Seleccionar todo'}
+              {allSelected ? 'Deseleccionar todo' : selected.size > 0 ? 'Limpiar selección' : 'Seleccionar todo'}
             </button>
             {searchQuery && filteredSources.length > 0 && (
               <button

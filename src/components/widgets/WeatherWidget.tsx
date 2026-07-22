@@ -267,6 +267,7 @@ export function WeatherWidget() {
   const [showMap, setShowMap] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
+  const [mapRetryKey, setMapRetryKey] = useState(0);
 
   const [savedNames, setSavedNames] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('weather-saved-cities') || '[]'); } catch { return []; }
@@ -549,7 +550,7 @@ export function WeatherWidget() {
 
       {/* Windy map toggle */}
       <button
-        onClick={() => { setShowMap(s => !s); if (!showMap) { setMapLoaded(false); setMapFailed(false); } }}
+        onClick={() => { setShowMap(s => !s); if (!showMap) { setMapLoaded(false); setMapFailed(false); setMapRetryKey(k => k + 1); } }}
         className="mb-3 flex items-center gap-1.5 text-xs font-medium text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
@@ -565,6 +566,7 @@ export function WeatherWidget() {
             {!mapFailed ? (
               <>
                 <iframe
+                  key={mapRetryKey}
                   src={`https://embed.windy.com/embed2.html?lat=${mapLat}&lon=${mapLon}&zoom=3&overlay=rain&level=surface&pressure=true&metricWind=km/h&metricTemp=%C2%B0C&calendar=now&product=ecmwf&type=map&location=coordinates&radarRange=-1`}
                   width="100%"
                   height="350"
@@ -590,6 +592,13 @@ export function WeatherWidget() {
                   <circle cx="12" cy="10" r="3" />
                 </svg>
                 <p className="text-xs text-base-content/70 text-center">No se pudo cargar el mapa</p>
+                <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setMapFailed(false); setMapLoaded(false); setMapRetryKey(k => k + 1); }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-base-300 text-base-content text-xs font-medium hover:bg-base-300/80 transition-colors active:scale-[0.96] cursor-pointer"
+                >
+                  Reintentar
+                </button>
                 <a
                   href={`https://www.windy.com/-Rain-rain?rain,${mapLat},${mapLon},3`}
                   target="_blank"
@@ -598,6 +607,7 @@ export function WeatherWidget() {
                 >
                   Abrir en Windy
                 </a>
+                </div>
               </div>
             )}
             <div className="px-3 pb-2 text-right text-[10px] text-base-content/50">

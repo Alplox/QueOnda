@@ -7,6 +7,7 @@ import { validateFetchUrl } from '../../../lib/url-validator';
 import { checkRateLimit } from '../../../lib/rate-limit';
 
 const SOURCE_CACHE_TTL = 60 * 60 * 1000;
+const CF_SUBREQUEST_LIMIT = 40;
 
 function assembleResult(cached: Array<{ articles: Article[]; sourceResult: SourceResult }>) {
   const articles: Article[] = [];
@@ -65,7 +66,12 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       if (uncached.length > 0) {
-        const fresh = await Promise.all(uncached.map(src => fetchSingleSource(src)));
+        const fresh: Array<{ articles: Article[]; sourceResult: SourceResult }> = [];
+        for (let i = 0; i < uncached.length; i += CF_SUBREQUEST_LIMIT) {
+          const batch = uncached.slice(i, i + CF_SUBREQUEST_LIMIT);
+          const results = await Promise.all(batch.map(src => fetchSingleSource(src)));
+          fresh.push(...results);
+        }
         for (let i = 0; i < uncached.length; i++) {
           const entry = fresh[i];
           results.push(entry);
@@ -88,7 +94,12 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const fresh = await Promise.all(sources.map(src => fetchSingleSource(src)));
+    const fresh: Array<{ articles: Article[]; sourceResult: SourceResult }> = [];
+    for (let i = 0; i < sources.length; i += CF_SUBREQUEST_LIMIT) {
+      const batch = sources.slice(i, i + CF_SUBREQUEST_LIMIT);
+      const results = await Promise.all(batch.map(src => fetchSingleSource(src)));
+      fresh.push(...results);
+    }
     const assembled = assembleResult(fresh);
     await setCache(comboKey, { articles: assembled.articles, sourceResults: assembled.sourceResults }, SOURCE_CACHE_TTL);
 
