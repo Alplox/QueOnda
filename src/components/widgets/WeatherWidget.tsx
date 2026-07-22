@@ -153,10 +153,12 @@ function normalize(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-function WeatherCard({ data, isUser, onRemove, forecast, isExpanded, onToggle }: {
+function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, isExpanded, onToggle }: {
   data: CityWeather;
   isUser?: boolean;
   onRemove?: () => void;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
   forecast?: DmcForecast;
   isExpanded?: boolean;
   onToggle?: () => void;
@@ -171,10 +173,21 @@ function WeatherCard({ data, isUser, onRemove, forecast, isExpanded, onToggle }:
 
   return (
     <div className={`rounded-xl border p-4 relative ${isUser ? 'bg-primary/5 border-primary/30' : 'bg-base-200 border-base-300'}`}>
-      {onRemove && (
-        <button onClick={onRemove} className="absolute top-1.5 right-1.5 min-w-[24px] min-h-[24px] flex items-center justify-center p-0.5 rounded text-base-content/50 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer" title="Quitar ciudad">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-        </button>
+      {(onRemove || onTogglePin) && (
+        <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5">
+          {onTogglePin && (
+            <button onClick={onTogglePin} className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded transition-[transform,opacity] active:scale-[0.96] cursor-pointer" title={isPinned ? 'Desfijar ciudad' : 'Fijar arriba'}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isPinned ? 'text-primary' : 'text-base-content/50 hover:text-base-content'}>
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </button>
+          )}
+          {onRemove && (
+            <button onClick={onRemove} className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded text-base-content/50 hover:text-base-content hover:bg-base-300 transition-[transform,colors] active:scale-[0.96] cursor-pointer" title="Quitar ciudad">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          )}
+        </div>
       )}
       <div className="flex items-center justify-between">
         <p className="text-xs text-base-content/70 uppercase tracking-wider font-medium truncate pr-4">
@@ -188,15 +201,15 @@ function WeatherCard({ data, isUser, onRemove, forecast, isExpanded, onToggle }:
       </div>
       <p className="text-xs text-base-content/70 mt-0.5">{label}</p>
       <div className="flex gap-3 mt-2 text-[10px] text-base-content/70">
-        <span>Humedad {data.humidity}%</span>
-        <span>Viento {data.wind} km/h</span>
+        <span className="tabular-nums">Humedad {data.humidity}%</span>
+        <span className="tabular-nums">Viento {data.wind} km/h</span>
       </div>
 
       {/* Forecast toggle */}
       {hasForecast && onToggle && (
         <button
           onClick={onToggle}
-          className="mt-2 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-colors cursor-pointer"
+          className="mt-2 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
             className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
@@ -207,29 +220,33 @@ function WeatherCard({ data, isUser, onRemove, forecast, isExpanded, onToggle }:
       )}
 
       {/* Expanded forecast */}
-      {isExpanded && hasForecast && (
-        <div className="mt-2 pt-2 border-t border-base-300 space-y-1.5">
-          {forecastDays.map((day, i) => {
-            const temps = (forecastTemps[i] ?? '').split('/');
-            const min = temps[0];
-            const max = temps[1];
-            const icon = forecastIcons[i]?.[1] ?? forecastIcons[i]?.[0] ?? '';
-            const text = forecastTexts[i]?.[1] ?? forecastTexts[i]?.[0] ?? '';
-            const code = dmcIconToCode(icon);
-            return (
-              <div key={i} className="flex items-center gap-2 text-[10px]">
-                <span className="w-20 text-base-content/70 truncate font-medium">{day}</span>
-                <WeatherIcon code={code} />
-                <span className="tabular-nums text-base-content font-medium">
-                  {min && <>{min}°</>}{min && max && ' / '}{max && <>{max}°</>}
-                </span>
-                <span className="text-base-content/50 truncate flex-1">{text}</span>
-              </div>
-            );
-          })}
-          <p className="text-[9px] text-base-content/40 text-right">Fuente: DMC</p>
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded && hasForecast ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden min-h-0">
+          {hasForecast && (
+            <div className="mt-2 pt-2 border-t border-base-300 space-y-1.5">
+              {forecastDays.map((day, i) => {
+                const temps = (forecastTemps[i] ?? '').split('/');
+                const min = temps[0];
+                const max = temps[1];
+                const icon = forecastIcons[i]?.[1] ?? forecastIcons[i]?.[0] ?? '';
+                const text = forecastTexts[i]?.[1] ?? forecastTexts[i]?.[0] ?? '';
+                const code = dmcIconToCode(icon);
+                return (
+                  <div key={i} className="flex items-center gap-2 text-[10px]">
+                    <span className="w-20 text-base-content/70 truncate font-medium">{day}</span>
+                    <WeatherIcon code={code} />
+                    <span className="tabular-nums text-base-content font-medium">
+                      {min && <>{min}°</>}{min && max && ' / '}{max && <>{max}°</>}
+                    </span>
+                    <span className="text-base-content/50 truncate flex-1">{text}</span>
+                  </div>
+                );
+              })}
+              <p className="text-[9px] text-base-content/40 text-right">Fuente: DMC</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -247,14 +264,29 @@ export function WeatherWidget() {
   const [filterCity, setFilterCity] = useState<string | null>(null);
   const [forecastMap, setForecastMap] = useState<Record<string, DmcForecast>>({});
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapFailed, setMapFailed] = useState(false);
 
   const [savedNames, setSavedNames] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('weather-saved-cities') || '[]'); } catch { return []; }
   });
 
+  const [pinnedCities, setPinnedCities] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('weather-pinned-cities') || '[]'); } catch { return []; }
+  });
+
   function saveNames(names: string[]) {
     setSavedNames(names);
     localStorage.setItem('weather-saved-cities', JSON.stringify(names));
+  }
+
+  function togglePin(city: string) {
+    setPinnedCities(prev => {
+      const next = prev.includes(city) ? prev.filter(c => c !== city) : [city, ...prev];
+      localStorage.setItem('weather-pinned-cities', JSON.stringify(next));
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -337,6 +369,13 @@ export function WeatherWidget() {
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
+
+  // Windy map timeout → fallback if iframe doesn't load in 15s
+  useEffect(() => {
+    if (!showMap || mapLoaded) return;
+    const t = setTimeout(() => setMapFailed(true), 15000);
+    return () => clearTimeout(t);
+  }, [showMap, mapLoaded]);
 
   useEffect(() => {
     if (savedNames.length === 0) return;
@@ -430,7 +469,14 @@ export function WeatherWidget() {
     .filter(w => !userCity || w.city !== userCity.city)
     .filter(w => !defaultCities.some(d => d.city === w.city));
 
-  allCities.push(...extraCities, ...defaultCities);
+  const unpinned = [...extraCities, ...defaultCities];
+  const pinned = pinnedCities.length > 0
+    ? pinnedCities.map(name => unpinned.find(c => c.city === name)).filter((c): c is CityWeather => !!c)
+    : [];
+  const rest = pinnedCities.length > 0
+    ? unpinned.filter(c => !pinnedCities.includes(c.city))
+    : unpinned;
+  allCities.push(...pinned, ...rest);
 
   const localMatch = searchQuery.trim() && !filterCity
     ? allCities.find(c => normalize(c.city).includes(normalize(searchQuery.trim())))
@@ -472,6 +518,12 @@ export function WeatherWidget() {
     );
   }
 
+  const mapCenter = userCity
+    ? DEFAULT_CITIES_COORDS.find(c => normalize(c.name) === normalize(userCity.city))
+    : null;
+  const mapLat = mapCenter?.lat ?? -33.45;
+  const mapLon = mapCenter?.lon ?? -70.67;
+
   return (
     <div>
       {/* Search / Filter bar */}
@@ -486,7 +538,7 @@ export function WeatherWidget() {
         <button
           type="submit"
           disabled={searching || !searchQuery.trim()}
-          className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+          className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-[transform,background-color,opacity] active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
         >
           {searching ? '...' : 'Ir'}
         </button>
@@ -495,12 +547,73 @@ export function WeatherWidget() {
         <p className="text-[10px] text-error mb-2">{searchError}</p>
       )}
 
+      {/* Windy map toggle */}
+      <button
+        onClick={() => { setShowMap(s => !s); if (!showMap) { setMapLoaded(false); setMapFailed(false); } }}
+        className="mb-3 flex items-center gap-1.5 text-xs font-medium text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+          className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+        Mapa del clima
+      </button>
+
+      <div className={`mb-3 grid transition-[grid-template-rows] duration-300 ease-out ${showMap ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden min-h-0">
+          <div className="rounded-xl bg-base-200 border border-base-300 transition-opacity duration-500" style={{ opacity: mapLoaded ? 1 : 0.6 }}>
+            {!mapFailed ? (
+              <>
+                <iframe
+                  src={`https://embed.windy.com/embed2.html?lat=${mapLat}&lon=${mapLon}&zoom=3&overlay=rain&level=surface&pressure=true&metricWind=km/h&metricTemp=%C2%B0C&calendar=now&product=ecmwf&type=map&location=coordinates&radarRange=-1`}
+                  width="100%"
+                  height="350"
+                  className="border-0"
+                  loading="lazy"
+                  title="Mapa del clima - Windy"
+                  onLoad={() => setMapLoaded(true)}
+                  onError={() => setMapFailed(true)}
+                />
+                {!mapLoaded && (
+                  <div className="h-[350px] flex items-center justify-center -mt-[350px] relative z-10">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      <span className="text-[10px] text-base-content/70">Cargando mapa...</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="h-[350px] flex flex-col items-center justify-center gap-4 p-6">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-base-content/30">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <p className="text-xs text-base-content/70 text-center">No se pudo cargar el mapa</p>
+                <a
+                  href={`https://www.windy.com/-Rain-rain?rain,${mapLat},${mapLon},3`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-content text-xs font-medium hover:opacity-90 transition-opacity"
+                >
+                  Abrir en Windy
+                </a>
+              </div>
+            )}
+            <div className="px-3 pb-2 text-right text-[10px] text-base-content/50">
+              Fuente:{' '}
+              <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Windy</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {filterCity && (
         <div className="flex items-center gap-2 mb-3 text-xs">
           <span className="text-base-content/70">Filtrando: <strong className="text-base-content">{filterCity}</strong></span>
           <button
             onClick={() => { setFilterCity(null); setSearchQuery(''); }}
-            className="px-2 py-0.5 text-[10px] rounded bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
+            className="px-2 py-0.5 text-[10px] rounded bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
           >
             Limpiar filtro
           </button>
@@ -527,6 +640,8 @@ export function WeatherWidget() {
                 data={w}
                 isUser={userCity?.city === w.city}
                 onRemove={!defaultCities.includes(w) && userCity?.city !== w.city ? () => handleRemove(w.city) : undefined}
+                isPinned={pinnedCities.includes(w.city)}
+                onTogglePin={userCity?.city !== w.city ? () => togglePin(w.city) : undefined}
                 forecast={forecast}
                 isExpanded={expandedCard === w.city}
                 onToggle={() => setExpandedCard(prev => prev === w.city ? null : w.city)}
@@ -542,7 +657,7 @@ export function WeatherWidget() {
         {hasMore && (
           <button
             onClick={() => setLimit(s => s + LOAD_MORE)}
-            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
+            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[transform,background-color,border-color,ring] duration-200 active:scale-[0.96] cursor-pointer"
           >
             Mostrar más ({allCities.length - limit} restantes)
           </button>
@@ -550,7 +665,7 @@ export function WeatherWidget() {
         {hasExtra && (
           <button
             onClick={() => setLimit(INITIAL)}
-            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.96] cursor-pointer"
+            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-[transform,background-color] duration-200 active:scale-[0.96] cursor-pointer"
           >
             Mostrar menos
           </button>

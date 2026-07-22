@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
+import { BROWSER_UA } from '../../lib/ua';
 
 const DMC_URL = 'https://archivos.meteochile.gob.cl/portaldmc/meteochile/js/pronostico.js';
 
@@ -42,7 +43,10 @@ interface DmcForecast {
 export const GET: APIRoute = async () => {
   const forecasts = await dedupeFetch<Record<string, DmcForecast> | null>('dmc-forecast', async () => {
     try {
-      const res = await fetch(DMC_URL, { signal: AbortSignal.timeout(10000) });
+      const res = await fetch(DMC_URL, {
+        signal: AbortSignal.timeout(10000),
+        headers: { 'User-Agent': BROWSER_UA },
+      });
       if (!res.ok) return null;
       const js = await res.text();
 

@@ -365,7 +365,6 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 
 ## Performance
 
-- **`@playform/compress`** minifies HTML and JS in the build pipeline (`astro.config.mjs`; CSS compression disabled — was stripping responsive `@media` rules)
 - **Google Fonts** loaded non-blocking via `media="print" onload="this.media='all'"` (`index.astro`)
 - **Static asset caching**: `public/_headers` sets immutable cache for `/_astro/*`, `/emoji/*`, `/cd-disc-*.webp` (1 year) and 86400 for favicons/og-image
 - **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate

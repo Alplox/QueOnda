@@ -261,7 +261,7 @@ export function FootballTable() {
           <button
             key={t.key}
             onClick={() => { play('interaction.tap'); setActiveTab(t.key); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer active:scale-[0.96] ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
               activeTab === t.key
                 ? 'bg-primary text-primary-content'
                 : 'bg-base-300 text-base-content/60 hover:text-base-content'
@@ -294,12 +294,12 @@ export function FootballTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-base-300/50">
-              {standings.map((s) => {
+              {standings.map((s, idx) => {
                 const isTop3 = s.position <= 3;
                 const isRelegation = s.position > totalTeams - 2;
                 return (
+                <div key={s.position} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${idx * 40}ms` }}>
                 <tr
-                  key={s.position}
                   className={`hover:bg-base-300/40 transition-colors ${
                     isTop3 ? 'bg-success/[0.03]' : isRelegation ? 'bg-error/[0.03]' : ''
                   }`}
@@ -341,6 +341,7 @@ export function FootballTable() {
                   </td>
                   <td className="text-center px-3 py-2 font-bold text-base-content font-mono tabular-nums text-sm">{s.points}</td>
                 </tr>
+                </div>
                 );
               })}
             </tbody>
@@ -433,8 +434,9 @@ export function FootballTable() {
                 <p className="text-[10px] text-base-content/70 font-semibold uppercase tracking-wider">Resultados recientes</p>
               </div>
               <div className="divide-y divide-base-300">
-                {finishedMatches.slice(0, 6).map((m) => (
-                  <div key={m.id} className="px-4 py-2.5 hover:bg-base-300/40 transition-colors">
+                {finishedMatches.slice(0, 6).map((m, idx) => (
+                  <div key={m.id} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${idx * 50}ms` }}>
+                  <div className="px-4 py-2.5 hover:bg-base-300/40 transition-colors">
                     <div className="flex items-center justify-center gap-3">
                       <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
                         <span className="text-xs font-medium text-base-content truncate text-right">{m.homeTeam}</span>
@@ -452,6 +454,7 @@ export function FootballTable() {
                     </div>
                     <p className="text-[10px] text-base-content/50 text-center mt-1">{formatDate(m.date)}</p>
                   </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -463,11 +466,12 @@ export function FootballTable() {
                 <p className="text-[10px] text-base-content/70 font-semibold uppercase tracking-wider">Próximos partidos</p>
               </div>
               <div className="divide-y divide-base-300">
-                {upcomingMatches.slice(0, 6).map((m) => {
+                {upcomingMatches.slice(0, 6).map((m, idx) => {
                   const d = new Date(m.date);
                   const dateStr = d.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' });
                   return (
-                  <div key={m.id} className="px-4 py-2.5 hover:bg-base-300/40 transition-colors">
+                  <div key={m.id} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${idx * 50}ms` }}>
+                  <div className="px-4 py-2.5 hover:bg-base-300/40 transition-colors">
                     <div className="flex items-center justify-center gap-3">
                       <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
                         <span className="text-xs font-medium text-base-content truncate text-right">{m.homeTeam}</span>
@@ -482,6 +486,7 @@ export function FootballTable() {
                       </div>
                     </div>
                     <p className="text-[10px] text-base-content/50 text-center mt-1">{dateStr}</p>
+                  </div>
                   </div>
                   );
                 })}
@@ -515,7 +520,8 @@ export function FootballTable() {
           <>
           <div className="divide-y divide-base-300">
             {visibleArticles.map((article, i) => (
-              <div key={i} className="flex items-center gap-1 group hover:bg-base-300 transition-colors">
+              <div key={i} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${i * 50}ms` }}>
+              <div className="flex items-center gap-1 group hover:bg-base-300 transition-colors">
                 <button
                   onClick={() => { play('interaction.tap'); window.open(article.link, '_blank', 'noopener,noreferrer'); }}
                   className="flex-1 text-left min-w-0 px-3 py-2 cursor-pointer"
@@ -541,6 +547,7 @@ export function FootballTable() {
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                   </svg>
                 </button>
+              </div>
               </div>
             ))}
           </div>

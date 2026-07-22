@@ -97,8 +97,8 @@ export function GoogleTrendsWidget() {
     <div>
       <div className="space-y-1">
       {trends.map((trend, i) => (
+        <div key={i} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${i * 50}ms` }}>
         <div
-          key={i}
           className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] transition-colors"
         >
           <span className="text-xs font-mono text-base-content/70 w-5 text-right shrink-0 mt-0.5">
@@ -110,7 +110,7 @@ export function GoogleTrendsWidget() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => play('interaction.tap')}
-              className="text-base text-base-content truncate block no-underline hover:underline active:scale-[0.96] transition-all"
+              className="text-base text-base-content truncate block no-underline hover:underline active:scale-[0.96] transition-transform"
             >
               {trend.title}
             </a>
@@ -124,7 +124,7 @@ export function GoogleTrendsWidget() {
                   href={se.url + encodeURIComponent(trend.title)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-base-content/50 hover:text-base-content bg-base-content/[0.03] hover:bg-base-300 border border-base-content/[0.06] hover:border-base-content/20 transition-colors"
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-base-content/50 hover:text-base-content bg-base-content/[0.03] hover:bg-base-300 border border-base-content/[0.06] hover:border-base-content/20 transition-colors"
                   title={`Buscar "${trend.title}" en ${se.name}`}
                   onClick={(e) => { play('interaction.tap'); e.stopPropagation(); }}
                 >
@@ -138,6 +138,7 @@ export function GoogleTrendsWidget() {
               {trend.traffic}
             </span>
           )}
+        </div>
         </div>
       ))}
       </div>

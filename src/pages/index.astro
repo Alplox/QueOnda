@@ -218,8 +218,8 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
 
     <script is:inline>
       // Section entrance animation — one-shot data-visible on scroll
-      (function() {
-        if (typeof document === 'undefined') return;
+      // ponytail: astro:page-load re-fires after View Transitions (e.g. nav to /todas-las-fuentes and back)
+      document.addEventListener('astro:page-load', function() {
         var observer = new IntersectionObserver(function(entries) {
           for (var i = 0; i < entries.length; i++) {
             if (entries[i].isIntersecting) {
@@ -229,7 +229,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
           }
         }, { rootMargin: '-80px 0px -20% 0px' });
         document.querySelectorAll('section[id]').forEach(function(s) { observer.observe(s); });
-      })();
+      });
     </script>
 
     <script>

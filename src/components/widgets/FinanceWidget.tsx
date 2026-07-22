@@ -35,7 +35,7 @@ async function fetchDolarApiClient(): Promise<Partial<FinanceData>> {
   return result;
 }
 
-async function fetchFinanceClient(): Promise<FinanceData | null> {
+async function fetchFinanceClient(): Promise<Partial<FinanceData> | null> {
   const merged: Partial<FinanceData> = {};
   for (const fn of [fetchMindicadorClient, fetchDolarApiClient]) {
     try {
@@ -44,11 +44,11 @@ async function fetchFinanceClient(): Promise<FinanceData | null> {
       if (ALL_KEYS.every(k => merged[k]?.value != null)) break;
     } catch {}
   }
-  return ALL_KEYS.some(k => merged[k]?.value != null) ? merged as FinanceData : null;
+  return ALL_KEYS.some(k => merged[k]?.value != null) ? merged : null;
 }
 
-async function fetchFinanceServer(): Promise<FinanceData | null> {
-  try { const r = await fetch('/api/finance'); const j = await r.json(); return j.error ? null : j; } catch { return null; }
+async function fetchFinanceServer(): Promise<Partial<FinanceData> | null> {
+  try { const r = await fetch('/api/finance'); if (!r.ok) return null; const j = await r.json(); return j.error ? null : j; } catch { return null; }
 }
 
 interface ItemDef {
@@ -108,8 +108,11 @@ const ITEMS: ItemDef[] = [
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
   try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr.slice(0, 10);
+    const cleanDate = dateStr.slice(0, 10);
+    const [year, month, day] = cleanDate.split('-').map(Number);
+    if (!year || !month || !day) return cleanDate;
+    // ponytail: manual parse avoids UTC→local off-by-one at midnight (mindicador returns T00:00:00Z)
+    const d = new Date(year, month - 1, day);
     return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
   } catch {
     return dateStr.slice(0, 10);
@@ -174,39 +177,38 @@ function SourceAttribution() {
 }
 
 export function FinanceWidget() {
-  const [data, setData] = useState<FinanceData | null>(null);
+  const [data, setData] = useState<Partial<FinanceData> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [stale, setStale] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    let resolved = false;
+    let hasCache = false;
 
-    // Phase 0: IDB cache → instant render
-    idbGet<FinanceData>(IDB_KEY).then(cached => {
-      if (cancelled || !cached?.data) return;
-      resolved = true;
-      setData(cached.data);
-      setLoading(false);
-    });
+    (async () => {
+      const cached = await idbGet<FinanceData>(IDB_KEY);
+      if (!cancelled && cached?.data) {
+        setData(cached.data);
+        setLoading(false);
+        setStale(true);
+        hasCache = true;
+      }
 
-    // Phase 1: background fetch → update
-    fetchFinanceClient()
-      .then(async result => {
-        if (cancelled) return;
-        const data = result ?? await fetchFinanceServer();
-        if (data) {
-          idbSet(IDB_KEY, data, IDB_TTL);
-          setData(data);
-        }
-        if (!resolved) setLoading(false);
-        resolved = true;
-      })
-      .catch(() => {
-        if (!cancelled && !resolved) setError(true);
-      })
-      .finally(() => { if (!cancelled && !resolved) setLoading(false); });
+      const fresh = (await fetchFinanceClient()) ?? (await fetchFinanceServer());
+
+      if (!cancelled && fresh) {
+        setData(fresh);
+        setStale(false);
+        idbSet(IDB_KEY, fresh, IDB_TTL);
+      }
+
+      if (!cancelled) {
+        if (!fresh && !hasCache) setError(true);
+        setLoading(false);
+      }
+    })();
+
     return () => { cancelled = true; };
   }, []);
 
