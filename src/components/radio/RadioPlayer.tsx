@@ -649,15 +649,25 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
               </>
             ) : (
               <div className="flex flex-col items-center justify-center flex-1 w-full px-6 text-center">
-                <div className="w-24 h-24 rounded-full bg-base-100 ring-1 ring-base-content/5 flex items-center justify-center mb-4 text-base-content/70">
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z" />
-                    <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-                  </svg>
-                </div>
-                <p className="text-base-content/70 text-sm font-medium">Selecciona una radio</p>
-                <p className="text-base-content/70 text-xs mt-1">Elige de la lista para empezar</p>
+                {fallback ? (
+                  <>
+                    <div className="w-24 h-24 rounded-full bg-base-content/5 animate-pulse" />
+                    <div className="mt-4 h-3 w-28 rounded bg-base-content/5 animate-pulse" />
+                    <div className="mt-2 h-2.5 w-20 rounded bg-base-content/5 animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    <div className="w-24 h-24 rounded-full bg-base-100 ring-1 ring-base-content/5 flex items-center justify-center mb-4 text-base-content/70">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z" />
+                        <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                      </svg>
+                    </div>
+                    <p className="text-base-content/70 text-sm font-medium">Selecciona una radio</p>
+                    <p className="text-base-content/70 text-xs mt-1">Elige de la lista para empezar</p>
+                  </>
+                )}
               </div>
             )}
 
