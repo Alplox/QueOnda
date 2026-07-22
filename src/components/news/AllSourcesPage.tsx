@@ -10,9 +10,9 @@ import { ChileMap } from './ChileMap';
 import { FaviconImg } from './FaviconImg';
 
 const CACHE_TTL = 30 * 60 * 1000;
-const CHUNK_SIZE = 250;
+const CHUNK_SIZE = 40;
 const STORAGE_SELECTION = 'all-sources-selection';
-const BATCH_CACHE_TTL_HINT = 'Artículos duplicados se muestran una sola vez; Si dos fuentes distintas tienen el mismo artículo con la misma URL, solo se muestra uno.';
+const BATCH_CACHE_TTL_HINT = 'Feeds duplicados se muestran una sola vez. Ejemplo: "Noticiero" y "Noticiero - Politica" se cargan como una sola fuente.';
 
 const REGION_LABELS: Record<string, string> = {
   'arica-y-parinacota': 'XV Arica y Parinacota',
