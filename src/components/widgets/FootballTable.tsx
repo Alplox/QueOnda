@@ -298,11 +298,12 @@ export function FootballTable() {
                 const isTop3 = s.position <= 3;
                 const isRelegation = s.position > totalTeams - 2;
                 return (
-                <div key={s.position} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${idx * 40}ms` }}>
                 <tr
-                  className={`hover:bg-base-300/40 transition-colors ${
+                  key={s.position}
+                  className={`opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards] hover:bg-base-300/40 transition-colors ${
                     isTop3 ? 'bg-success/[0.03]' : isRelegation ? 'bg-error/[0.03]' : ''
                   }`}
+                  style={{ animationDelay: `${idx * 40}ms` }}
                 >
                   <td className={`px-3 py-2 text-sm font-mono tabular-nums ${
                     isTop3 ? 'font-bold text-success' : isRelegation ? 'font-bold text-error' : 'text-base-content/70'
@@ -341,7 +342,6 @@ export function FootballTable() {
                   </td>
                   <td className="text-center px-3 py-2 font-bold text-base-content font-mono tabular-nums text-sm">{s.points}</td>
                 </tr>
-                </div>
                 );
               })}
             </tbody>

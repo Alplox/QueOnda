@@ -235,10 +235,8 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     <script>
       // Pre-warm server cache: all API routes, so the edge cache is hot before widgets hydrate
       (function() {
-        var critical = [
+        var endpoints = [
           '/api/emergency',
-        ];
-        var deferred = [
           '/api/news?mode=inventory',
           '/api/channels?source=json-teles',
           '/api/channels?source=iptv-org',
@@ -251,22 +249,18 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
           '/api/jobs',
           '/api/spotify',
         ];
-        function warm(list: string[]) {
-          for (var i = 0; i < list.length; i++) {
-            try { fetch(list[i]); } catch(e) {}
-          }
-        }
-        // Critical (rAF): emergency is above the fold
+        // ponytail: all at rAF — fire-and-forget fetches are negligible, idle scheduling
+        // delayed cache warming past the point client:visible widgets hydrate on fast scroll
         if ('requestAnimationFrame' in window) {
-          requestAnimationFrame(function() { warm(critical); });
+          requestAnimationFrame(function() {
+            for (var i = 0; i < endpoints.length; i++) {
+              try { fetch(endpoints[i]); } catch(e) {}
+            }
+          });
         } else {
-          warm(critical);
-        }
-        // Deferred to idle: the rest
-        if ('requestIdleCallback' in window) {
-          requestIdleCallback(function() { warm(deferred); }, { timeout: 5000 });
-        } else {
-          setTimeout(function() { warm(deferred); }, 2000);
+          for (var i = 0; i < endpoints.length; i++) {
+            try { fetch(endpoints[i]); } catch(e) {}
+          }
         }
       })();
     </script>
