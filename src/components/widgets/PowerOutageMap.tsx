@@ -141,6 +141,7 @@ export function PowerOutageMap({ comunas }: Props) {
           </div>`;
         marker.bindTooltip(content, { sticky: true });
         marker.bindPopup(content);
+        marker.on('popupopen', () => marker.closeTooltip());
         markers.push(marker);
       }
       L.featureGroup(markers).addTo(groupRef.current as any);
