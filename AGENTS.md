@@ -349,7 +349,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 | TV | [json-teles](https://github.com/Alplox/json-teles) | `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` → jsDelivr CDN fallback |
 | YouTube | YouTube RSS (canales chilenos) | `www.youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) |
 | Google Trends | [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` |
-| Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GRJmY7SUz` (Top 50 Chile) |
+| Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GavIqMTeb` (Top 50 Chile) |
 | Sports RSS | awesome-chilean-rss DB (categoría `sports`) | múltiples fuentes RSS deportivas chilenas |
 | Holidays | [Nager.Date](https://date.nager.at) | `date.nager.at/api/v3/publicholidays/{year}/CL` — bundled fallback JSON (auto-updated via `update-holidays-db.mjs`) |
 | Article proxy | [cheerio](https://cheerio.js.org) scraping | URL enviada por el cliente |

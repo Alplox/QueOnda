@@ -37,7 +37,8 @@ npm run update-holidays # regenera src/lib/holidays.json (feriados)
 - **Spotify**: Top 50 Chile vía proxy server-side
 - **Deportes**: RSS deportivo + tabla de posiciones fútbol chileno (ESPN API client-side), IDB cache (1h)
 - **Trabajos**: ofertas laborales desde múltiples fuentes
-- **Sismos**: emergencias sísmicas vía Gael Cloud → USGS
+- **Sismos + alertas**: emergencias sísmicas vía Gael Cloud → Boostr → USGS + alertas SAE de SENAPRED (Telegram)
+- **Cortes de luz**: clientes sin suministro eléctrico por región/comuna vía SEC (apps.sec.cl), mapa + evolución horaria
 - **Feríados**: calendario de feriados chilenos vía nager.at client-side, bundled fallback, IDB cache (1 año)
 
 ## Fuentes de datos
@@ -56,12 +57,14 @@ npm run update-holidays # regenera src/lib/holidays.json (feriados)
 | [awesome-chilean-rss](https://github.com/Alplox/awesome-chilean-rss) | `feeds-database.json` (local → GitHub raw → CDN) — categoría `sports` | Noticias, Deportes | Primario (local) |
 | [ESPN Deportes API](https://github.com/pseudo-r/Public-ESPN-API) | `site.web.api.espn.com` + `site.api.espn.com` | Fútbol (standings + matches) | Único |
 | [awesome-chilean-rss](https://github.com/Alplox/awesome-chilean-rss) (categoría `sports`) | múltiples feeds RSS deportivos chilenos | Deportes (RSS) | Primario |
-| [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` | Tendencias | Único |
+| [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` + `trends/trendingsearches/daily/rss?geo=CL` | Tendencias | Único (realtime + daily) |
 | [USGS](https://earthquake.usgs.gov) | `earthquake.usgs.gov/.../2.5_day.geojson` | Sismos (3°) | Terciario |
+| [SENAPRED (Telegram)](https://t.me/SenapredChile) | `t.me/s/SenapredChile` (scraping widget web) | Emergencias (alertas SAE) | Único |
+| [SEC](https://www.sec.cl) | `apps.sec.cl/INTONLINEv1/ClientesAfectados/` (POST) | Cortes de luz | Único |
 | [Metro.cl](https://www.metro.cl) | `metro.cl/el-viaje/estado-red` (scraping) | Transporte | Único |
 | [red.cl](https://www.red.cl) | `red.cl/planifica-tu-viaje/cuando-llega/` → `predictorPlus/prediccion` | Transporte (buses) | Único |
 | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` | Transporte (rutas RED, build-time) | Único |
-| [Spotify](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GRJmY7SUz` | Spotify Top 50 Chile | Único |
+| [Spotify](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GavIqMTeb` | Spotify Top 50 Chile | Único |
 | [YouTube RSS](https://www.youtube.com/) | `youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) | YouTube | Único |
 | [GetOnBoard](https://www.getonbrd.com) + [Remotive](https://remotive.com) + [WorkAnywhere](https://workanywhere.com) | múltiples APIs | Trabajos | Agregado vía proxy |
 | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` | Geolocalización clima | Único |
