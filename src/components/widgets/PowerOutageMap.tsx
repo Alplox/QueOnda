@@ -67,13 +67,9 @@ export function PowerOutageMap({ comunas }: Props) {
     let destroyed = false;
 
     (async () => {
-      const L = await import('leaflet');
-      if (!document.querySelector('link[href*="leaflet"]')) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-      }
+      // ponytail: bundle the CSS so it's present before the map builds —
+      // fetching it from unpkg at runtime raced the JS init and blanked tiles on slow/mobile nets
+      const [L] = await Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]);
       if (destroyed || !containerRef.current) return;
 
       const map = L.map(containerRef.current, {
