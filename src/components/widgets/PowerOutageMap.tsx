@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import leafletCssUrl from 'leaflet/dist/leaflet.css?url';
 
 interface Comuna {
   region: string;
@@ -67,10 +68,17 @@ export function PowerOutageMap({ comunas }: Props) {
     let destroyed = false;
 
     (async () => {
-      // ponytail: bundle the CSS so it's present before the map builds —
-      // fetching it from unpkg at runtime raced the JS init and blanked tiles on slow/mobile nets
-      const [L] = await Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]);
+      // ponytail: ?url import + <link> instead of import('*.css') — Vite's CSS preload helper
+      // rejects on first load in the Workers SSR env, which killed the whole map init
+      const L = await import('leaflet');
       if (destroyed || !containerRef.current) return;
+      if (!document.querySelector('link[data-leaflet]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.dataset.leaflet = '';
+        link.href = leafletCssUrl;
+        document.head.appendChild(link);
+      }
 
       const map = L.map(containerRef.current, {
         zoomControl: true,
