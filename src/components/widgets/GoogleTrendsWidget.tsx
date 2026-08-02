@@ -142,9 +142,9 @@ export function GoogleTrendsWidget() {
         </div>
       ))}
       </div>
-      <div className="mt-3 text-right text-[10px] text-base-content/70">
+      <div className="mt-2 text-right text-[10px] text-base-content/50">
         Fuente:{' '}
-        <a href="https://trends.google.com/trending?geo=CL" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">
+        <a href="https://trends.google.com/trending?geo=CL" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">
           Google Trends
         </a>
       </div>

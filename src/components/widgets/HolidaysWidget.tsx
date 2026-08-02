@@ -173,11 +173,13 @@ export function HolidaysWidget() {
         })}
       </div>
 
-      <div className="mt-3 text-right text-[10px] text-base-content/70">
+      <div className="mt-2 text-right text-[10px] text-base-content/50">
         Fuentes:{' '}
-        <a href="https://docs.boostr.cl/reference/holidays" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Boostr</a>
+        <a href="https://docs.boostr.cl/reference/holidays" target="_blank" rel="noopener noreferrer" 
+        className="hover:text-base-content underline underline-offset-2 transition-colors">Boostr</a>
         {' · '}
-        <a href="https://date.nager.at" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Nager.Date</a>
+        <a href="https://date.nager.at" target="_blank" rel="noopener noreferrer" 
+        className="hover:text-base-content underline underline-offset-2 transition-colors">Nager.Date</a>
       </div>
     </div>
   );

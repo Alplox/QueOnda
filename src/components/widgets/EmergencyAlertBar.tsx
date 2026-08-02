@@ -4,6 +4,7 @@ import { play } from '@/lib/sound';
 
 interface Props {
   items: EmergencyItem[];
+  onClose?: () => void;
 }
 
 const severityColors: Record<string, string> = {
@@ -13,7 +14,7 @@ const severityColors: Record<string, string> = {
   low: 'bg-warning',
 };
 
-export function EmergencyAlertBar({ items }: Props) {
+export function EmergencyAlertBar({ items, onClose }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
   const pausedRef = useRef(false);
@@ -126,6 +127,18 @@ export function EmergencyAlertBar({ items }: Props) {
             ).flat()}
           </div>
         </div>
+
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Colapsar barra de emergencia"
+            className="shrink-0 flex items-center justify-center h-full w-9 text-base-content/60 hover:text-base-content transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

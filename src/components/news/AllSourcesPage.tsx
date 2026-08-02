@@ -898,9 +898,9 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
         )}
 
         {/* Attribution */}
-        <div className="mt-4 text-right text-[10px] text-base-content/70">
+        <div className="mt-4 text-right text-[10px] text-base-content/50">
           Fuente:{' '}
-          <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
+          <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
         </div>
       </div>
 

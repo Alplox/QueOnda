@@ -140,6 +140,63 @@ section[id][data-visible] h2 .letter {
   transform: translateX(0);
 }
 
+/* Emergency sub-section header */
+.em-subhead {
+  padding-bottom: 0.375rem;
+  margin-bottom: 0.375rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-base-content);
+  opacity: 0.6;
+  border-bottom: 1px solid var(--color-base-300);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.em-subhead a {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-base-content);
+  opacity: 0.6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.2s ease-out;
+}
+.em-subhead a:hover {
+  opacity: 1;
+}
+
+/* Fading corner ring — color from --curl (defaults primary), per-severity overrides */
+.card-curl {
+  --curl: var(--color-primary);
+  position: relative;
+}
+.card-curl.sev-critical { --curl: var(--color-error); }
+.card-curl.sev-high { --curl: var(--color-warning); }
+.card-curl.sev-moderate { --curl: var(--color-info); }
+.card-curl.sev-low { --curl: var(--color-warning); }
+.card-curl::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  padding: 1px;
+  pointer-events: none;
+  /* Two corner-anchored radial glows → fade is euclidean (equal distance along both adjacent edges) */
+  background:
+    radial-gradient(circle at 100% 0%, var(--curl), transparent 68%),
+    radial-gradient(circle at 0% 100%, var(--curl), transparent 68%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.45;
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

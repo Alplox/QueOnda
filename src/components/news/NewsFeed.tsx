@@ -400,9 +400,9 @@ export function NewsFeed({
         </div>
       )}
 
-      <div className="mt-4 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[10px] text-base-content/50">
         Fuente:{' '}
-        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
+        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
       </div>
 
       <SourceErrorPanel sourceResults={sourceResults} onRetry={onRetry} />

@@ -13,6 +13,7 @@ import { TransportWidget } from '../components/widgets/TransportWidget';
 import { FootballTable } from '../components/widgets/FootballTable';
 import { JobList } from '../components/widgets/JobList';
 import { EmergencyWidget } from '../components/widgets/EmergencyWidget';
+import { EmergencyTicker } from '../components/widgets/EmergencyTicker';
 import { HolidaysWidget } from '../components/widgets/HolidaysWidget';
 import { ClientNewsFeed } from '../components/news/ClientNewsFeed';
 import { ClientTV } from '../components/tv/ClientTV';
@@ -27,7 +28,8 @@ const hour = new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false
 const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long', timeZone: 'America/Santiago' });
 const todayBg = getTodayBg();
 const festivity = getTodayFestivity();
-const greeting = festivity?.message ?? (dayOfWeek === 'Monday' && Number(hour) === 10 ? 'Se me hizo larga esta semana' : Number(hour) === 23 ? 'A trabajar con el nóctulo' : Number(hour) < 12 ? 'Buenos días' : Number(hour) < 19 ? 'Buenas tardes' : 'Buenas noches');
+const nightGreetings = ['¿Mucho café?', 'Anda acostarte wn', '¿No funcionó contar ovejas?'];
+const greeting = festivity?.message ?? (dayOfWeek === 'Monday' && Number(hour) === 10 ? 'Se me hizo larga esta semana' : Number(hour) === 23 ? 'A trabajar con el nóctulo' : Number(hour) < 6 ? nightGreetings[Math.floor(Math.random() * nightGreetings.length)] : Number(hour) < 12 ? 'Buenos días' : Number(hour) < 19 ? 'Buenas tardes' : 'Buenas noches');
 
 const SITE_TITLE = '¿Qué Onda? - Chile en una sola página';
 const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más de Chile en un solo lugar. Sin anuncios, sin ruido.';
@@ -97,7 +99,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
 
     <SideIndex client:load />
 
-    <EmergencyWidget client:load />
+    <EmergencyTicker client:load />
 
     <main class="max-w-7xl mx-auto px-4 py-6 pb-56 space-y-8 md:space-y-12">
       <!-- Hero -->
@@ -141,6 +143,9 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
           </span>
         </div>
       </section>
+
+      <!-- Emergencia -->
+      <EmergencyWidget client:load />
 
       <!-- Noticias -->
       <Section id="noticias" title="Noticias" subtitle="Agrupadas por tema y medio">
@@ -246,6 +251,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
       (function() {
         var endpoints = [
           '/api/emergency',
+          '/api/power',
           '/api/news?mode=inventory',
           '/api/channels?source=json-teles',
           '/api/channels?source=iptv-org',

@@ -838,7 +838,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
         </div>
       </div>
 
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
         Fuentes:{' '}
         <a href="https://api.radio-browser.info" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">radio-browser.info</a>
         {' · '}

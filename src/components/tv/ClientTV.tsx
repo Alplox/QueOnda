@@ -695,7 +695,7 @@ export function ClientTV() {
         </>
       )}
 
-      <div className="mt-2 text-right text-[10px] text-base-content/70">
+      <div className="mt-2 text-right text-[10px] text-base-content/50">
         Fuente:{' '}
         {source === 'json-teles' ? (
           <a href="https://github.com/Alplox/json-teles" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>

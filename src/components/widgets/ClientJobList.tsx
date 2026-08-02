@@ -279,7 +279,7 @@ export function ClientJobList() {
       </div>
 
       {/* Attribution */}
-      <div className="px-3 pb-3 text-right text-[10px] text-base-content/70">
+      <div className="px-3 pb-3 text-right text-[10px] text-base-content/50">
         Fuentes:{' '}
         {JOB_SOURCES.map((sm, i) => (
           <span key={sm.key}>

@@ -500,9 +500,9 @@ export function YouTubeTrends() {
         </div>
       )}
 
-      <div className="mt-3 text-right text-[10px] text-base-content/70">
+      <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
         Fuentes:{' '}
-        <a href="https://github.com/Alplox/json-teles/blob/main/countries/cl.json" target="_blank" rel="noopener noreferrer" className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
+        <a href="https://github.com/Alplox/json-teles/blob/main/countries/cl.json" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
       </div>
     </div>
   );

@@ -83,7 +83,11 @@ src/
       JobList.tsx              # Job listings placeholder (client:visible)
       ClientJobList.tsx        # Client job listings widget (client:visible)
       EmergencyWidget.tsx      # Sismos recientes widget (client:load)
+      EmergencyTicker.tsx      # Sticky collapsible alert ticker bar under navbar (client:load)
       EmergencyAlertBar.tsx    # Auto-scrolling alert ticker bar
+      PowerOutageWidget.tsx    # SEC clientes sin suministro + mapa Leaflet por comuna + gráfico evolución (client:load)
+      PowerOutageMap.tsx       # Leaflet comuna dot map (theme-aware tiles, rank-band circles, filtros región/comuna)
+      PowerEvolutionChart.tsx  # Chart.js evolución horaria de clientes sin suministro (24h/48h/72h/7d)
       HolidaysWidget.tsx       # Chilean holidays calendar (client:visible)
       FiestasCountdown.tsx     # Fiestas Patrias countdown (client:visible)
       EmojiCard.tsx           # Card component for FiestasCountdown (client:visible)
@@ -100,6 +104,7 @@ src/
     radios.ts                # Radio station data + extraction
     sound.ts                 # Web Audio API sound engine — oscillator + noise synthesis
     transport.ts             # City configs, stop predictions, Metro API, POPULAR_STOPS list
+    comunas-coords.ts        # Comuna → [lat, lon] table (monitor-sinluz + supplements) + comunaCoords() matcher
     ua.ts                    # BROWSER_UA constant (shared by rss.ts + radios.ts, client-safe)
     backgrounds.ts            # Hero background images data
     emoji.ts                  # Emoji-to-SVG-path helper + text splitter
@@ -145,7 +150,8 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/transport?mode=route-names` | 1 hour | `{ routes }` — Lista de todos los números de recorrido RED                                                              |
 | `GET /api/sports`                     | 30 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
 | `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
-| `GET /api/emergency`                  | 5 min  | `{ items }` — Gael Cloud → Boostr → USGS fallback chain                                                                 |
+| `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain; senapred: 🚨 SAE alerts via Telegram           |
+| `GET /api/power`                      | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria)                 |
 | `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
 | `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
 | `GET /api/radio-stations`             | 1 hour | `{ stations }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits)                              |
@@ -159,7 +165,7 @@ All routes return JSON. CORS is not needed (same-origin).
 ### Hydration strategy
 
 - Components use Astro `client:*` directives for partial hydration
-- **Above-fold** (load eagerly): `Header`, `SideIndex`, `EmergencyWidget` — `client:load`
+- **Above-fold** (load eagerly): `Header`, `SideIndex`, `EmergencyTicker`, `EmergencyWidget` — `client:load`
 - **Mid-fold** (load at idle): `ClientNewsFeed` — `client:idle` (hydrate via `requestIdleCallback` when browser is free)
 - **Below-fold** widgets: `ClientTV`, `ClientRadios`, `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `FiestasCountdown` — all `client:visible` (hydrate when scrolled into view)
 - **hls.js** is loaded lazily via `import('hls.js')` only when a user plays an m3u8 stream, not at hydration time
@@ -297,6 +303,12 @@ Cada endpoint tiene una estrategia de respaldo. A continuación se detalla el or
 2. **[Boostr](https://docs.boostr.cl)** (secundario) — `api.boostr.cl/earthquakes/recent.json` — timeout 10s
 3. **[USGS](https://earthquake.usgs.gov)** (terciario) — `earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson` — timeout 10s, filtrado a Chile/South America
 4. Criterio: pasa al siguiente si `items.length === 0`, magnitud mínima 5.0
+
+#### SENAPRED SAE alerts (official Telegram, independent channel)
+- Fetch `t.me/s/SenapredChile` (BROWSER_UA) → parse each `.js-widget_message` wrapper for `data-post`, `<time datetime>`, and `.js-message_text`
+- Severity by keyword: desborde/aluvión/evacuar → critical, crecida/incendio/SAE/alerta → high, preventivo/monitoreo → moderate, else low
+- Returns as `senapred[]` beside `items[]` in `/api/emergency` (separate from earthquake fallback chain)
+- EmergencyWidget renders them as a "🚨 Alertas SENAPRED" block. Why Telegram: it's the official live SAE feed (gets CREF on the events page requires AWS AppSync Cognito/SigV4 — brittle to reimplement)
 
 ### Finance (`/api/finance`) — merge (no reemplaza)
 Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya tiene los 5.

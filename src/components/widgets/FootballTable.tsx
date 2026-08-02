@@ -583,16 +583,19 @@ export function FootballTable() {
         </>
       )}
     </div>
-    <div className="mt-2 text-right text-[10px] text-base-content/70">
+    <div className="mt-2 text-right text-[10px] text-base-content/50">
       {source === 'espn' ? (
         <>Fuentes:{' '}
-        <a href="https://github.com/pseudo-r/Public-ESPN-API" target="_blank" rel="noopener noreferrer" className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">ESPN (API pública)</a>
+        <a href="https://github.com/pseudo-r/Public-ESPN-API" target="_blank" rel="noopener noreferrer" 
+        className="hover:text-base-content underline underline-offset-2 transition-colors">ESPN (API pública)</a>
         {' · '}
-        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
+        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" 
+        className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
         </>
       ) : (
         <>Fuente:{' '}
-        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
+        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" 
+        className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
         </>
       )}
     </div>

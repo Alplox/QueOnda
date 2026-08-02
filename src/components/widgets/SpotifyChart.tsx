@@ -80,9 +80,9 @@ export function SpotifyChart() {
           </div>
         )}
       </div>
-      <div className="mt-2 text-right text-[10px] text-base-content/70">
+      <div className="mt-2 text-right text-[10px] text-base-content/50">
         Fuente:{' '}
-        <a href="https://open.spotify.com/playlist/37i9dQZEVXbL0GavIqMTeb" target="_blank" rel="noopener noreferrer" className="text-base-content/70  hover:text-base-content transition-colors underline underline-offset-2">
+        <a href="https://open.spotify.com/playlist/37i9dQZEVXbL0GavIqMTeb" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">
           Spotify "Top 50 Chile" playlist
         </a>
       </div>

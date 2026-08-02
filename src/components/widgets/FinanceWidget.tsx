@@ -169,7 +169,10 @@ function SourceAttribution() {
       {SOURCES.map((s, i) => (
         <span key={s.name}>
           {i > 0 && <>{' · '}</>}
-          <a href={s.url} target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">{s.name}</a>
+          <a href={s.url} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="hover:text-base-content underline underline-offset-2 transition-colors">{s.name}</a>
         </span>
       ))}
     </div>

@@ -610,7 +610,7 @@ export function WeatherWidget() {
                 </div>
               </div>
             )}
-            <div className="px-3 pb-2 text-right text-[10px] text-base-content/50">
+            <div className="mt-2 text-right text-[10px] text-base-content/50">
               Fuente:{' '}
               <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Windy</a>
             </div>

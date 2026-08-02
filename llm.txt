@@ -55,6 +55,7 @@ All return JSON. No CORS needed (same-origin). Cache durations in parens.
 - `GET /api/sports` — sports RSS (30m)
 - `GET /api/futbol` — RSS articles only (FootballTable fetches ESPN client-side)
 - `GET /api/emergency` — sismos (5m)
+- `GET /api/power` — SEC clientes sin suministro (15m)
 - `GET /api/holidays` — Chilean holidays (30m) — **fallback only** (HolidaysWidget fetches client-side)
 - `GET /api/radio-stations` — radio stations (1h) — **fallback only** (ClientRadios fetches client-side)
 - `GET /api/article?url=` — article proxy via cheerio (60m per URL)
