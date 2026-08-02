@@ -154,62 +154,62 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
 
       <!-- TV en Vivo -->
       <Section id="tv" title="TV en Vivo" subtitle="Canales chilenos en tiempo real">
-        <ClientTV client:visible />
+        <ClientTV client:idle />
       </Section>
 
       <!-- Radios -->
       <Section id="radios" title="Radios" subtitle="Radios chilenas en vivo">
-        <ClientRadios client:visible />
+        <ClientRadios client:idle />
       </Section>
 
       <!-- Finanzas -->
       <Section id="finanzas" title="Finanzas" subtitle="Indicadores económicos">
-        <FinanceWidget client:visible />
+        <FinanceWidget client:idle />
       </Section>
 
       <!-- YouTube Trends -->
       <Section id="youtube" title="YouTube Chile" subtitle="Últimos videos de canales chilenos">
-        <YouTubeTrends client:visible />
+        <YouTubeTrends client:idle />
       </Section>
 
       <!-- Spotify -->
       <Section id="spotify" title="Spotify Top 50" subtitle="Lo más escuchado en Chile">
-        <SpotifyChart client:visible />
+        <SpotifyChart client:idle />
       </Section>
 
       <!-- Google Trends -->
       <Section id="tendencias-web" title="Google Trends" subtitle="Búsquedas del momento en Chile">
-        <GoogleTrendsWidget client:visible />
+        <GoogleTrendsWidget client:idle />
       </Section>
 
       <!-- Clima -->
       <Section id="clima" title="Clima" subtitle="Pronóstico para Chile">
-        <WeatherWidget client:visible />
+        <WeatherWidget client:idle />
       </Section>
 
       <!-- Transporte -->
       <Section id="transporte" title="Transporte" subtitle="Metro y buses en tiempo real (Santiago)">
-        <TransportWidget client:visible />
+        <TransportWidget client:idle />
       </Section>
 
       <!-- Deportes -->
       <Section id="deportes" title="Deportes" subtitle="Noticias del fútbol chileno">
-        <FootballTable client:visible />
+        <FootballTable client:idle />
       </Section>
 
       <!-- Trabajos -->
       <Section id="trabajos" title="Trabajos" subtitle="Ofertas laborales en Chile">
-        <JobList client:visible />
+        <JobList client:idle />
       </Section>
 
       <!-- Feriados -->
       <Section id="feriados" title="Feriados" subtitle="Calendario de feriados en Chile">
-        <HolidaysWidget client:visible />
+        <HolidaysWidget client:idle />
       </Section>
 
       <!-- Fiestas Patrias -->
       <Section id="fiestas-patrias" title="Fiestas Patrias" subtitle="Cuenta regresiva para el 18 de septiembre">
-        <FiestasCountdown client:visible />
+        <FiestasCountdown client:idle />
       </Section>
     </main>
 
@@ -265,7 +265,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
           '/api/spotify',
         ];
         // ponytail: all at rAF — fire-and-forget fetches are negligible, idle scheduling
-        // delayed cache warming past the point client:visible widgets hydrate on fast scroll
+        // delayed cache warming past the point client:idle widgets hydrate on fast scroll
         if ('requestAnimationFrame' in window) {
           requestAnimationFrame(function() {
             for (var i = 0; i < endpoints.length; i++) {

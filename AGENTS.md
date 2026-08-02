@@ -63,35 +63,35 @@ src/
       chile-outline.ts        # Chile SVG outline data for ChileMap
     Emoji.tsx                 # Root-level emoji rendering component
     tv/
-      ClientTV.tsx            # TV orchestrator (state management, client:visible)
+      ClientTV.tsx            # TV orchestrator (state management, client:idle)
       ChannelSelector.tsx     # Category filter bar
       ChannelGrid.tsx         # Channel grid with hover/selected states
       UnifiedPlayer.tsx       # Single player for both inline + PiP modes (hls.js loaded per-play)
     radio/
-      ClientRadios.tsx        # Client wrapper (client:visible)
+      ClientRadios.tsx        # Client wrapper (client:idle)
       RadioPlayer.tsx         # Boombox-style radio player (hls.js loaded per-play)
     widgets/
       TrendingTags.tsx         # Tag chips
-      FinanceWidget.tsx        # UF, USD, EUR, IPC, UTM (client:visible)
-      ThemeSwitcher.tsx        # Theme selector dropdown (client:visible)
-      YouTubeTrends.tsx        # YouTube Chile trending videos grid (client:visible; IDB cache: youtube-trends 30min)
-      SpotifyChart.tsx         # Spotify Top 50 Chile iframe embed (client:visible)
-      GoogleTrendsWidget.tsx   # Google Trends Chile list (client:visible)
-      WeatherWidget.tsx        # Multi-city weather cards (client:visible)
-      TransportWidget.tsx      # Metro grid + estaciones + llegada de buses (client:visible)
-      FootballTable.tsx        # Chilean football standings + matches + news feed (client:visible; IDB cache: football-standings 6h, football-matches 1h, football-articles 30min; progressive per-tab rendering)
-      JobList.tsx              # Job listings placeholder (client:visible)
-      ClientJobList.tsx        # Client job listings widget (client:visible)
+      FinanceWidget.tsx        # UF, USD, EUR, IPC, UTM (client:idle)
+      ThemeSwitcher.tsx        # Theme selector dropdown (client:load)
+      YouTubeTrends.tsx        # YouTube Chile trending videos grid (client:idle; IDB cache: youtube-trends 30min)
+      SpotifyChart.tsx         # Spotify Top 50 Chile iframe embed (client:idle)
+      GoogleTrendsWidget.tsx   # Google Trends Chile list (client:idle)
+      WeatherWidget.tsx        # Multi-city weather cards (client:idle)
+      TransportWidget.tsx      # Metro grid + estaciones + llegada de buses (client:idle)
+      FootballTable.tsx        # Chilean football standings + matches + news feed (client:idle; IDB cache: football-standings 6h, football-matches 1h, football-articles 30min; progressive per-tab rendering)
+      JobList.tsx              # Job listings placeholder (client:idle)
+      ClientJobList.tsx        # Client job listings widget (client:idle)
       EmergencyWidget.tsx      # Sismos recientes widget (client:load)
       EmergencyTicker.tsx      # Sticky collapsible alert ticker bar under navbar (client:load)
       EmergencyAlertBar.tsx    # Auto-scrolling alert ticker bar
       PowerOutageWidget.tsx    # SEC clientes sin suministro + mapa Leaflet por comuna + gráfico evolución (client:load)
       PowerOutageMap.tsx       # Leaflet comuna dot map (theme-aware tiles, rank-band circles, filtros región/comuna)
       PowerEvolutionChart.tsx  # Chart.js evolución horaria de clientes sin suministro (24h/48h/72h/7d)
-      HolidaysWidget.tsx       # Chilean holidays calendar (client:visible)
-      FiestasCountdown.tsx     # Fiestas Patrias countdown (client:visible)
-      EmojiCard.tsx           # Card component for FiestasCountdown (client:visible)
-      RouteMap.tsx             # Transit route map component (client:visible)
+      HolidaysWidget.tsx       # Chilean holidays calendar (client:idle)
+      FiestasCountdown.tsx     # Fiestas Patrias countdown (client:idle)
+      EmojiCard.tsx           # Card component for FiestasCountdown (client:idle)
+      RouteMap.tsx             # Transit route map component (client:idle)
       ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
   lib/
     cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch. Exports edgeCacheHeaders(ttlSeconds) for CDN-level edge caching with stale-while-revalidate
@@ -166,8 +166,7 @@ All routes return JSON. CORS is not needed (same-origin).
 
 - Components use Astro `client:*` directives for partial hydration
 - **Above-fold** (load eagerly): `Header`, `SideIndex`, `EmergencyTicker`, `EmergencyWidget` — `client:load`
-- **Mid-fold** (load at idle): `ClientNewsFeed` — `client:idle` (hydrate via `requestIdleCallback` when browser is free)
-- **Below-fold** widgets: `ClientTV`, `ClientRadios`, `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `FiestasCountdown` — all `client:visible` (hydrate when scrolled into view)
+- **Mid/below-fold** (load at idle): `ClientNewsFeed`, `ClientTV`, `ClientRadios`, `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `FiestasCountdown` — all `client:idle` (hydrate via `requestIdleCallback` when browser is free, regardless of scroll). This preloads content in the background so sections are rendered before the user scrolls to them; on reload the IDB Phase-0 render makes skeletons invisible
 - **hls.js** is loaded lazily via `import('hls.js')` only when a user plays an m3u8 stream, not at hydration time
 - **clustering.ts** is code-split via dynamic `import()` in ClientNewsFeed (not in main bundle)
 

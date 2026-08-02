@@ -51,6 +51,8 @@ export function EmergencyWidget() {
   const [items, setItems] = useState<EmergencyItem[]>([]);
   const [alerts, setAlerts] = useState<EmergencyItem[]>([]);
   const [loading, setLoading] = useState(true);
+  // senapred no se cachea en IDB (solo items), así que mantiene su propio flag de carga
+  const [alertsLoaded, setAlertsLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +68,7 @@ export function EmergencyWidget() {
       if (cancelled) return;
       setItems(eqs);
       setAlerts(senapred);
+      setAlertsLoaded(true);
       setLoading(false);
       idbSet(IDB_KEY, eqs, IDB_TTL);
     }
@@ -90,26 +93,41 @@ export function EmergencyWidget() {
             <span>🚨 Alertas SENAPRED</span>
             <a href="https://www.senapred.gov.cl/eventos/" target="_blank" rel="noopener noreferrer">senapred.gov.cl</a>
           </p>
-          <ScrollRow>
-            {alerts.map((a, i) => (
-              <a
-                key={a.id}
-                href={a.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ animationDelay: `${i * 60}ms` }}
-                className={`card-curl sev-${a.severity} snap-start shrink-0 w-[260px] sm:w-[300px] flex flex-col rounded-lg p-3 bg-base-100 hover:bg-base-300 transition-colors no-underline animate-[fadeInUp_0.3s_ease-out_forwards] opacity-0`}
-              >
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className={severityBadges[a.severity] + ' shrink-0'}>{severityLabels[a.severity]}</span>
-                  <span className="shrink-0 text-[9px] text-base-content/50">
-                    {new Date(a.time).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+          {!alertsLoaded ? (
+            <div className="flex gap-2 overflow-x-hidden">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="w-[260px] sm:w-[300px] shrink-0 rounded-lg p-3 border border-base-300">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="h-4 w-16 bg-base-300 rounded-full animate-pulse" />
+                    <div className="h-2.5 w-10 bg-base-300 rounded animate-pulse" />
+                  </div>
+                  <div className="h-3 bg-base-300 rounded w-full animate-pulse" />
+                  <div className="h-3 bg-base-300 rounded w-4/5 mt-1.5 animate-pulse" />
                 </div>
-                <p className="text-xs text-base-content leading-snug line-clamp-4">{a.description}</p>
-              </a>
-            ))}
-          </ScrollRow>
+              ))}
+            </div>
+          ) : (
+            <ScrollRow>
+              {alerts.map((a, i) => (
+                <a
+                  key={a.id}
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                  className={`card-curl sev-${a.severity} snap-start shrink-0 w-[260px] sm:w-[300px] flex flex-col rounded-lg p-3 bg-base-100 hover:bg-base-300 transition-colors no-underline animate-[fadeInUp_0.3s_ease-out_forwards] opacity-0`}
+                >
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className={severityBadges[a.severity] + ' shrink-0'}>{severityLabels[a.severity]}</span>
+                    <span className="shrink-0 text-[9px] text-base-content/50">
+                      {new Date(a.time).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-base-content leading-snug line-clamp-4">{a.description}</p>
+                </a>
+              ))}
+            </ScrollRow>
+          )}
           <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
             Fuente:{' '}
             <a href="https://t.me/SenapredChile" target="_blank" rel="noopener noreferrer"
