@@ -226,13 +226,20 @@ function stripBoilerplate(text: string): string {
     .trim();
 }
 
+// Cut at a word boundary so we never end mid-word (max chars, no trailing spaces/commas)
+function cutAtWord(text: string, max: number): string {
+  if (text.length <= max) return text.trim().replace(/[,\s]+$/, '');
+  return text.slice(0, max).split(' ').slice(0, -1).join(' ').replace(/[,\s]+$/, '');
+}
+
 // Trim long post → readable model title
 function compactAlert(text: string): string {
   const clean = stripBoilerplate(text);
-  const region = clean.match(/(?:de la |del |de )?Regi[oó]n(?: del? | de la | )?[A-Za-z\s]+/i);
+  const region = clean.match(/(?:de la |del |de )?Regi[oó]n(?: del? | de la | )?[^\s.,;]+(?: [^\s.,;]+){0,2}/i);
   const regionStr = region ? `. ${region[0].trim()}` : '';
-  const core = clean.slice(0, 70).split(/(?=Regi[oó]n)/i)[0];
-  return `${core}${regionStr}`.replace(/\s{2,}/g, ' ').trim().slice(0, 90);
+  const core = cutAtWord(clean.split(/(?=Regi[oó]n)/i)[0], 140);
+  const joined = `${core}${regionStr}`.replace(/\s{2,}/g, ' ').replace(/\.\.+/g, '.').trim();
+  return cutAtWord(joined, 170);
 }
 
 // Keyword → severity: SAE alerts escalate by urgency

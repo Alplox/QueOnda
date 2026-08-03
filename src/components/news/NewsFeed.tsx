@@ -232,7 +232,7 @@ export function NewsFeed({
 
   return (
     <div className="space-y-8">
-      {trending.length > 0 && (
+      {(trending.length > 0 || activeTag) && (
         <div>
           <TrendingTags tags={trending} />
         </div>

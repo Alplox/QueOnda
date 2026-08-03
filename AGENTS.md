@@ -49,8 +49,10 @@ src/
     layout/
       Header.tsx             # Fixed nav bar with section scroll links (client:load)
       SideIndex.tsx          # Side navigation index (client:load)
+      ShareButton.tsx        # Header share button — native share on touch, clipboard copy on desktop (client:load)
+      SectionShareHandler.tsx  # Single delegated client:isidle island wiring every [data-section-share] button to share its section anchor (no per-section hydration)
       Footer.tsx
-      Section.tsx            # Reusable section wrapper
+      Section.tsx            # Reusable section wrapper — renders header + a "Compartir sección" button (data-section-share) per section
     news/
       ClientNewsFeed.tsx      # Client wrapper — 6-slot orchestrator (client:idle; clustering code-split via dynamic import)
       NewsFeed.tsx            # Slot grid + clusters + trending (presentational)
@@ -118,6 +120,8 @@ src/
     storage.ts                # localStorage JSON get/set helpers
     url.ts                    # extractHost() URL helper
     url-validator.ts          # SSRF protection / private IP validation
+    share.ts                  # shareOrCopy (native share on touch, clipboard on desktop), buildEmergencySummary, canShareFiles/downloadBlob
+    share-image.ts            # renderEmergencyCard — manual canvas 1080x1350 PNG for sharing the emergency section (no html2canvas)
     jobs/
       index.ts                # Job fetching orchestration
       types.ts                # Job/JobSource type definitions

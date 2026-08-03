@@ -454,42 +454,37 @@ export function ClientNewsFeed() {
   }, []);
 
   const handleAddSlot = useCallback(async () => {
-    let addedSource: SourceFeed | null = null;
-    setSlots(prev => {
-      if (prev.length >= MAX_SLOTS) return prev;
-      const newIdx = prev.length;
-      const pin = pinnedSources[newIdx];
-      if (pin) {
-        const source = matchSource(allSources, pin.sourceKey);
-        if (source) { addedSource = source; return [...prev, { source, articles: [], loading: true, error: null }]; }
-        if (pin.url) {
-          const fallbackSource: SourceFeed = {
-            sourceKey: pin.sourceKey,
-            name: pin.name,
-            url: pin.url,
-            source: pin.name,
-          };
-          addedSource = fallbackSource;
-          return [...prev, { source: fallbackSource, articles: [], loading: true, error: null, isFallback: true }];
-        }
+    if (slots.length >= MAX_SLOTS) return;
+    const newIdx = slots.length;
+    let newSource: SourceFeed | null = null;
+    let isFallback = false;
+    const pin = pinnedSources[newIdx];
+    if (pin) {
+      const source = matchSource(allSources, pin.sourceKey);
+      if (source) {
+        newSource = source;
+      } else if (pin.url) {
+        newSource = { sourceKey: pin.sourceKey, name: pin.name, url: pin.url, source: pin.name };
+        isFallback = true;
       }
-      const seen = new Set(prev.map(s => s.source?.sourceKey).filter(Boolean));
-      const unused = allSources.find(s => !seen.has(s.sourceKey));
-      if (unused) addedSource = unused;
-      return [...prev, { source: unused ?? null, articles: [], loading: !!unused, error: null }];
-    });
-    if (addedSource) {
-      const result = await fetchSingleSourceFeed(addedSource);
-      setSlots(prev => {
-        // ponytail: don't require s.loading — applyBatchResults can clear it before we resolve
-        const idx = prev.findIndex(s => s.source?.sourceKey === addedSource!.sourceKey);
-        if (idx === -1) return prev;
-        const next = [...prev];
-        next[idx] = { ...next[idx], articles: result.articles, loading: false, error: result.error };
-        return next;
-      });
     }
-  }, [allSources, pinnedSources]);
+    if (!newSource) {
+      const seen = new Set(slots.map(s => s.source?.sourceKey).filter(Boolean));
+      newSource = allSources.find(s => !seen.has(s.sourceKey)) ?? null;
+    }
+
+    setSlots(prev => [...prev, { source: newSource, articles: [], loading: !!newSource, error: null, isFallback }]);
+    if (!newSource) return;
+
+    const result = await fetchSingleSourceFeed(newSource);
+    setSlots(prev => {
+      const idx = prev.findIndex(s => s.source?.sourceKey === newSource!.sourceKey);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next[idx] = { ...next[idx], articles: result.articles, loading: false, error: result.error };
+      return next;
+    });
+  }, [slots, allSources, pinnedSources]);
 
   const handleRemoveSlot = useCallback(() => {
     setSlots(prev => {

@@ -7,6 +7,14 @@ import { extractHost } from '@/lib/url';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 import { parseChileLocal } from '@/lib/chile-time';
+import {
+  buildEmergencySummary,
+  canShareFiles,
+  copyToClipboard,
+  downloadBlob,
+  shareOrCopy,
+} from '@/lib/share';
+import { renderEmergencyCard } from '@/lib/share-image';
 
 export interface EmergencyItem {
   id: string;
@@ -110,13 +118,19 @@ export function EmergencyWidget() {
   const [items, setItems] = useState<EmergencyItem[]>([]);
   const [alerts, setAlerts] = useState<EmergencyItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [powerCount, setPowerCount] = useState<number | null>(null);
   // senapred no se cachea en IDB (solo items), así que mantiene su propio flag de carga
   const [alertsLoaded, setAlertsLoaded] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [mapMounted, setMapMounted] = useState(false);
   const [liveMsg, setLiveMsg] = useState('');
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const shareRef = useRef<HTMLDivElement>(null);
   const seenRef = useRef<{ sismos: Set<string>; alerts: Set<string> }>({ sismos: new Set(), alerts: new Set() });
+
+  const hasShareData = items.length > 0 || alerts.length > 0 || (powerCount != null && powerCount > 0);
 
   const openMap = (item: EmergencyItem) => {
     setShowMap(true);
@@ -143,6 +157,15 @@ export function EmergencyWidget() {
       if (newSismos[0]) setLiveMsg(`Nuevo sismo: ${newSismos[0].mag != null ? `magnitud ${newSismos[0].mag.toFixed(1)} ` : ''}${newSismos[0].place || newSismos[0].title}`);
       else if (newAlerts[0]) setLiveMsg(`Nueva alerta SENAPRED: ${newAlerts[0].title}`);
     }
+
+    try {
+      const res = await fetch('/api/power', { signal: AbortSignal.timeout(10000) });
+      if (res.ok) {
+        const d = await res.json();
+        setPowerCount(d?.affected != null ? d.affected : null);
+      }
+    } catch { /* power unavailable — omit from summary */ }
+
     setAlertsLoaded(true);
     setLoading(false);
   }, []);
@@ -174,16 +197,134 @@ export function EmergencyWidget() {
     else { const t = setTimeout(() => setMapMounted(false), 300); return () => clearTimeout(t); }
   }, [showMap]);
 
+  const handleShare = async (action: 'link' | 'summary' | 'image') => {
+    setShareOpen(false);
+    setShareMsg(null);
+    try {
+      if (action === 'link') {
+        const r = await shareOrCopy({
+          title: 'Emergencias Chile — ¿Qué Onda?',
+          text: 'Alertas SENAPRED, sismos y cortes de luz en Chile, en vivo.',
+          url: `${window.location.origin}#emergencia`,
+        });
+        setShareMsg(r === 'copied' ? 'Enlace copiado' : r === 'shared' ? 'Compartido' : 'No se pudo compartir');
+        play(r === 'copied' || r === 'shared' ? 'interaction.confirm' : 'notification.error');
+      } else if (action === 'summary') {
+        const r = await copyToClipboard(buildEmergencySummary(items, alerts, powerCount ?? undefined).text);
+        setShareMsg(r === 'copied' ? 'Resumen copiado' : 'No se pudo copiar');
+        play(r === 'copied' ? 'interaction.confirm' : 'notification.error');
+      } else {
+        const blob = await renderEmergencyCard(items, alerts, powerCount ?? undefined);
+        if (canShareFiles() && navigator.share) {
+          const file = new File([blob], 'queonda-emergencia.png', { type: 'image/png' });
+          await navigator.share({
+            files: [file],
+            title: 'Emergencias Chile — ¿Qué Onda?',
+            text: 'Alertas SENAPRED y sismos en Chile, en vivo.',
+          });
+          setShareMsg('Imagen compartida');
+        } else {
+          downloadBlob(blob, 'queonda-emergencia.png');
+          setShareMsg('Imagen descargada');
+        }
+        play('interaction.confirm');
+      }
+    } catch {
+      setShareMsg('No se pudo compartir');
+      play('notification.error');
+    }
+  };
+
+  // Close share menu on outside click / Escape; auto-clear transient feedback
+  useEffect(() => {
+    if (!shareOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) setShareOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShareOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [shareOpen]);
+
+  useEffect(() => {
+    if (!shareMsg) return;
+    const t = setTimeout(() => setShareMsg(null), 2600);
+    return () => clearTimeout(t);
+  }, [shareMsg]);
+
   return (
     <>
-      <section id="emergencia" className="scroll-mt-20 mb-8 md:mb-12">
+      <section id="emergencia" className="scroll-mt-[104px] mb-8 md:mb-12">
         <div className="sr-only" aria-live="polite">{liveMsg}</div>
         <div className="mb-4">
-          <h2 className="text-2xl font-bold text-balance text-base-content">
-            {'Emergencia'.split('').map((char, i) => (
-              <span key={i} className="letter" style={{ transitionDelay: `${i * 30}ms` }}>{char === ' ' ? '\u00A0' : char}</span>
-            ))}
-          </h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-2xl font-bold text-balance text-base-content">
+              {'Emergencia'.split('').map((char, i) => (
+                <span key={i} className="letter" style={{ transitionDelay: `${i * 30}ms` }}>{char === ' ' ? '\u00A0' : char}</span>
+              ))}
+            </h2>
+            <button
+              type="button"
+              data-section-share="emergencia"
+              data-section-title="Emergencia"
+              aria-label="Compartir sección Emergencia"
+              title="Compartir sección Emergencia"
+              className="relative flex items-center justify-center w-9 h-9 text-base-content/70 hover:text-base-content rounded-lg hover:bg-base-200 transition-colors shrink-0 cursor-pointer"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+            </button>
+            <div ref={shareRef} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => { play(shareOpen ? 'overlay.close' : 'overlay.expand'); setShareOpen(!shareOpen); }}
+                aria-expanded={shareOpen}
+                aria-haspopup="menu"
+                aria-label="Más opciones de compartir"
+                title="Más opciones de compartir"
+                className="flex items-center justify-center w-9 h-9 text-base-content/70 hover:text-base-content rounded-lg hover:bg-base-200 transition-colors shrink-0 cursor-pointer"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                  <circle cx="5" cy="12" r="1.5" />
+                  <circle cx="12" cy="12" r="1.5" />
+                  <circle cx="19" cy="12" r="1.5" />
+                </svg>
+              </button>
+              {shareOpen && (
+                <div role="menu" aria-label="Opciones de compartir emergencia" className="absolute top-full right-0 mt-1 w-48 bg-base-100 border border-base-300 rounded-xl shadow-2xl p-1.5 grid grid-cols-1 gap-0.5 z-50 animate-[fadeSlideIn_0.15s_ease-out]">
+                  <button type="button" role="menuitem" disabled={!hasShareData} onClick={() => handleShare('summary')} className="flex items-center gap-2 px-3 py-2 text-xs rounded-lg text-left hover:bg-base-200 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 2v6h6" />
+                    </svg>
+                    Copiar resumen
+                  </button>
+                  <button type="button" role="menuitem" disabled={!hasShareData} onClick={() => handleShare('image')} className="flex items-center gap-2 px-3 py-2 text-xs rounded-lg text-left hover:bg-base-200 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                    Compartir imagen
+                  </button>
+                </div>
+              )}
+              {shareMsg && (
+                <span role="status" className="absolute top-full right-0 mt-2 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap animate-[fadeSlideIn_0.15s_ease-out]">
+                  {shareMsg}
+                </span>
+              )}
+            </div>
+          </div>
           <p className="section-subtitle text-sm text-base-content/70 mt-1 text-pretty">Alertas SENAPRED, sismos y cortes de suministro eléctrico</p>
         </div>
 

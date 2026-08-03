@@ -2,7 +2,9 @@
 import { Header } from '../components/layout/Header';
 import { SideIndex } from '../components/layout/SideIndex';
 import { Footer } from '../components/layout/Footer';
+import { BackToTop } from '../components/layout/BackToTop';
 import { Section } from '../components/layout/Section';
+import { SectionShareHandler } from '../components/layout/SectionShareHandler';
 import { FinanceWidget } from '../components/widgets/FinanceWidget';
 import { FiestasCountdown } from '../components/widgets/FiestasCountdown';
 import { YouTubeTrends } from '../components/widgets/YouTubeTrends';
@@ -149,6 +151,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
       </section>
 
       <!-- Emergencia -->
+      <SectionShareHandler client:idle />
       <EmergencyWidget client:load />
 
       <!-- Noticias -->
@@ -218,6 +221,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     </main>
 
     <Footer client:idle />
+    <BackToTop client:load />
 
     <script>
       // Smooth scroll for anchor links

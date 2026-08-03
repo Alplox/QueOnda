@@ -55,7 +55,7 @@ export function TrendingTags({ tags, loading }: Props) {
     );
   }
 
-  if (tags.length === 0) return null;
+  if (tags.length === 0 && !activeTag) return null;
 
   return (
     <div>
@@ -81,7 +81,7 @@ export function TrendingTags({ tags, loading }: Props) {
         {activeTag && (
           <button
             onClick={() => { play('interaction.confirm'); setTag(null); }}
-            className="px-3 py-1.5 rounded-full text-sm bg-base-200 text-base-content/70 border border-base-300 hover:border-base-content/30 hover:text-base-content transition-colors cursor-pointer active:scale-[0.96]"
+            className="px-3 py-1.5 rounded-full text-sm bg-base-200 text-error border border-base-300 hover:border-error/50 hover:text-base-content transition-colors cursor-pointer active:scale-[0.96]"
           >
             Limpiar filtro
           </button>
