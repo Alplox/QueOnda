@@ -6,6 +6,7 @@ import { play } from '@/lib/sound';
 import { extractHost } from '@/lib/url';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 import { subscribeAutoRefresh } from '@/lib/auto-refresh';
+import { parseChileLocal } from '@/lib/chile-time';
 
 export interface EmergencyItem {
   id: string;
@@ -38,6 +39,56 @@ async function fetchEmergency() {
       ok: true,
     };
   } catch { return { items: [], senapred: [], ok: false }; }
+}
+
+// Client-side coordinate enrichment. /api/emergency attaches lat/lon from Boostr,
+// but Boostr can be unreachable from Cloudflare Workers (while still CORS-open to the
+// user's browser, ACAO: *). So if any sismo came back without coordinates, refetch
+// Boostr from the browser and match by the same Chile-local epoch, so pins always render.
+const COORD_TOL = 10 * 60 * 1000;
+async function enrichWithBoostr(items: EmergencyItem[]): Promise<EmergencyItem[]> {
+  const needsCoords = items.some(
+    (i) => i.type === 'earthquake' && i.mag != null && i.lat == null,
+  );
+  if (!needsCoords) return items;
+
+  let candidates: Array<{ time: number; mag: number; lat: number; lon: number }> = [];
+  try {
+    const res = await fetch('https://api.boostr.cl/earthquakes/recent.json', {
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const data = Array.isArray(json?.data) ? json.data : [];
+      for (const b of data) {
+        const time = parseChileLocal(`${b.date} ${b.hour}`);
+        const lat = parseFloat(b.latitude);
+        const lon = parseFloat(b.longitude);
+        if (isNaN(time) || isNaN(lat) || isNaN(lon)) continue;
+        candidates.push({ time, mag: parseFloat(b.magnitude), lat, lon });
+      }
+    }
+  } catch {
+    /* Boostr unreachable from browser too — leave items as-is */
+  }
+
+  if (candidates.length === 0) return items;
+
+  return items.map((it) => {
+    if (it.type !== 'earthquake' || it.mag == null || it.lat != null) return it;
+    const exact = candidates.find((c) => c.time === it.time);
+    let c = exact;
+    if (!c) {
+      c = candidates
+        .filter((x) => Math.abs(x.time - it.time) <= COORD_TOL)
+        .sort(
+          (a, b) =>
+            Math.abs(a.time - it.time) + Math.abs(a.mag - it.mag) * 60_000 -
+            (Math.abs(b.time - it.time) + Math.abs(b.mag - it.mag) * 60_000),
+        )[0];
+    }
+    return c ? { ...it, lat: c.lat, lon: c.lon } : it;
+  });
 }
 
 const severityBadges: Record<string, string> = {
@@ -74,9 +125,10 @@ export function EmergencyWidget() {
     if (ok) {
       // Trust a reachable server: a genuinely empty day clears to the placeholder instead of
       // showing stale alerts forever. Only a failed fetch keeps last-known data.
-      setItems(eqs);
+      const enriched = await enrichWithBoostr(eqs);
+      setItems(enriched);
       setAlerts(senapred);
-      if (eqs.length) idbSet(IDB_KEY, eqs, IDB_TTL);
+      if (enriched.length) idbSet(IDB_KEY, enriched, IDB_TTL);
     }
     setAlertsLoaded(true);
     setLoading(false);
@@ -87,7 +139,13 @@ export function EmergencyWidget() {
 
     idbGet<EmergencyItem[]>(IDB_KEY).then(cached => {
       if (cancelled || !cached?.data) return;
-      if (Array.isArray(cached.data)) setItems(cached.data);
+      if (Array.isArray(cached.data)) {
+        // enrich cached (possibly coord-less) data in the background so pins appear
+        // even while the fresh fetch is still in flight
+        enrichWithBoostr(cached.data).then(enriched => {
+          if (!cancelled) setItems(enriched);
+        });
+      }
       setLoading(false);
     });
 

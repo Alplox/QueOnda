@@ -111,6 +111,7 @@ src/
     emoji.ts                  # Emoji-to-SVG-path helper + text splitter
     festivities.ts            # Date-range-based festivity/theming logic
     idb-cache.ts              # IndexedDB client-side caching utility (idbGet/idbSet/cacheGet/cacheSet)
+    chile-time.ts             # parseChileLocal() — Chile-local time→epoch (DST-safe), shared by /api/emergency + EmergencyWidget client coord enrichment
     rate-limit.ts             # In-memory sliding window rate limiter
     auto-refresh.ts           # Module singleton that auto-refreshes the emergency section every 5 min + on tab re-focus (60s throttle; always on, no toggle)
     sections.ts               # Section ID/label constants for nav
@@ -152,7 +153,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/transport?mode=route-names` | 1 hour | `{ routes }` — Lista de todos los números de recorrido RED                                                              |
 | `GET /api/sports`                     | 30 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
 | `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
-| `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain; senapred: 🚨 SAE alerts via Telegram           |
+| `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain (coords attached from Boostr); senapred: 🚨 SAE alerts via Telegram. If Boostr is unreachable from the Worker, EmergencyWidget re-enriches `lat/lon` client-side from Boostr (API is CORS-open) so sismo pins always render |
 | `GET /api/power`                      | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria)                 |
 | `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
 | `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |

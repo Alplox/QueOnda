@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
 import { BROWSER_UA } from '../../lib/ua';
+import { parseChileLocal } from '../../lib/chile-time';
 
 interface ChileanEarthquake {
   Fecha: string;
@@ -60,28 +61,9 @@ function getSeverity(mag: number): 'low' | 'moderate' | 'high' | 'critical' {
 }
 
 // Gael/Boostr send "Fecha" as Chile local time with no offset; Workers run UTC,
-// so a naive parse shifts every sismo by the TZ offset (looks "stale" by ~4h).
-const CHILE_TZ = 'America/Santiago';
-const chileParts = new Intl.DateTimeFormat('en-US', {
-  timeZone: CHILE_TZ, hour12: false, hourCycle: 'h23',
-  year: 'numeric', month: '2-digit', day: '2-digit',
-  hour: '2-digit', minute: '2-digit', second: '2-digit',
-});
-// ponytail: solve epoch = naive - offset(epoch); 2 passes converge (DST-safe)
-function parseChileLocal(dateStr: string): number {
-  // parse components manually so the result is host-TZ-independent (Workers run UTC)
-  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
-  if (!m) return Date.parse(dateStr);
-  const naive = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
-  const offset = (epoch: number) => {
-    const p = chileParts.formatToParts(new Date(epoch));
-    const get = (t: string) => Number(p.find(x => x.type === t)?.value ?? 0);
-    return Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second')) - epoch;
-  };
-  let epoch = naive;
-  for (let i = 0; i < 2; i++) epoch = naive - offset(epoch);
-  return epoch;
-}
+// so a naive parse would shift every sismo by the TZ offset (looks "stale" by ~4h).
+// parseChileLocal lives in src/lib/chile-time.ts (shared with the client so both
+// attach coordinates by the exact same epoch).
 
 async function fetchGaelCloud(): Promise<EmergencyItem[]> {
   let items: EmergencyItem[] = [];
