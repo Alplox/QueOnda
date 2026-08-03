@@ -46,6 +46,8 @@ interface EmergencyItem {
   mag?: number;
   place?: string;
   depth?: number;
+  lat?: number;
+  lon?: number;
 }
 
 const MIN_MAGNITUDE = 1.0;
@@ -57,11 +59,32 @@ function getSeverity(mag: number): 'low' | 'moderate' | 'high' | 'critical' {
   return 'low';
 }
 
-function parseDate(dateStr: string): number {
-  return new Date(dateStr).getTime();
+// Gael/Boostr send "Fecha" as Chile local time with no offset; Workers run UTC,
+// so a naive parse shifts every sismo by the TZ offset (looks "stale" by ~4h).
+const CHILE_TZ = 'America/Santiago';
+const chileParts = new Intl.DateTimeFormat('en-US', {
+  timeZone: CHILE_TZ, hour12: false, hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+// ponytail: solve epoch = naive - offset(epoch); 2 passes converge (DST-safe)
+function parseChileLocal(dateStr: string): number {
+  // parse components manually so the result is host-TZ-independent (Workers run UTC)
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return Date.parse(dateStr);
+  const naive = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  const offset = (epoch: number) => {
+    const p = chileParts.formatToParts(new Date(epoch));
+    const get = (t: string) => Number(p.find(x => x.type === t)?.value ?? 0);
+    return Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second')) - epoch;
+  };
+  let epoch = naive;
+  for (let i = 0; i < 2; i++) epoch = naive - offset(epoch);
+  return epoch;
 }
 
 async function fetchGaelCloud(): Promise<EmergencyItem[]> {
+  let items: EmergencyItem[] = [];
   try {
     const chileRes = await fetch('https://api.gael.cloud/general/public/sismos', {
       signal: AbortSignal.timeout(10000),
@@ -69,9 +92,8 @@ async function fetchGaelCloud(): Promise<EmergencyItem[]> {
     if (!chileRes.ok) throw new Error(`API returned ${chileRes.status}`);
     const chileData = await chileRes.json() as ChileanEarthquake[];
     const filteredData = chileData.filter(eq => parseFloat(eq.Magnitud) >= MIN_MAGNITUDE);
-    filteredData.sort((a, b) => parseDate(b.Fecha) - parseDate(a.Fecha));
+    filteredData.sort((a, b) => parseChileLocal(b.Fecha) - parseChileLocal(a.Fecha));
 
-    const items: EmergencyItem[] = [];
     for (const eq of filteredData.slice(0, 25)) {
       const mag = parseFloat(eq.Magnitud);
       const depth = parseFloat(eq.Profundidad);
@@ -80,17 +102,28 @@ async function fetchGaelCloud(): Promise<EmergencyItem[]> {
         type: 'earthquake',
         title: `M ${mag.toFixed(1)} — ${eq.RefGeografica}`,
         description: `${eq.RefGeografica}. Profundidad: ${depth} km.`,
-        time: parseDate(eq.Fecha),
+        time: parseChileLocal(eq.Fecha),
         url: 'https://www.csn.uchile.cl/',
         severity: getSeverity(mag),
         mag, place: eq.RefGeografica, depth,
       });
     }
-    return items;
   } catch (err) {
     console.error('Emergency: Gael Cloud API fetch failed:', err);
     return [];
   }
+
+  // Gael sends no coordinates; Boostr serves the same CSN data with lat/lon,
+  // so attach them by matching the Chile-local timestamp.
+  const byTime = new Map<number, { lat: number; lon: number }>();
+  for (const b of await fetchBoostr()) {
+    if (b.lat != null && b.lon != null) byTime.set(b.time, { lat: b.lat, lon: b.lon });
+  }
+  for (const it of items) {
+    const c = byTime.get(it.time);
+    if (c) { it.lat = c.lat; it.lon = c.lon; }
+  }
+  return items;
 }
 
 async function fetchBoostr(): Promise<EmergencyItem[]> {
@@ -108,8 +141,10 @@ async function fetchBoostr(): Promise<EmergencyItem[]> {
       const mag = parseFloat(eq.magnitude);
       if (isNaN(mag) || mag < MIN_MAGNITUDE) continue;
       const depth = parseFloat(eq.depth.replace(' km', ''));
-      const time = new Date(`${eq.date} ${eq.hour}`).getTime();
+      const time = parseChileLocal(`${eq.date} ${eq.hour}`);
       if (isNaN(time)) continue;
+      const lat = parseFloat(eq.latitude);
+      const lon = parseFloat(eq.longitude);
       items.push({
         id: `${eq.date}-${eq.hour}-${eq.place}`,
         type: 'earthquake',
@@ -118,6 +153,7 @@ async function fetchBoostr(): Promise<EmergencyItem[]> {
         time, url: eq.info || '',
         severity: getSeverity(mag),
         mag, place: eq.place, depth,
+        ...(isNaN(lat) || isNaN(lon) ? {} : { lat, lon }),
       });
     }
     items.sort((a, b) => b.time - a.time);
@@ -153,6 +189,8 @@ async function fetchUSGS(): Promise<EmergencyItem[]> {
         mag: f.properties.mag,
         place: f.properties.place,
         depth: f.geometry.coordinates[2],
+        lat: f.geometry.coordinates[1],
+        lon: f.geometry.coordinates[0],
       }));
   } catch (err) {
     console.error('Emergency: USGS API fetch failed:', err);
@@ -188,13 +226,14 @@ function senapredSeverity(text: string): 'low' | 'moderate' | 'high' | 'critical
 }
 
 async function fetchSenapred(): Promise<EmergencyItem[]> {
-  try {
-    const res = await fetch('https://t.me/s/SenapredChile', {
-      headers: { 'user-agent': BROWSER_UA },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) throw new Error(`Telegram returned ${res.status}`);
-    const html = await res.text();
+  const run = async (): Promise<EmergencyItem[]> => {
+    try {
+      const res = await fetch('https://t.me/s/SenapredChile', {
+        headers: { 'user-agent': BROWSER_UA },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`Telegram returned ${res.status}`);
+      const html = await res.text();
 
     // t.me web preview: each post is a <div class="tgme_widget_message_wrap"> wrapper
     const items: EmergencyItem[] = [];
@@ -234,10 +273,15 @@ async function fetchSenapred(): Promise<EmergencyItem[]> {
 
     items.sort((a, b) => b.time - a.time);
     return items.slice(0, 12);
-  } catch (err) {
-    console.error('Emergency: SENAPRED Telegram fetch failed:', err);
-    return [];
-  }
+    } catch (err) {
+      console.error('Emergency: SENAPRED Telegram fetch failed:', err);
+      return [];
+    }
+  };
+
+  // ponytail: a transient Telegram hiccup must not cache senapred: [] for 5 min — retry once
+  const first = await run();
+  return first.length > 0 ? first : run();
 }
 
 export const GET: APIRoute = async () => {

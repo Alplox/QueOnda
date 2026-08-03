@@ -83,6 +83,7 @@ src/
       JobList.tsx              # Job listings placeholder (client:idle)
       ClientJobList.tsx        # Client job listings widget (client:idle)
       EmergencyWidget.tsx      # Sismos recientes widget (client:load)
+      EmergencyMap.tsx         # Leaflet map of sismos by magnitude (toggle inside EmergencyWidget)
       EmergencyTicker.tsx      # Sticky collapsible alert ticker bar under navbar (client:load)
       EmergencyAlertBar.tsx    # Auto-scrolling alert ticker bar
       PowerOutageWidget.tsx    # SEC clientes sin suministro + mapa Leaflet por comuna + gráfico evolución (client:load)
@@ -111,6 +112,7 @@ src/
     festivities.ts            # Date-range-based festivity/theming logic
     idb-cache.ts              # IndexedDB client-side caching utility (idbGet/idbSet/cacheGet/cacheSet)
     rate-limit.ts             # In-memory sliding window rate limiter
+    auto-refresh.ts           # Module singleton that auto-refreshes the emergency section every 5 min + on tab re-focus (60s throttle; always on, no toggle)
     sections.ts               # Section ID/label constants for nav
     storage.ts                # localStorage JSON get/set helpers
     url.ts                    # extractHost() URL helper

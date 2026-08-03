@@ -178,7 +178,7 @@ section[id][data-visible] h2 .letter {
 .card-curl.sev-critical { --curl: var(--color-error); }
 .card-curl.sev-high { --curl: var(--color-warning); }
 .card-curl.sev-moderate { --curl: var(--color-info); }
-.card-curl.sev-low { --curl: var(--color-warning); }
+.card-curl.sev-low { --curl: var(--color-success); }
 .card-curl::before {
   content: '';
   position: absolute;

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PowerOutageMap } from './PowerOutageMap';
 import { PowerEvolutionChart } from './PowerEvolutionChart';
+import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 
 interface Comuna {
   region: string;
@@ -44,14 +45,21 @@ export function PowerOutageWidget() {
   const [showChart, setShowChart] = useState(false);
   const [tab, setTab] = useState<'regiones' | 'comunas'>('regiones');
 
-  useEffect(() => {
-    let cancelled = false;
+  const refresh = useCallback(() => {
     fetchPower().then(d => {
-      if (cancelled) return;
-      setData(d);
+      if (d) setData(d);
       setLoading(false);
     });
-    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => subscribeAutoRefresh(refresh), [refresh]);
+
+  // prefetch leaflet JS at idle so opening the map doesn't wait for the ~144 KB chunk
+  useEffect(() => {
+    const id = requestIdleCallback(() => { import('leaflet').catch(() => {}); });
+    return () => cancelIdleCallback(id);
   }, []);
 
   const topComunas = useMemo(() => data?.comunas.slice(0, 8) ?? [], [data]);
@@ -89,20 +97,28 @@ export function PowerOutageWidget() {
 
       <div className="flex items-baseline gap-3 mt-2 animate-[heroFadeUp_0.4s_ease-out]">
         <span className="text-3xl font-bold text-base-content tabular-nums">{miles(data.affected)}</span>
+        <span className="text-base-content/70 text-sm font-normal"> de {miles(data.total)}</span>
         <span className={`text-sm font-medium ${data.pct >= 2 ? 'text-error' : 'text-base-content/70'}`}>
-          {data.pct.toFixed(2)}% del país
+          ({data.pct.toFixed(2)}% del país)
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        <div className="rounded-lg bg-base-100 px-3 py-2 border border-base-300/60 animate-[fadeInUp_0.3s_ease-out_0.05s_both]">
-          <div className="text-[10px] text-base-content/70">Comunas afectadas</div>
-          <div className="text-lg font-semibold text-base-content tabular-nums">{data.comunas.length}</div>
-        </div>
-        <div className="rounded-lg bg-base-100 px-3 py-2 border border-base-300/60 animate-[fadeInUp_0.3s_ease-out_0.1s_both]">
-          <div className="text-[10px] text-base-content/70">Clientes afectados</div>
-          <div className="text-lg font-semibold text-base-content tabular-nums">{miles(data.affected)} de {miles(data.total)}</div>
-        </div>
+      <div className="mt-3 text-[11px] text-base-content/70">
+        ¿Corte de luz? Reporta:{' '}
+        <a href="https://www.sec.cl/reclamo-por-corte-de-luz/" target="_blank" rel="noopener noreferrer"
+          className="hover:text-base-content underline underline-offset-2 transition-colors">SEC</a>
+        {' · '}
+        <a href="https://sucursalvirtual.cge.cl/estas-sin-luz" target="_blank" rel="noopener noreferrer"
+          className="hover:text-base-content underline underline-offset-2 transition-colors">CGE</a>
+        {' · '}
+        <a href="https://desconexiones.gruposaesa.cl/estoy-sin-luz" target="_blank" rel="noopener noreferrer"
+          className="hover:text-base-content underline underline-offset-2 transition-colors">Grupo Saesa</a>
+        {' · '}
+        <a href="https://www.enel.cl/es/clientes/servicios-en-linea/solicitud-contacto.html" target="_blank" rel="noopener noreferrer"
+          className="hover:text-base-content underline underline-offset-2 transition-colors">Enel</a>
+        {' · '}
+        <a href="https://www.chilquinta.cl/reportar-corte" target="_blank" rel="noopener noreferrer"
+          className="hover:text-base-content underline underline-offset-2 transition-colors">Chilquinta</a>
       </div>
 
       <div className="mt-3">
@@ -125,7 +141,7 @@ export function PowerOutageWidget() {
                 : 'bg-base-300 text-base-content/60 hover:text-base-content'
             }`}
           >
-            Comunas
+            Comunas ({data.comunas.length})
           </button>
         </div>
 

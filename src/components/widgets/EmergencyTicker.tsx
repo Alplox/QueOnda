@@ -1,20 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EmergencyItem } from './EmergencyWidget';
 import { EmergencyAlertBar } from './EmergencyAlertBar';
 import { play } from '@/lib/sound';
 import { idbGet, idbSet } from '@/lib/idb-cache';
+import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 
 const IDB_KEY = 'emergency';
 const IDB_TTL = 5 * 60 * 1000;
 const LS_COLLAPSED = 'emergency-bar-collapsed';
 
-async function fetchEmergency(): Promise<EmergencyItem[]> {
+async function fetchEmergency(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
   try {
     const res = await fetch('/api/emergency', { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return [];
+    if (!res.ok) return { items: [], ok: false };
     const data = await res.json();
-    return (data.items || []) as EmergencyItem[];
-  } catch { return []; }
+    return { items: (data.items || []) as EmergencyItem[], ok: true };
+  } catch { return { items: [], ok: false }; }
 }
 
 export function EmergencyTicker() {
@@ -39,6 +40,14 @@ export function EmergencyTicker() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const refresh = useCallback(() => {
+    fetchEmergency().then(({ items: eqs, ok }) => {
+      if (!ok) return; // API unreachable → keep last-known; a real empty day hides the ticker via items.length === 0
+      setItems(eqs);
+      if (eqs.length) idbSet(IDB_KEY, eqs, IDB_TTL);
+    });
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -47,13 +56,11 @@ export function EmergencyTicker() {
       setItems(cached.data);
     });
 
-    fetchEmergency().then(eqs => {
-      if (cancelled) return;
-      setItems(eqs);
-      idbSet(IDB_KEY, eqs, IDB_TTL);
-    });
+    refresh();
     return () => { cancelled = true; };
-  }, []);
+  }, [refresh]);
+
+  useEffect(() => subscribeAutoRefresh(refresh), [refresh]);
 
   if (items.length === 0) return null;
 

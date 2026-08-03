@@ -3,6 +3,19 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
+  "description": "Noticias, TV y radio de Chile en un solo dashboard (Astro + React)",
+  "keywords": [
+    "chile",
+    "noticias",
+    "news",
+    "tv",
+    "radio",
+    "rss",
+    "astro",
+    "react",
+    "dashboard",
+    "streaming"
+  ],
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/post-build-pages.mjs",

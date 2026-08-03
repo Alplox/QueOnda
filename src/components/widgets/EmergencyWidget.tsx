@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { PowerOutageWidget } from './PowerOutageWidget';
+import { EmergencyMap } from './EmergencyMap';
 import { play } from '@/lib/sound';
+import { extractHost } from '@/lib/url';
 import { idbGet, idbSet } from '@/lib/idb-cache';
+import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 
 export interface EmergencyItem {
   id: string;
@@ -15,29 +18,33 @@ export interface EmergencyItem {
   mag?: number;
   place?: string;
   depth?: number;
+  lat?: number;
+  lon?: number;
 }
 
 const IDB_KEY = 'emergency';
 const IDB_TTL = 5 * 60 * 1000;
 
 // ponytail: server-side /api/emergency aggregates Gael → Boostr → USGS (CORS + edge cache)
+// ok=false → the API itself was unreachable (keep last-good); ok=true → trust the payload even if empty
 async function fetchEmergency() {
   try {
     const res = await fetch('/api/emergency', { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return { items: [], senapred: [] };
+    if (!res.ok) return { items: [], senapred: [], ok: false };
     const data = await res.json();
     return {
       items: (data.items || []) as EmergencyItem[],
       senapred: (data.senapred || []) as EmergencyItem[],
+      ok: true,
     };
-  } catch { return { items: [], senapred: [] }; }
+  } catch { return { items: [], senapred: [], ok: false }; }
 }
 
 const severityBadges: Record<string, string> = {
   critical: 'badge badge-xs badge-error',
   high: 'badge badge-xs badge-warning',
   moderate: 'badge badge-xs badge-info',
-  low: 'badge badge-xs badge-warning',
+  low: 'badge badge-xs badge-success',
 };
 
 const severityLabels: Record<string, string> = {
@@ -53,6 +60,27 @@ export function EmergencyWidget() {
   const [loading, setLoading] = useState(true);
   // senapred no se cachea en IDB (solo items), así que mantiene su propio flag de carga
   const [alertsLoaded, setAlertsLoaded] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [focusId, setFocusId] = useState<string | null>(null);
+
+  const openMap = (item: EmergencyItem) => {
+    setShowMap(true);
+    setFocusId(item.id);
+    play('interaction.toggle');
+  };
+
+  const refresh = useCallback(async () => {
+    const { items: eqs, senapred, ok } = await fetchEmergency();
+    if (ok) {
+      // Trust a reachable server: a genuinely empty day clears to the placeholder instead of
+      // showing stale alerts forever. Only a failed fetch keeps last-known data.
+      setItems(eqs);
+      setAlerts(senapred);
+      if (eqs.length) idbSet(IDB_KEY, eqs, IDB_TTL);
+    }
+    setAlertsLoaded(true);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,18 +91,11 @@ export function EmergencyWidget() {
       setLoading(false);
     });
 
-    async function load() {
-      const { items: eqs, senapred } = await fetchEmergency();
-      if (cancelled) return;
-      setItems(eqs);
-      setAlerts(senapred);
-      setAlertsLoaded(true);
-      setLoading(false);
-      idbSet(IDB_KEY, eqs, IDB_TTL);
-    }
-    load();
+    refresh();
     return () => { cancelled = true; };
-  }, []);
+  }, [refresh]);
+
+  useEffect(() => subscribeAutoRefresh(refresh), [refresh]);
 
   return (
     <>
@@ -106,6 +127,8 @@ export function EmergencyWidget() {
                 </div>
               ))}
             </div>
+          ) : alerts.length === 0 ? (
+            <p className="text-xs text-base-content/50 pb-1">Sin alertas SENAPRED activas</p>
           ) : (
             <ScrollRow>
               {alerts.map((a, i) => (
@@ -153,21 +176,33 @@ export function EmergencyWidget() {
                 className="underline hover:text-base-content transition-colors">Sismología Chile</a>
             </p>
           ) : (
-            <ScrollRow>
-              {items.map((item, i) => (
-                <a
+            <>
+              <ScrollRow>
+                {items.map((item, i) => (
+                <div
                   key={item.id}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   style={{ animationDelay: `${i * 60}ms` }}
-                  className={`card-curl sev-${item.severity} snap-start shrink-0 w-[200px] sm:w-[230px] flex flex-col rounded-xl p-3 bg-base-100 hover:bg-base-300 transition-colors no-underline animate-[fadeInUp_0.3s_ease-out_forwards] opacity-0`}
+                  className={`card-curl sev-${item.severity} snap-start shrink-0 w-[200px] sm:w-[230px] flex flex-col rounded-xl p-3 bg-base-100 animate-[fadeInUp_0.3s_ease-out_forwards] opacity-0`}
                 >
                   <div className="mb-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className={severityBadges[item.severity] + ' shrink-0'}>{severityLabels[item.severity]}</span>
                       {item.mag !== undefined && (
                         <span className="text-sm font-bold text-base-content shrink-0">M {item.mag.toFixed(1)}</span>
+                      )}
+                      {item.lat != null && item.lon != null && (
+                        <button
+                          type="button"
+                          onClick={() => openMap(item)}
+                          aria-label="Ver dónde ocurrió en el mapa"
+                          title="Ver en el mapa"
+                          className="ml-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
+                        </button>
                       )}
                     </div>
                     <span className="block text-[9px] text-base-content/50 mt-0.5">
@@ -177,15 +212,43 @@ export function EmergencyWidget() {
                     </span>
                   </div>
                   <p className="text-xs text-base-content leading-snug line-clamp-2">{item.place || item.title}</p>
-                  {item.depth !== undefined && (
-                    <div className="mt-1.5 text-[9px] text-base-content/70">{item.depth.toFixed(1)} km</div>
-                  )}
-                </a>
+                  <div className="mt-auto pt-1.5 flex items-center justify-between gap-1">
+                    {item.depth !== undefined && (
+                      <span className="text-[9px] text-base-content/70">{item.depth.toFixed(1)} km</span>
+                    )}
+                    {item.url && (
+                      <span className="ml-auto text-[9px] text-base-content/40 truncate max-w-[70%]">{extractHost(item.url)}</span>
+                    )}
+                  </div>
+                </div>
               ))}
             </ScrollRow>
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !showMap;
+                  setShowMap(next);
+                  if (next) setFocusId(null);
+                  play('interaction.toggle');
+                }}
+                className="text-[11px] font-medium text-primary hover:text-primary/80 border border-primary/30 rounded-full px-3 py-1 hover:bg-primary/5 transition-colors active:scale-[0.96]"
+              >
+                {showMap ? 'Ocultar mapa' : 'Ver mapa de sismos'}
+              </button>
+            </div>
+            {showMap && (
+              <div className="mt-2 rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3 animate-[fadeInUp_0.3s_ease-out]">
+                <EmergencyMap items={items} focusId={focusId} />
+              </div>
+            )}
+            </>
           )}
           <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
             Fuentes:{' '}
+            <a href="https://www.csn.uchile.cl/" target="_blank" rel="noopener noreferrer"
+              className="hover:text-base-content underline underline-offset-2 transition-colors">CSN (U. de Chile)</a>
+            {' · '}
             <a href="https://api.gael.cloud/#sismos" target="_blank" rel="noopener noreferrer"
               className="hover:text-base-content underline underline-offset-2 transition-colors">Gael Cloud</a>
             {' · '}

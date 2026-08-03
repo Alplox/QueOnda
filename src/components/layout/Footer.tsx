@@ -9,7 +9,7 @@ function useFooterReveal() {
     if (!el) return;
     const obs = new IntersectionObserver(
       ([e]) => { if (e.isIntersecting) { el.classList.add('visible'); obs.disconnect(); } },
-      { threshold: 0.15 }
+      { threshold: 0.05 }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -58,7 +58,7 @@ export function Footer() {
             {/* Col 2: Links */}
             <div className="flex flex-col gap-2 text-sm">
               <a href="/todas-las-fuentes" onClick={() => play('interaction.tap')} className="text-base-content/70 hover:text-base-content transition-colors underline underline-offset-2">Todas las fuentes</a>
-              <a href="https://github.com/Alplox/QueOnda" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="text-base-content/70 hover:text-base-content transition-colors underline underline-offset-2">⭐ Dar estrella en GitHub</a>
+              <a href="https://github.com/Alplox/QueOnda" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="text-base-content/70 hover:text-base-content transition-colors underline underline-offset-2">Desarrollado por Alplox</a>
             </div>
 
             {/* Col 3: Sound */}
@@ -85,7 +85,7 @@ export function Footer() {
 
           {/* Bottom bar */}
           <div className="mt-10 pt-6 border-t border-base-content/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-base-content/50">
-            <span>© {new Date().getFullYear()} ¿Qué Onda? Hecho en Chile.</span>
+            <span>© {new Date().getFullYear()} Hecho en Chile.</span>
             <span>Foto: <a href="https://unsplash.com/es/fotos/manada-de-caballos-en-arbustos-y-pastos-a-traves-de-la-montana-Zf2mL1gtaVg" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">modernwolo</a></span>
           </div>
         </div>
