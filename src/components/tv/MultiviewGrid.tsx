@@ -95,10 +95,11 @@ export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, o
         {/* Drag handle — only if onReorder is provided */}
         {onReorder && (
           <button
+            type="button"
             onPointerDown={(ev) => handleDragStart(ev, index)}
+            aria-label="Reordenar canal (arrastrar)"
             className="absolute -top-1 -left-1 z-30 w-5 h-5 flex items-center justify-center rounded-full bg-neutral/90 border border-white/15 text-white/50 hover:text-white hover:bg-neutral touch-none opacity-40 hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
             style={{ touchAction: 'none' }}
-            title="Reordenar"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>

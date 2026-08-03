@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PowerOutageMap } from './PowerOutageMap';
 import { PowerEvolutionChart } from './PowerEvolutionChart';
 import { subscribeAutoRefresh } from '@/lib/auto-refresh';
+import { play } from '@/lib/sound';
 
 interface Comuna {
   region: string;
@@ -43,7 +44,19 @@ export function PowerOutageWidget() {
   const [loading, setLoading] = useState(true);
   const [showMap, setShowMap] = useState(false);
   const [showChart, setShowChart] = useState(false);
+  const [mapMounted, setMapMounted] = useState(false);
+  const [chartMounted, setChartMounted] = useState(false);
   const [tab, setTab] = useState<'regiones' | 'comunas'>('regiones');
+
+  // Keep map/chart mounted through their 300ms collapse so the exit animates like the weather map
+  useEffect(() => {
+    if (showMap) setMapMounted(true);
+    else { const t = setTimeout(() => setMapMounted(false), 300); return () => clearTimeout(t); }
+  }, [showMap]);
+  useEffect(() => {
+    if (showChart) setChartMounted(true);
+    else { const t = setTimeout(() => setChartMounted(false), 300); return () => clearTimeout(t); }
+  }, [showChart]);
 
   const refresh = useCallback(() => {
     fetchPower().then(d => {
@@ -164,32 +177,52 @@ export function PowerOutageWidget() {
         </div>
       </div>
 
-      <div className="flex gap-2 mt-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
         <button
-          onClick={() => setShowMap(s => !s)}
-          className="text-[11px] font-medium text-primary hover:text-primary/80 border border-primary/30 rounded-full px-3 py-1 hover:bg-primary/5 transition-colors active:scale-[0.96]"
+          type="button"
+          onClick={() => { play('interaction.toggle'); setShowMap(s => !s); }}
+          aria-expanded={showMap}
+          className="flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
         >
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+            className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
+            <path d="M9 18l6-6-6-6" />
+          </svg>
           {showMap ? 'Ocultar mapa' : 'Ver mapa por comuna'}
         </button>
         <button
-          onClick={() => setShowChart(s => !s)}
-          className="text-[11px] font-medium text-primary hover:text-primary/80 border border-primary/30 rounded-full px-3 py-1 hover:bg-primary/5 transition-colors active:scale-[0.96]"
+          type="button"
+          onClick={() => { play('interaction.toggle'); setShowChart(s => !s); }}
+          aria-expanded={showChart}
+          className="flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
         >
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+            className={`transition-transform duration-200 ${showChart ? 'rotate-90' : ''}`}>
+            <path d="M9 18l6-6-6-6" />
+          </svg>
           {showChart ? 'Ocultar evolución' : 'Ver evolución'}
         </button>
       </div>
 
-      {showMap && (
-        <div className="mt-2 rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3 animate-[fadeInUp_0.3s_ease-out]">
-          <PowerOutageMap comunas={data.comunas} />
+      <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showMap ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden min-h-0">
+          {mapMounted && (
+            <div className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
+              <PowerOutageMap comunas={data.comunas} />
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {showChart && (
-        <div className="mt-2 rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3 animate-[fadeInUp_0.3s_ease-out]">
-          <PowerEvolutionChart series={data.series} />
+      <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showChart ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden min-h-0">
+          {chartMounted && (
+            <div className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
+              <PowerEvolutionChart series={data.series} />
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="mt-2 text-right text-[10px] text-base-content/50">
         Fuente:{' '}

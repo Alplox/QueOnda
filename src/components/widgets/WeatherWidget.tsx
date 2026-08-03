@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { idbGet, idbSet } from '../../lib/idb-cache';
+import { play } from '@/lib/sound';
 
 const IDB_KEY = 'weather-default';
 const IDB_TTL = 10 * 60 * 1000; // 10 min
@@ -208,7 +209,7 @@ function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, 
       {/* Forecast toggle */}
       {hasForecast && onToggle && (
         <button
-          onClick={onToggle}
+          onClick={() => { play('interaction.toggle'); onToggle(); }}
           className="mt-2 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
@@ -550,7 +551,8 @@ export function WeatherWidget() {
 
       {/* Windy map toggle */}
       <button
-        onClick={() => { setShowMap(s => !s); if (!showMap) { setMapLoaded(false); setMapFailed(false); setMapRetryKey(k => k + 1); } }}
+        onClick={() => { play('interaction.toggle'); setShowMap(s => !s); if (!showMap) { setMapLoaded(false); setMapFailed(false); setMapRetryKey(k => k + 1); } }}
+        aria-expanded={showMap}
         className="mb-3 flex items-center gap-1.5 text-xs font-medium text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"

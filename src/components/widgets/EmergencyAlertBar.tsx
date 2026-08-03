@@ -25,6 +25,12 @@ export function EmergencyAlertBar({ items, onClose }: Props) {
     const el = scrollRef.current;
     if (!el || items.length === 0) return;
 
+    // Respect reduced motion: show the first items statically instead of animating
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      el.style.transform = 'translateX(0)';
+      return () => { cancelAnimationFrame(rafRef.current); };
+    }
+
     const contentWidth = el.scrollWidth / repeats;
     if (contentWidth <= 0) return;
 
@@ -86,7 +92,7 @@ export function EmergencyAlertBar({ items, onClose }: Props) {
       rel="noopener noreferrer"
       onClick={() => play('notification.warning')}
       className={`inline-flex items-center gap-2 text-xs no-underline shrink-0 ${
-        item.severity === 'critical' ? 'text-error-content' : item.severity === 'high' ? 'text-warning-content' : 'text-base-content/80'
+        item.severity === 'critical' ? 'text-error' : item.severity === 'high' ? 'text-warning' : 'text-base-content/80'
       } hover:text-base-content transition-colors`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${severityColors[item.severity]}`} />
@@ -105,6 +111,8 @@ export function EmergencyAlertBar({ items, onClose }: Props) {
       }`}
       onMouseEnter={() => { pausedRef.current = true; }}
       onMouseLeave={() => { pausedRef.current = false; }}
+      onFocus={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; pausedRef.current = true; }}
+      onBlur={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; pausedRef.current = false; }}
     >
       <div className="flex items-center h-9">
         <div className={`shrink-0 flex items-center gap-2 pl-4 pr-3 h-full z-10 ${isCritical ? 'bg-error text-error-content' : 'bg-warning text-warning-content'}`}>

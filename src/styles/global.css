@@ -130,8 +130,8 @@ section:target h2 {
 }
 
 section[id] h2 .letter {
-  opacity: 0;
-  transform: translateX(-6px);
+  opacity: 1;
+  transform: translateX(0);
   transition: opacity 0.3s ease-out, transform 0.3s ease-out;
   display: inline-block;
 }

@@ -88,6 +88,10 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
     <ClientRouter />
   </head>
   <body class="bg-base-100 text-base-content min-h-screen pt-14">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:bg-primary focus:text-primary-content focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg"
+    >Ir al contenido</a>
     <svg style="position:absolute;width:0;height:0" aria-hidden="true">
       <filter id="paper-grain">
         <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
@@ -101,7 +105,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
 
     <EmergencyTicker client:load />
 
-    <main class="max-w-7xl mx-auto px-4 py-6 pb-56 space-y-8 md:space-y-12">
+    <main id="main" class="max-w-7xl mx-auto px-4 py-6 pb-56 space-y-8 md:space-y-12">
       <!-- Hero -->
       <section class="relative overflow-hidden text-center py-32 md:py-40 rounded-t-2xl">
         <div class="absolute inset-0 animate-[heroBgIn_0.8s_ease-out] will-animate">

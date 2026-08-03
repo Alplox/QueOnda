@@ -75,6 +75,9 @@ export function EmergencyTicker() {
   return (
     <div className="sticky z-40 transition-[top] duration-300" style={{ top: navHidden ? 0 : 56 }}>
       <div
+        id="emergency-alert-bar"
+        inert={collapsed}
+        aria-hidden={collapsed}
         className={`transition-all duration-300 ease-out ${
           collapsed ? 'max-h-0 opacity-0 overflow-hidden' : 'max-h-10 opacity-100'
         }`}
@@ -83,7 +86,11 @@ export function EmergencyTicker() {
       </div>
       <button
         onClick={toggle}
-        aria-label="Mostrar alertas de emergencia"
+        inert={!collapsed}
+        aria-hidden={!collapsed}
+        aria-expanded={!collapsed}
+        aria-controls="emergency-alert-bar"
+        aria-label={collapsed ? 'Mostrar alertas de emergencia' : 'Ocultar alertas de emergencia'}
         className={`mx-auto flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-base-content/80 hover:text-base-content bg-base-200 border border-base-300 rounded-full px-3 py-1.5 shadow-sm transition-all duration-300 active:scale-[0.96] ${
           collapsed
             ? 'mt-2 max-h-10 opacity-100 translate-y-0'

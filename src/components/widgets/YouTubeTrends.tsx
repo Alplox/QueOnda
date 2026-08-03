@@ -82,7 +82,7 @@ function VideoCard({ video, isCompact }: { video: Video; isCompact?: boolean }) 
         )}
       </div>
       <div className="p-2.5">
-        <p className="text-xs text-base-content line-clamp-2 leading-snug group-hover:text-base-content group-hover:underline decoration-primary/60 underline-offset-2 transition-colors">
+        <p className="text-xs text-base-content line-clamp-2 leading-snug group-hover:text-base-content group-hover:underline decoration-primary/60 underline-offset-2 transition-colors" title={video.title}>
           {video.title}
         </p>
         <p className="text-[10px] text-base-content/70 mt-1 truncate">{video.author}</p>
@@ -120,9 +120,9 @@ function MobileCarousel({ videos }: { videos: Video[] }) {
       {canScrollLeft && (
         <div className="absolute left-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to right, var(--color-base-100) 40%, transparent)' }}>
-          <button onClick={() => { scrollBy(-1); play('interaction.subtle'); }}
+          <button onClick={() => { scrollBy(-1); play('interaction.subtle'); }} aria-label="Anterior"
             className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer ml-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
           </button>
         </div>
       )}
@@ -138,9 +138,9 @@ function MobileCarousel({ videos }: { videos: Video[] }) {
       {canScrollRight && (
         <div className="absolute right-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to left, var(--color-base-100) 40%, transparent)' }}>
-          <button onClick={() => { scrollBy(1); play('interaction.subtle'); }}
+          <button onClick={() => { scrollBy(1); play('interaction.subtle'); }} aria-label="Siguiente"
             className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer mr-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>
       )}
@@ -371,11 +371,13 @@ export function YouTubeTrends() {
 
         <div className="relative" ref={configRef}>
           <button onClick={() => { play('interaction.tap'); setConfigOpen(o => !o); }}
+            aria-expanded={configOpen}
+            aria-controls="youtube-canales-panel"
             className="px-2.5 py-1 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary transition-all active:scale-[0.96] cursor-pointer">
             Canales
           </button>
           {configOpen && (
-              <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-1 z-20 w-60 max-w-[calc(100vw-16px)] bg-base-200 border border-base-300 rounded-xl shadow-xl overflow-hidden">
+              <div id="youtube-canales-panel" className="absolute top-full left-0 sm:right-0 sm:left-auto mt-1 z-20 w-60 max-w-[calc(100vw-16px)] bg-base-200 border border-base-300 rounded-xl shadow-xl overflow-hidden">
               <div className="p-2 border-b border-base-300 space-y-1.5">
                 <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar canal..."
@@ -401,11 +403,17 @@ export function YouTubeTrends() {
                       <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                         on ? 'bg-primary/10 text-primary' : ''
                       }`}>
-                        <button onClick={() => toggleChannel(ch.id)}
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={on}
+                          aria-label={on ? `Desactivar canal ${ch.name}` : `Activar canal ${ch.name}`}
+                          onClick={() => toggleChannel(ch.id)}
                           className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
                             on ? 'bg-primary border-primary text-primary-content' : 'border-base-content/30 hover:border-base-content'
-                          }`}>
-                          {on && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m4 12 5 5 11-11" /></svg>}
+                          }`}
+                        >
+                          {on && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true"><path d="m4 12 5 5 11-11" /></svg>}
                         </button>
                         <button onClick={() => { if (isError) { setExpandedErrors(prev => { const n = new Set(prev); if (n.has(ch.id)) n.delete(ch.id); else n.add(ch.id); return n; }); } else { toggleChannel(ch.id); } }}
                           className={`flex-1 flex items-center gap-2 min-w-0 text-left transition-colors cursor-pointer ${

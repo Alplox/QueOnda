@@ -239,6 +239,22 @@ All routes return JSON. CORS is not needed (same-origin).
 4. Returns clusters sorted by score (article count × source diversity)
 5. Clustering runs automatically in the browser whenever slot articles change
 
+### Accessibility conventions
+
+Accessibility is treated as part of the component craft, not a compliance pass. These are the project-wide rules:
+
+- **Native elements first.** Actions are `<button>`, navigation is `<a href>`, never `<div onClick>`. If a clickable card also needs nested controls, render a real `<button>` as the card's selection element (or an `absolute inset-0` button) with the nested controls as siblings — never `role="button"` with focusable children.
+- **Visible focus rings.** Use `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary` on interactive elements that need a custom ring; otherwise keep the native ring. Never `outline:none` without a visible replacement.
+- **Keyboard operability.** Every interactive control is reachable and operable by keyboard (Enter/Space activate buttons, arrow keys where a composite widget expects them, Escape closes overlays). No positive `tabindex`.
+- **Overlays / modals.** Any portal/drawer/modal gets `role="dialog"` + `aria-modal="true"` + an `aria-label`, moves focus in on open, **traps Tab**, and **restores focus** on close. Hidden-but-visual states must also be removed from the tab order via `inert`/`aria-hidden` (never rely on `opacity-0`/`pointer-events-none` alone).
+- **ARIA state on toggles/selection.** Every toggle, disclosure, filter chip, signal selector, and checkbox announces its state: `aria-pressed`, `aria-expanded`, `aria-checked`, `aria-selected`, or `aria-live`. State is never conveyed by color/background alone.
+- **Accessible names.** Icon-only controls get `aria-label` (changing with state) and their decorative SVG gets `aria-hidden="true"`.
+- **Skip link.** `index.astro` has a visually-hidden "Ir al contenido" link (`href="#main"`) shown on focus; `<main>` carries `id="main"`.
+- **Auto-updating content.** Regions that update in the background (emergency) share new items via `aria-live="polite"` and explicitly silence per-second timers/countdowns (`aria-live="off"`).
+- **Hit areas.** Icon/touch targets are ≥ 24px (ideally 28–32px); interactive cards expose clear `focus-visible` affordances.
+- **Content visibility.** No content is initially `opacity: 0` gated on JS to become visible — headings render visible by default; animations are additive, never the only reveal mechanism.
+- **Reduced motion.** Center-stage animated surfaces (marquee alert bar, pulsing indicators) respect `prefers-reduced-motion` and pause while hovered/focused.
+
 ### Theme system
 
 - **DaisyUI v5** handles all theme colors natively via `daisyui` plugin

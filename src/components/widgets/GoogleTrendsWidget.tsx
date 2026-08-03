@@ -115,7 +115,7 @@ export function GoogleTrendsWidget() {
               {trend.title}
             </a>
             {trend.snippet && (
-              <p className="text-[11px] text-base-content/70 line-clamp-1 mt-0.5">{trend.snippet}</p>
+              <p className="text-[11px] text-base-content/70 line-clamp-1 mt-0.5" title={trend.snippet}>{trend.snippet}</p>
             )}
             <div className="flex items-center gap-1 mt-1.5">
               {SEARCH_ENGINES.map((se) => (
@@ -124,11 +124,11 @@ export function GoogleTrendsWidget() {
                   href={se.url + encodeURIComponent(trend.title)}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`Buscar "${trend.title}" en ${se.name}`}
                   className="w-9 h-9 rounded-full flex items-center justify-center text-base-content/50 hover:text-base-content bg-base-content/[0.03] hover:bg-base-300 border border-base-content/[0.06] hover:border-base-content/20 transition-colors"
-                  title={`Buscar "${trend.title}" en ${se.name}`}
                   onClick={(e) => { play('interaction.tap'); e.stopPropagation(); }}
                 >
-                  <span className="w-3.5 h-3.5">{se.icon}</span>
+                  <span className="w-3.5 h-3.5" aria-hidden="true">{se.icon}</span>
                 </a>
               ))}
             </div>

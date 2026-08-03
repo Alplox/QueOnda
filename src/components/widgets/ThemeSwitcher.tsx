@@ -77,6 +77,8 @@ export function ThemeSwitcher() {
     <div ref={ref} className="relative">
       <button
         onClick={() => { if (!open) play('overlay.open'); else play('overlay.close'); setOpen(p => !p); }}
+        aria-expanded={open}
+        aria-haspopup="listbox"
         className="flex items-center gap-2 px-3 py-1.5 text-sm text-base-content/70 hover:text-base-content bg-base-200 hover:bg-base-300 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.06] rounded-lg transition-all border border-base-300"
       >
         <span

@@ -392,6 +392,7 @@ function StopCombobox() {
           <button
             type="button"
             onClick={() => { setMode('paradero'); setRouteStops(null); setRouteInput(''); }}
+            aria-pressed={mode === 'paradero'}
             className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
               mode === 'paradero' ? 'bg-base-100 text-base-content shadow-sm' : 'text-base-content/60 hover:text-base-content'
             }`}
@@ -401,6 +402,7 @@ function StopCombobox() {
           <button
             type="button"
             onClick={() => { setMode('recorrido'); setStopId(''); setResult(null); setError(null); }}
+            aria-pressed={mode === 'recorrido'}
             className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
               mode === 'recorrido' ? 'bg-base-100 text-base-content shadow-sm' : 'text-base-content/60 hover:text-base-content'
             }`}
@@ -682,7 +684,8 @@ export function TransportWidget() {
   if (!data) {
     return (
       <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center text-base-content/70 text-sm">
-        Información de transporte no disponible
+        Información de transporte no disponible.{' '}
+        <a href="https://www.metro.cl/el-viaje/estado-red" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Consulta el estado en Metro.cl →</a>
       </div>
     );
   }

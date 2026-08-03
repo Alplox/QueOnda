@@ -72,24 +72,29 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
             return (
               <div
                 key={ch.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => { play('interaction.tap'); onSelect(ch); }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play('interaction.tap'); onSelect(ch); } }}
                 style={{ animationDelay: `${index * 40}ms` }}
-                className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all active:scale-[0.96] shrink-0 w-[84px] sm:w-24 cursor-pointer opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards] hover:scale-105 ${
+                className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all shrink-0 w-[84px] sm:w-24 opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards] ${
                   isSelected
                     ? 'bg-primary ring-2 ring-primary'
                     : 'bg-base-200 hover:bg-base-200 ring-1 ring-base-content/[0.07]'
                 }`}
               >
+                {/* Select channel — real button, fills the card for keyboard + touch */}
+                <button
+                  type="button"
+                  onClick={() => { play('interaction.tap'); onSelect(ch); }}
+                  aria-pressed={isSelected}
+                  aria-label={`Ver canal ${ch.name}`}
+                  className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                />
                 {/* Drag handle */}
                 {onDragChannelStart && (
                   <button
+                    type="button"
                     onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onDragChannelStart(ch, e); }}
-                    className="absolute -top-1 -left-1 z-20 w-4 h-4 flex items-center justify-center rounded-full bg-base-300 border border-base-300 text-base-content/50 hover:text-base-content hover:bg-base-200 cursor-grab active:cursor-grabbing touch-none transition-colors"
+                    aria-label="Arrastrar al multiview"
+                    className="absolute -top-1 -left-1 z-20 w-5 h-5 flex items-center justify-center rounded-full bg-base-300 border border-base-300 text-base-content/50 hover:text-base-content hover:bg-base-200 cursor-grab active:cursor-grabbing touch-none transition-colors"
                     style={{ touchAction: 'none' }}
-                    title="Arrastrar al multiview"
                   >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>

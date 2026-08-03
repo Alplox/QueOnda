@@ -35,12 +35,40 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const el = overlayRef.current;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    // Move focus into the dialog on open
+    const focusTarget = el?.querySelector<HTMLElement>(
+      'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    focusTarget?.focus?.();
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      // Trap Tab within the dialog
+      if (e.key === 'Tab' && el) {
+        const focusables = Array.from(
+          el.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((n) => n.offsetParent !== null || n === document.activeElement);
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        if (e.shiftKey && (active === first || active === el)) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+
     window.addEventListener('keydown', handler);
     document.body.style.overflow = 'hidden';
+
     return () => {
       window.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
+      previouslyFocused?.focus?.();
     };
   }, [onClose]);
 
@@ -109,6 +137,10 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
   return createPortal(
     <div
       ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Lector de artículo"
+      tabIndex={-1}
       onClick={(e) => { play('overlay.close'); handleOverlayClick(e); }}
       className="fixed inset-0 z-50 flex items-start justify-center bg-neutral/70 backdrop-blur-sm animate-[fadeSlideIn_0.2s_ease-out]"
     >

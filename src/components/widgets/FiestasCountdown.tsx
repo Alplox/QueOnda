@@ -390,10 +390,10 @@ function getProgress(): number {
 }
 
 function getColorClasses(days: number): string {
-  if (days <= 1) return 'text-red-500';
-  if (days <= 7) return 'text-red-400';
-  if (days <= 15) return 'text-orange-400';
-  if (days <= 50) return 'text-amber-400';
+  if (days <= 1) return 'text-error';
+  if (days <= 7) return 'text-warning';
+  if (days <= 15) return 'text-primary';
+  if (days <= 50) return 'text-base-content/80';
   return 'text-base-content';
 }
 
@@ -589,8 +589,8 @@ export function FiestasCountdown() {
   return (
     <div className="rounded-2xl bg-base-200 border border-base-300 shadow-lg p-6 sm:p-8 overflow-hidden relative">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-red-500/10 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-info/10 blur-3xl" />
       </div>
 
       <div className="relative">
@@ -601,6 +601,7 @@ export function FiestasCountdown() {
         </h3>
         <p
           key={msgIndex}
+          aria-live="polite"
           className="text-sm text-center text-base-content/70 mb-6 animate-[fadeSlideIn_0.5s_ease-out]"
         >
           <Emoji emoji={displayMessage.emoji} className="inline-block h-[1em] align-text-bottom" /> {displayMessage.text}
@@ -624,7 +625,7 @@ export function FiestasCountdown() {
           </div>
         ) : timeLeft && timeLeft.days > 0 ? (
           <div className="text-center">
-            <div className={`text-6xl sm:text-7xl font-light tabular-nums leading-none tracking-[-0.02em] transition-colors duration-1000 ${colorClass}`}>
+            <div className={`text-6xl sm:text-7xl font-light tabular-nums leading-none tracking-[-0.02em] transition-colors duration-1000 ${colorClass}`} aria-live="off">
               {timeLeft.days}
             </div>
             <div className="text-[11px] font-semibold text-base-content/70 mt-1 uppercase tracking-[0.2em]">

@@ -126,6 +126,7 @@ function chipArp(notes: number[], noteDur: number, gap: number, vol: number) {
 let ctx: AudioContext | null = null;
 let vol = 0.5;
 let muted = false;
+let lastPlayedAt = 0;
 
 function getCtx(): AudioContext {
   if (!ctx || ctx.state === "closed") ctx = new AudioContext();
@@ -141,6 +142,31 @@ export function play(role: SoundRole) {
   if (!fn) return;
   const c = getCtx();
   if (c.state !== "running") c.resume();
+  lastPlayedAt = Date.now();
   fn(c, c.currentTime, vol);
 }
+
+// Global safety net: every interactive element gets a sound even if its
+// handler forgot to call play(). Capture phase resets lastPlayedAt, bubble
+// phase plays only if no explicit play() fired for this click (dedup).
+function initUiSounds() {
+  const SELECTOR =
+    'button, a[href], [role="button"], [role="tab"], [role="switch"], [aria-pressed], [aria-checked]';
+  document.addEventListener("click", () => { lastPlayedAt = 0; }, true);
+  document.addEventListener("click", (e) => {
+    const target = e.target as Element | null;
+    const el = target?.closest?.(SELECTOR);
+    if (!el) return;
+    if (Date.now() - lastPlayedAt < 400) return;
+    const role: SoundRole =
+      el.getAttribute("role") === "tab"
+        ? "navigation.tab"
+        : el.hasAttribute("aria-pressed") || el.hasAttribute("aria-checked") || el.getAttribute("role") === "switch"
+          ? "interaction.toggle"
+          : "interaction.tap";
+    play(role);
+  });
+}
+
+if (typeof document !== "undefined") initUiSounds();
 

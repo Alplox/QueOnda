@@ -226,44 +226,55 @@ function StationCard({
 }) {
   return (
     <div
-      className={`flex items-center gap-2 ${compact ? 'p-2' : 'p-2.5'} rounded-xl border transition-colors duration-150 cursor-pointer group active:scale-[0.96] ${
+      className={`flex items-center gap-0.5 rounded-xl border transition-colors duration-150 group active:scale-[0.99] ${
         isActive
           ? 'bg-primary/10 border-primary'
           : 'bg-transparent border-base-300/50 hover:bg-base-200 hover:border-base-300'
       }`}
-      onClick={() => onSelect(station)}
     >
-      <div className={[
-        'rounded-full overflow-hidden bg-base-100 shrink-0 ring-1 flex items-center justify-center',
-        compact ? 'w-8 h-8' : 'w-9 h-9',
-        isActive ? 'ring-primary/50' : 'ring-base-content/5',
-      ].join(' ')}>
-        {station.logo ? (
-          <img src={station.logo} alt={station.name} className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf2') as HTMLElement)?.classList.remove('hidden'); }} />
-        ) : null}
-        <div className={`w-full h-full flex items-center justify-center text-sm font-bold text-base-content rf2 ${station.logo ? 'hidden' : ''}`}>
-          {station.name.charAt(0)}
-        </div>
-      </div>
-      <div className="text-left min-w-0 flex-1">
-        <p className={[
-          'text-sm leading-tight truncate transition-colors',
-          isActive ? 'text-base-content font-medium' : 'text-base-content/70',
-        ].join(' ')}>
-          {station.name}
-        </p>
-      </div>
-      {isActive && (
-        <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
-      )}
       <button
+        type="button"
+        onClick={() => onSelect(station)}
+        aria-pressed={isActive}
+        aria-label={`Escuchar ${station.name}`}
+        className={`flex items-center gap-2 min-w-0 flex-1 text-left rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors ${
+          compact ? 'p-1.5' : 'p-2'
+        }`}
+      >
+        <div className={[
+          'rounded-full overflow-hidden bg-base-100 shrink-0 ring-1 flex items-center justify-center',
+          compact ? 'w-8 h-8' : 'w-9 h-9',
+          isActive ? 'ring-primary/50' : 'ring-base-content/5',
+        ].join(' ')}>
+          {station.logo ? (
+            <img src={station.logo} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf2') as HTMLElement)?.classList.remove('hidden'); }} />
+          ) : null}
+          <div className={`w-full h-full flex items-center justify-center text-sm font-bold text-base-content rf2 ${station.logo ? 'hidden' : ''}`}>
+            {station.name.charAt(0)}
+          </div>
+        </div>
+        <div className="text-left min-w-0 flex-1">
+          <p className={[
+            'text-sm leading-tight truncate transition-colors',
+            isActive ? 'text-base-content font-medium' : 'text-base-content/70',
+          ].join(' ')}>
+            {station.name}
+          </p>
+        </div>
+        {isActive && (
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" aria-hidden="true" />
+        )}
+      </button>
+      <button
+        type="button"
         onClick={(e) => { e.stopPropagation(); play('interaction.toggle'); onToggleFavorite(station.id); }}
-        className={`shrink-0 p-1 rounded transition-colors ${
+        aria-label={isFav ? `Quitar ${station.name} de favoritos` : `Agregar ${station.name} a favoritos`}
+        aria-pressed={isFav}
+        className={`shrink-0 p-1.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors ${
           isFav
             ? 'text-base-content hover:text-base-content/70'
-            : 'text-base-content/20 group-hover:text-base-content/50 hover:text-base-content/70'
+            : 'text-base-content/40 group-hover:text-base-content/60 hover:text-base-content/80'
         }`}
-        title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
       >
         {isFav ? STAR_FILLED : STAR_EMPTY}
       </button>
@@ -635,6 +646,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                       <button
                         key={idx}
                         onClick={() => { play('interaction.tap'); setSignalIndex(idx); }}
+                        aria-pressed={idx === signalIndex}
                         className={`text-[10px] px-2 py-1 rounded transition-colors cursor-pointer whitespace-nowrap ${
                           idx === signalIndex
                             ? 'bg-primary text-primary-content border border-primary'
@@ -765,6 +777,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
             <div className="shrink-0 mb-2">
               <button
                 onClick={() => { play('interaction.tap'); setFavExpanded((v) => !v); }}
+                aria-expanded={favExpanded}
                 className="w-full flex items-center justify-between px-1.5 py-1 rounded-lg hover:bg-base-100 transition-colors"
               >
                 <span className="text-[10px] text-base-content/50 font-semibold uppercase tracking-wider">
@@ -792,7 +805,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                     </div>
                   ) : (
                     <p className="text-xs text-base-content/50 px-1.5 py-2 italic leading-relaxed">
-                      Sin favoritos. Haz clic en ☆ para agregar.
+                      Sin favoritos todavía. Pulsa la estrella de alguna radio para guardarla.
                     </p>
                   )}
                 </div>
@@ -809,6 +822,8 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                 </p>
                 <button
                   onClick={() => { play('interaction.tap'); setSortAZ((v) => !v); }}
+                  aria-pressed={sortAZ}
+                  aria-label="Orden alfabético"
                   className="text-[10px] text-base-content/50 hover:text-base-content px-1.5 transition-colors"
                 >
                   {sortAZ ? 'A-Z' : 'Z-A'}
@@ -871,7 +886,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
           <div className="flex items-center gap-1.5">
             <button onClick={() => { play('interaction.toggle'); if (videoRef.current) videoRef.current.muted = !videoRef.current.muted; if (audioRef.current) audioRef.current.muted = !audioRef.current.muted; setMuted((m) => !m); }}
               aria-label={muted ? 'Activar sonido' : 'Silenciar'}
-              className="w-7 h-7 flex items-center justify-center rounded text-base-content/70 hover:text-base-content hover:bg-base-content/10 transition-colors active:scale-[0.9] shrink-0">
+              className="w-8 h-8 flex items-center justify-center rounded text-base-content/70 hover:text-base-content hover:bg-base-content/10 transition-colors active:scale-[0.9] shrink-0">
               {muted ? MUTED_ICON : volume > 0.5 ? VOLUME_HIGH : VOLUME_LOW}
             </button>
             <input
@@ -886,7 +901,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
             />
             <button onClick={handlePlayPause}
               aria-label={playing ? 'Pausar' : 'Reproducir'}
-              className="w-7 h-7 flex items-center justify-center rounded bg-primary text-primary-content hover:bg-primary/90 transition-colors active:scale-[0.9] shrink-0">
+              className="w-8 h-8 flex items-center justify-center rounded bg-primary text-primary-content hover:bg-primary/90 transition-colors active:scale-[0.9] shrink-0">
               {playing ? (
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="1.5" width="3" height="9" rx="0.5" /><rect x="7" y="1.5" width="3" height="9" rx="0.5" /></svg>
               ) : (
@@ -895,7 +910,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
             </button>
             <button onClick={handleStop}
               aria-label="Detener"
-              className="w-7 h-7 flex items-center justify-center rounded text-base-content/70 hover:text-base-content hover:bg-base-content/10 transition-colors active:scale-[0.9] shrink-0">
+              className="w-8 h-8 flex items-center justify-center rounded text-base-content/70 hover:text-base-content hover:bg-base-content/10 transition-colors active:scale-[0.9] shrink-0">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1" y="1" width="8" height="8" rx="1" /></svg>
             </button>
           </div>

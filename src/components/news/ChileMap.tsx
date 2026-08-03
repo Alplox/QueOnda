@@ -33,7 +33,11 @@ export function ChileMap({ allSources, selectedRegion, onSelectRegion }: ChileMa
             <g
               key={r.key}
               onClick={() => { if (!hasNoSources) onSelectRegion(isSelected ? null : r.key); }}
-              className={hasNoSources ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
+              onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !hasNoSources) { e.preventDefault(); onSelectRegion(isSelected ? null : r.key); } }}
+              role="button"
+              tabIndex={hasNoSources ? -1 : 0}
+              aria-label={hasNoSources ? `${r.label} (sin fuentes)` : `${r.label}${isSelected ? ' (seleccionada)' : ''}`}
+              className={hasNoSources ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2'}
             >
               {isSelected && (
                 <circle cx={r.cx} cy={r.cy} r={R + 3} fill="none" stroke="var(--color-primary)" strokeWidth="2" opacity="0.4" />

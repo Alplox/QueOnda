@@ -191,8 +191,9 @@ export function PowerOutageMap({ comunas }: Props) {
               key={b}
               type="button"
               onClick={() => toggleBand(b)}
+              aria-pressed={!off}
               className={`inline-flex items-center gap-1 cursor-pointer rounded-full px-2 py-0.5 border transition-colors active:scale-[0.96] ${
-                off ? 'border-base-300 text-base-content/40 line-through' : 'border-base-content/10 hover:bg-base-300/40'
+                off ? 'border-base-300 text-base-content/50 line-through' : 'border-base-content/10 hover:bg-base-300/40'
               }`}
             >
               <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: off ? 'transparent' : COLOR[b] }} />

@@ -10,6 +10,7 @@ export function Header() {
   const [activeSection, setActiveSection] = useState('');
   const lastScrollY = useRef(0);
   const moreRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -56,6 +57,8 @@ export function Header() {
   useEffect(() => {
     if (isDrawerOpen) {
       document.body.style.overflow = 'hidden';
+      // Move focus into the drawer so keyboard users don't get trapped behind the overlay
+      drawerRef.current?.querySelector<HTMLElement>('a, button')?.focus?.();
     } else {
       document.body.style.overflow = '';
     }
@@ -92,6 +95,8 @@ export function Header() {
               onClick={() => { play(isDrawerOpen ? 'overlay.close' : 'overlay.open'); setDrawerOpen(!isDrawerOpen); }}
               className="md:hidden relative flex items-center justify-center w-9 h-9 text-base-content/70 hover:text-base-content rounded-lg hover:bg-base-200 transition-colors shrink-0"
               aria-label={isDrawerOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={isDrawerOpen}
+              aria-controls="nav-drawer"
             >
               <div className="relative w-5 h-5">
                 <svg className="absolute inset-0 transition-all duration-200" style={{ opacity: isDrawerOpen ? 0 : 1, transform: `scale(${isDrawerOpen ? 0.25 : 1})` }} width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -134,6 +139,8 @@ export function Header() {
               <div ref={moreRef} className="hidden md:relative md:block">
                 <button
                   onClick={() => { play('overlay.expand'); setMoreOpen(!isMoreOpen); }}
+                  aria-expanded={isMoreOpen}
+                  aria-haspopup="menu"
                   className={`px-3 py-1.5 text-sm rounded-lg transition-colors whitespace-nowrap flex items-center gap-1 transition-transform active:scale-[0.96] ${
                     isMoreOpen
                       ? 'text-base-content bg-base-200'
@@ -190,6 +197,11 @@ export function Header() {
       )}
 
       <div
+        ref={(el) => { drawerRef.current = el as HTMLElement | null; }}
+        id="nav-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menú de secciones"
         className={`fixed top-0 left-0 z-[60] h-full w-72 bg-base-100 border-r border-base-300 shadow-2xl transition-transform duration-300 md:hidden ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}

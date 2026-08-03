@@ -73,6 +73,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
               <button
                 key={cat}
                 onClick={() => { play('navigation.tab'); onSelect(cat); }}
+                aria-pressed={isActive}
                 style={{ animationDelay: `${i * 40}ms` }}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-[0.96] opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
                   isActive

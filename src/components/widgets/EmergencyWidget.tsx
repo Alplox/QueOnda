@@ -76,6 +76,7 @@ async function enrichWithBoostr(items: EmergencyItem[]): Promise<EmergencyItem[]
 
   return items.map((it) => {
     if (it.type !== 'earthquake' || it.mag == null || it.lat != null) return it;
+    const mag = it.mag;
     const exact = candidates.find((c) => c.time === it.time);
     let c = exact;
     if (!c) {
@@ -83,8 +84,8 @@ async function enrichWithBoostr(items: EmergencyItem[]): Promise<EmergencyItem[]
         .filter((x) => Math.abs(x.time - it.time) <= COORD_TOL)
         .sort(
           (a, b) =>
-            Math.abs(a.time - it.time) + Math.abs(a.mag - it.mag) * 60_000 -
-            (Math.abs(b.time - it.time) + Math.abs(b.mag - it.mag) * 60_000),
+            Math.abs(a.time - it.time) + Math.abs(a.mag - mag) * 60_000 -
+            (Math.abs(b.time - it.time) + Math.abs(b.mag - mag) * 60_000),
         )[0];
     }
     return c ? { ...it, lat: c.lat, lon: c.lon } : it;
@@ -113,6 +114,9 @@ export function EmergencyWidget() {
   const [alertsLoaded, setAlertsLoaded] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [mapMounted, setMapMounted] = useState(false);
+  const [liveMsg, setLiveMsg] = useState('');
+  const seenRef = useRef<{ sismos: Set<string>; alerts: Set<string> }>({ sismos: new Set(), alerts: new Set() });
 
   const openMap = (item: EmergencyItem) => {
     setShowMap(true);
@@ -129,6 +133,15 @@ export function EmergencyWidget() {
       setItems(enriched);
       setAlerts(senapred);
       if (enriched.length) idbSet(IDB_KEY, enriched, IDB_TTL);
+
+      // Announce genuinely new items to assistive tech (not the whole list)
+      const sismoIds = new Set(enriched.filter((i) => i.type === 'earthquake').map((i) => i.id));
+      const alertIds = new Set(senapred.map((i) => i.id));
+      const newSismos = enriched.filter((i) => i.type === 'earthquake' && !seenRef.current.sismos.has(i.id));
+      const newAlerts = senapred.filter((a) => !seenRef.current.alerts.has(a.id));
+      seenRef.current = { sismos: sismoIds, alerts: alertIds };
+      if (newSismos[0]) setLiveMsg(`Nuevo sismo: ${newSismos[0].mag != null ? `magnitud ${newSismos[0].mag.toFixed(1)} ` : ''}${newSismos[0].place || newSismos[0].title}`);
+      else if (newAlerts[0]) setLiveMsg(`Nueva alerta SENAPRED: ${newAlerts[0].title}`);
     }
     setAlertsLoaded(true);
     setLoading(false);
@@ -155,9 +168,16 @@ export function EmergencyWidget() {
 
   useEffect(() => subscribeAutoRefresh(refresh), [refresh]);
 
+  // Keep the map mounted through its 300ms collapse so the exit animates like the weather map
+  useEffect(() => {
+    if (showMap) setMapMounted(true);
+    else { const t = setTimeout(() => setMapMounted(false), 300); return () => clearTimeout(t); }
+  }, [showMap]);
+
   return (
     <>
       <section id="emergencia" className="scroll-mt-20 mb-8 md:mb-12">
+        <div className="sr-only" aria-live="polite">{liveMsg}</div>
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-balance text-base-content">
             {'Emergencia'.split('').map((char, i) => (
@@ -186,7 +206,9 @@ export function EmergencyWidget() {
               ))}
             </div>
           ) : alerts.length === 0 ? (
-            <p className="text-xs text-base-content/50 pb-1">Sin alertas SENAPRED activas</p>
+            <p className="text-xs text-base-content/60 pb-1">
+              Sin alertas SENAPRED activas. <a href="https://t.me/SenapredChile" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Ver en Telegram</a>
+            </p>
           ) : (
             <ScrollRow>
               {alerts.map((a, i) => (
@@ -263,19 +285,19 @@ export function EmergencyWidget() {
                         </button>
                       )}
                     </div>
-                    <span className="block text-[9px] text-base-content/50 mt-0.5">
+                    <span className="block text-[10px] text-base-content/60 mt-0.5">
                       {new Date(item.time).toLocaleDateString('es-CL', {
                         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                       })}
                     </span>
                   </div>
-                  <p className="text-xs text-base-content leading-snug line-clamp-2">{item.place || item.title}</p>
+                  <p className="text-xs text-base-content leading-snug line-clamp-2" title={item.place || item.title}>{item.place || item.title}</p>
                   <div className="mt-auto pt-1.5 flex items-center justify-between gap-1">
                     {item.depth !== undefined && (
-                      <span className="text-[9px] text-base-content/70">{item.depth.toFixed(1)} km</span>
+                      <span className="text-[10px] text-base-content/70">{item.depth.toFixed(1)} km</span>
                     )}
                     {item.url && (
-                      <span className="ml-auto text-[9px] text-base-content/40 truncate max-w-[70%]">{extractHost(item.url)}</span>
+                      <span className="ml-auto text-[10px] text-base-content/60 truncate max-w-[70%]">{extractHost(item.url)}</span>
                     )}
                   </div>
                 </div>
@@ -290,16 +312,26 @@ export function EmergencyWidget() {
                   if (next) setFocusId(null);
                   play('interaction.toggle');
                 }}
-                className="text-[11px] font-medium text-primary hover:text-primary/80 border border-primary/30 rounded-full px-3 py-1 hover:bg-primary/5 transition-colors active:scale-[0.96]"
+                aria-expanded={showMap}
+                aria-controls="sismos-map"
+                className="mt-1 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
               >
-                {showMap ? 'Ocultar mapa' : 'Ver mapa de sismos'}
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                  className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+                {showMap ? 'Ocultar mapa de sismos' : 'Ver mapa de sismos'}
               </button>
             </div>
-            {showMap && (
-              <div className="mt-2 rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3 animate-[fadeInUp_0.3s_ease-out]">
-                <EmergencyMap items={items} focusId={focusId} />
+            <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showMap ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+              <div className="overflow-hidden min-h-0">
+                {mapMounted && (
+                  <div id="sismos-map" className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
+                    <EmergencyMap items={items} focusId={focusId} />
+                  </div>
+                )}
               </div>
-            )}
+            </div>
             </>
           )}
           <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
