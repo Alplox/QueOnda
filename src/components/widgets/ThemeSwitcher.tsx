@@ -79,13 +79,13 @@ export function ThemeSwitcher() {
         onClick={() => { if (!open) play('overlay.open'); else play('overlay.close'); setOpen(p => !p); }}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="flex items-center gap-2 px-3 py-1.5 text-sm text-base-content/70 hover:text-base-content bg-base-200 hover:bg-base-300 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.06] rounded-lg transition-all border border-base-300"
+        className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm text-base-content/70 hover:text-base-content bg-base-200 hover:bg-base-300 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.06] rounded-lg transition-all border border-base-300"
       >
         <span
           className="w-3.5 h-3.5 rounded-full ring-1 ring-inset ring-base-content/10 shrink-0"
           style={{ background: THEMES.find(t => t.id === current)?.swatch }}
         />
-        <span>Tema</span>
+        <span className="hidden sm:inline">Tema</span>
         <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>

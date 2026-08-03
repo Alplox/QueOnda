@@ -92,11 +92,11 @@ export function Header() {
           visible ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1 min-w-0">
             <button
               onClick={() => { play(isDrawerOpen ? 'overlay.close' : 'overlay.open'); setDrawerOpen(!isDrawerOpen); }}
-              className="md:hidden relative flex items-center justify-center w-9 h-9 text-base-content/70 hover:text-base-content rounded-lg hover:bg-base-200 transition-colors shrink-0"
+              className="lg:hidden relative flex items-center justify-center w-9 h-9 text-base-content/70 hover:text-base-content rounded-lg hover:bg-base-200 transition-colors shrink-0"
               aria-label={isDrawerOpen ? 'Cerrar menú' : 'Abrir menú'}
               aria-expanded={isDrawerOpen}
               aria-controls="nav-drawer"
@@ -114,13 +114,13 @@ export function Header() {
               </div>
             </button>
 
-            <a href="#" onClick={() => play('interaction.tap')} className="flex items-center gap-1 text-xl font-bold text-base-content no-underline shrink-0 group/title">
+            <a href="#" onClick={() => play('interaction.tap')} className="flex items-center gap-1 text-xl font-bold text-base-content no-underline shrink-0 group/title overflow-hidden text-ellipsis whitespace-nowrap">
               <span className="text-primary inline-block animate-[float_3s_ease-in-out_infinite] group-hover/title:animate-[float_1s_ease-in-out_infinite]">¿</span>
               <span>Qué Onda</span>
               <span className="text-primary inline-block animate-[float_3s_ease-in-out_infinite_0.5s] group-hover/title:animate-[float_1s_ease-in-out_infinite_0.5s]">?</span>
             </a>
 
-            <nav className="hidden md:flex items-center gap-1 ml-2">
+            <nav className="hidden lg:flex items-center gap-1 ml-2">
               {PRIMARY.map((section, i) => (
                 <a
                   key={section.id}
@@ -139,7 +139,7 @@ export function Header() {
               </nav>
 
               {OVERFLOW.length > 0 && (
-              <div ref={moreRef} className="hidden md:relative md:block">
+              <div ref={moreRef} className="hidden lg:relative lg:block">
                 <button
                   onClick={() => { play('overlay.expand'); setMoreOpen(!isMoreOpen); }}
                   aria-expanded={isMoreOpen}
@@ -207,7 +207,7 @@ export function Header() {
 
       {isDrawerOpen && (
         <div
-          className="fixed inset-0 z-[55] bg-neutral/50 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-[55] bg-neutral/50 backdrop-blur-sm lg:hidden"
           onClick={() => { play('overlay.close'); setDrawerOpen(false); }}
         />
       )}
@@ -218,7 +218,7 @@ export function Header() {
         role="dialog"
         aria-modal="true"
         aria-label="Menú de secciones"
-        className={`fixed top-0 left-0 z-[60] h-full w-72 bg-base-100 border-r border-base-300 shadow-2xl transition-transform duration-300 md:hidden ${
+        className={`fixed top-0 left-0 z-[60] h-full w-72 bg-base-100 border-r border-base-300 shadow-2xl transition-transform duration-300 lg:hidden ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

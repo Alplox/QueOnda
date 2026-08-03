@@ -84,7 +84,7 @@ export function Footer() {
           </div>
 
           {/* Bottom bar */}
-          <div className="mt-10 pt-6 border-t border-base-content/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-base-content/50">
+          <div id="footer-credits" className="mt-10 pt-6 border-t border-base-content/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-base-content/50">
             <span>© {new Date().getFullYear()} Hecho en Chile.</span>
             <span>Foto: <a href="https://unsplash.com/es/fotos/manada-de-caballos-en-arbustos-y-pastos-a-traves-de-la-montana-Zf2mL1gtaVg" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">modernwolo</a></span>
           </div>
