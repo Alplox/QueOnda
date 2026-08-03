@@ -512,7 +512,7 @@ export function Garland({ className = '', enhanced = false }: { className?: stri
 
 export function FiestasCountdown() {
   const [data, setData] = useState<{ timeLeft: TimeLeft | null; phase: 'before' | 'celebration' | 'after' } | null>(null);
-  const [cardIndex, setCardIndex] = useState(() => Math.floor(Math.random() * EMOJI_COLLECTION.length));
+  const [cardIndex, setCardIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [secTick, setSecTick] = useState(0);
   const [msgIndex, setMsgIndex] = useState(0);
@@ -521,6 +521,7 @@ export function FiestasCountdown() {
   const [revealing, setRevealing] = useState(false);
 
   useEffect(() => {
+    setCardIndex(Math.floor(Math.random() * EMOJI_COLLECTION.length));
     setData(compute());
     const id = setInterval(() => {
       const next = compute();
