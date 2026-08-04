@@ -110,6 +110,7 @@ export const GET: APIRoute = async ({ url, request }) => {
     city: cityId,
     name: 'Santiago',
     metro: metroResult,
+    updatedAt: Date.now(),
 
     stopInfo: stopInfo,
     predictionError: predictionError,

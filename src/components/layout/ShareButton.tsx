@@ -4,6 +4,7 @@ import { buildPageText, shareOrCopy } from '@/lib/share';
 
 export function ShareButton() {
   const [feedback, setFeedback] = useState<null | 'copied' | 'failed'>(null);
+  const [n, setN] = useState(0);
   const timer = useRef<number | null>(null);
 
   const handleShare = async () => {
@@ -11,6 +12,7 @@ export function ShareButton() {
     if (result === 'shared') return;
     play(result === 'copied' ? 'interaction.confirm' : 'notification.error');
     setFeedback(result === 'copied' ? 'copied' : 'failed');
+    setN(k => k + 1);
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setFeedback(null), 1600);
   };
@@ -31,8 +33,9 @@ export function ShareButton() {
       </svg>
       {feedback && (
         <span
+          key={n}
           role="status"
-          className="absolute -top-2.5 -right-2 px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap"
+          className="absolute -top-2.5 -right-2 px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap queonda-toast"
         >
           {feedback === 'copied' ? '¡Copiado!' : 'Error'}
         </span>

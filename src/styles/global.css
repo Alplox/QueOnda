@@ -94,6 +94,18 @@ h1, h2, h3, h4 {
   }
 }
 
+/* Share/copy status toast: pop in, hold, pop out — single shot so unmount is already invisible */
+@keyframes statusPop {
+  0%   { opacity: 0; transform: translateY(-6px) scale(0.85); }
+  12%  { opacity: 1; transform: translateY(0) scale(1.05); }
+  18%  { opacity: 1; transform: translateY(0) scale(1); }
+  85%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-4px) scale(0.92); }
+}
+
+.queonda-toast { animation: statusPop 1.6s ease-out forwards; }
+.queonda-toast-long { animation: statusPop 2.6s ease-out forwards; }
+
 @keyframes loadingSlide {
   0% { transform: translateX(-100%); }
   50% { transform: translateX(200%); }

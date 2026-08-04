@@ -9,20 +9,25 @@ export function BackToTop() {
     let raf = false;
     const update = () => {
       const bar = document.getElementById('footer-credits');
+      const player = document.getElementById('sticky-radio-player');
       const vh = window.innerHeight;
       const btnH = 44; // h-11
       const btnInset = 24; // bottom-6
-      const btnTop = vh - btnInset - btnH;
+      let inset = btnInset;
+      // Lift clear of the sticky radio player when it's on-screen (z-[9999] would otherwise cover us)
+      if (player) {
+        const rect = player.getBoundingClientRect();
+        if (rect.top < vh - 4) inset = Math.max(inset, vh - rect.top + 12); // 12px gap above the player
+      }
+      const btnTop = vh - inset - btnH;
       if (bar) {
         const rect = bar.getBoundingClientRect();
         // Only lift the button clear of the footer when it would actually overlap
         if (rect.top < btnTop + btnH) {
-          const inset = Math.max(btnInset, vh - rect.top - 12); // 12px gap above the credit bar
-          setBottom(`${inset}px`);
-          return;
+          inset = Math.max(inset, vh - rect.top - 12); // 12px gap above the credit bar
         }
       }
-      setBottom(`${btnInset}px`);
+      setBottom(`${inset}px`);
     };
     update();
     const onScroll = () => {

@@ -147,7 +147,10 @@ export async function renderEmergencyCard(items: ImageShareItem[], alerts: Image
 
   ctx.globalAlpha = 0.7;
   ctx.font = `600 24px ${font}`;
-  ctx.fillText('queonda.pages.dev', 52, H - 48);
+  const genTime = new Date().toLocaleString('es-CL', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago',
+  });
+  ctx.fillText(`queonda.pages.dev · generado ${genTime}`, 52, H - 48);
   ctx.globalAlpha = 1;
 
   return new Promise((resolve, reject) => {

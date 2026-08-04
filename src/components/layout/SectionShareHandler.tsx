@@ -35,14 +35,16 @@ export function SectionShareHandler() {
         span.setAttribute('data-section-status', '1');
         span.setAttribute('role', 'status');
         span.className =
-          'absolute top-full right-0 mt-2 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap opacity-0 transition-opacity duration-150';
-        const parent = btn;
-        parent.appendChild(span);
+          'absolute -top-7 -right-2 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap opacity-0';
+        btn.appendChild(span);
       }
       span.textContent = msg;
-      span.style.opacity = '1';
-      if ((span as unknown as { _t?: number })._t) clearTimeout((span as unknown as { _t: number })._t);
-      (span as unknown as { _t?: number })._t = window.setTimeout(() => { span.style.opacity = '0'; }, 1600);
+      // reset to hidden, force reflow, then replay the pop animation
+      span.classList.add('opacity-0');
+      span.classList.remove('queonda-toast');
+      void span.offsetWidth;
+      span.classList.remove('opacity-0');
+      span.classList.add('queonda-toast');
     };
 
     document.addEventListener('click', onClick, true);

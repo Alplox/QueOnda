@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { POPULAR_STOPS } from '../../lib/transport';
 import type { StopPrediction, StopInfo, PopularStop } from '../../lib/transport';
 import { idbGet, idbSet } from '../../lib/idb-cache';
+import { play } from '@/lib/sound';
 
 interface MetroLine {
   name: string;
@@ -22,6 +23,7 @@ interface TransportData {
   stations: { lines: MetroStation[]; issues: boolean } | null;
   stopInfo: StopInfo | null;
   predictionError: string | null;
+  updatedAt?: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -40,7 +42,7 @@ const STATION_STATUS: Record<number, { label: string; color: string }> = {
 
 const QUICK_PILLS = ['PA433', 'PA1', 'PA123', 'PA146'];
 
-function MetroGrid({ lines, source }: { lines: MetroLine[]; source: string | null }) {
+function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: string | null; updatedAt?: number }) {
   if (lines.length === 0) {
     return (
       <div className="mb-4">
@@ -59,7 +61,16 @@ function MetroGrid({ lines, source }: { lines: MetroLine[]; source: string | nul
   }
   return (
     <div className="mb-4">
-      <h4 className="text-sm font-semibold text-base-content mb-3">Metro de Santiago</h4>
+      <h4 className="text-sm font-semibold text-base-content mb-3">
+        Metro de Santiago
+        {updatedAt && (
+          <span className="text-[10px] text-base-content/50 ml-2 font-normal">
+            {new Date(updatedAt).toLocaleString('es-CL', {
+              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+            })}
+          </span>
+        )}
+      </h4>
       <div className="rounded-xl bg-base-200 border border-base-300 p-4">
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
           {lines.map((line) => {
@@ -233,7 +244,14 @@ function StopCombobox() {
   const [routeStops, setRouteStops] = useState<{ stop_id: string; stop_name: string; stop_lat: number; stop_lon: number }[] | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [mapMounted, setMapMounted] = useState(false);
   const [RouteMapComponent, setRouteMapComponent] = useState<React.ComponentType<{ stops: any[]; routeName: string; onPickStop: (id: string) => void }> | null>(null);
+
+  // Keep the map mounted through its 300ms collapse so it animates out like the sismo/power maps
+  useEffect(() => {
+    if (showMap) setMapMounted(true);
+    else { const t = setTimeout(() => setMapMounted(false), 300); return () => clearTimeout(t); }
+  }, [showMap]);
 
   useEffect(() => {
     if (mode === 'recorrido' && routeNames.length === 0) {
@@ -540,44 +558,41 @@ function StopCombobox() {
           {routeStops && (
             <div className="rounded-xl bg-base-200 border border-base-300 p-3 mb-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-base-content">Recorrido {selectedRoute}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-base-content/70">{routeStops.length} paraderos</span>
-                  {!showMap && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!RouteMapComponent) {
-                          const mod = await import('./RouteMap');
-                          setRouteMapComponent(() => mod.RouteMap);
-                        }
-                        setShowMap(true);
-                      }}
-                      className="px-2 py-0.5 text-[10px] font-medium bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors cursor-pointer"
-                    >
-                      Ver mapa
-                    </button>
-                  )}
-                  {showMap && (
-                    <button
-                      type="button"
-                      onClick={() => setShowMap(false)}
-                      className="px-2 py-0.5 text-[10px] font-medium bg-base-300 text-base-content rounded-md hover:bg-base-300/70 transition-colors cursor-pointer"
-                    >
-                      Lista
-                    </button>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-semibold text-base-content">Recorrido {selectedRoute}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      play('interaction.toggle');
+                      if (!showMap && !RouteMapComponent) {
+                        import('./RouteMap').then(mod => setRouteMapComponent(() => mod.RouteMap));
+                      }
+                      setShowMap(s => !s);
+                    }}
+                    aria-expanded={showMap}
+                    className="flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+                  >
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                    {showMap ? 'Ocultar mapa' : 'Ver mapa'}
+                  </button>
+                </div>
+                <span className="text-[10px] text-base-content/70 shrink-0">{routeStops.length} paraderos</span>
+              </div>
+              <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${showMap ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                <div className="overflow-hidden min-h-0">
+                  {mapMounted && RouteMapComponent && (
+                    <RouteMapComponent
+                      stops={routeStops}
+                      routeName={selectedRoute}
+                      onPickStop={pickStop}
+                    />
                   )}
                 </div>
               </div>
-              {showMap && RouteMapComponent && (
-                <RouteMapComponent
-                  stops={routeStops}
-                  routeName={selectedRoute}
-                  onPickStop={pickStop}
-                />
-              )}
-              {!showMap && (
-                <div className="max-h-60 overflow-y-auto space-y-0.5">
+              <div className="max-h-60 overflow-y-auto space-y-0.5">
                   {routeStops.map((s, i) => (
                     <button
                       key={s.stop_id}
@@ -591,7 +606,6 @@ function StopCombobox() {
                     </button>
                   ))}
                 </div>
-              )}
             </div>
           )}
 
@@ -692,7 +706,7 @@ export function TransportWidget() {
 
   return (
     <div className="space-y-6">
-      {data.metro && <MetroGrid lines={data.metro.lines} source={data.metro.source} />}
+      {data.metro && <MetroGrid lines={data.metro.lines} source={data.metro.source} updatedAt={data.updatedAt} />}
       <StopCombobox />
       <div className="mt-2 text-right text-[10px] text-base-content/50">
         {cachedTimestamp && <p className="mb-0.5">Datos desde las {cachedTimestamp}</p>}

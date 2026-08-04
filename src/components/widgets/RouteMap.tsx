@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import leafletCssUrl from 'leaflet/dist/leaflet.css?url';
 
 interface RouteStop {
   stop_id: string;
@@ -23,11 +24,12 @@ export function RouteMap({ stops, routeName, onPickStop }: Props) {
 
     (async () => {
       const L = await import('leaflet');
-      // ponytail: inject CSS lazily via DOM to avoid render-blocking <link> from Vite bundling dynamic import
-      if (!document.querySelector('link[href*="leaflet"]')) {
+      // ponytail: ?url import + <link> instead of unpkg CDN — same pattern as EmergencyMap/PowerOutageMap (reliable + theme-bundled)
+      if (!document.querySelector('link[data-leaflet]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.dataset.leaflet = '';
+        link.href = leafletCssUrl;
         document.head.appendChild(link);
       }
 
@@ -38,10 +40,23 @@ export function RouteMap({ stops, routeName, onPickStop }: Props) {
         attributionControl: true,
       }).setView([-33.45, -70.65], 12);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OSM</a>',
+      const isDark = () => !document.documentElement.classList.contains('light-theme');
+      const tileUrl = (dark: boolean) =>
+        dark
+          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+      const tiles = L.tileLayer(tileUrl(isDark()), {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
         maxZoom: 19,
       }).addTo(map);
+
+      const observer = new MutationObserver(() => tiles.setUrl(tileUrl(isDark())));
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+      instanceRef.current = {
+        destroy: () => { observer.disconnect(); map.remove(); instanceRef.current = null; },
+      };
 
       const coords: [number, number][] = stops
         .filter(s => s.stop_lat && s.stop_lon)
@@ -80,10 +95,6 @@ export function RouteMap({ stops, routeName, onPickStop }: Props) {
       }
 
       map.fitBounds(coords);
-
-      instanceRef.current = {
-        destroy: () => { map.remove(); instanceRef.current = null; },
-      };
     })();
 
     return () => { destroyed = true; instanceRef.current?.destroy(); };

@@ -127,6 +127,7 @@ export function EmergencyWidget() {
   const [liveMsg, setLiveMsg] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [shareMsgKey, setShareMsgKey] = useState(0);
   const shareRef = useRef<HTMLDivElement>(null);
   const seenRef = useRef<{ sismos: Set<string>; alerts: Set<string> }>({ sismos: new Set(), alerts: new Set() });
 
@@ -200,6 +201,7 @@ export function EmergencyWidget() {
   const handleShare = async (action: 'link' | 'summary' | 'image') => {
     setShareOpen(false);
     setShareMsg(null);
+    setShareMsgKey(k => k + 1);
     try {
       if (action === 'link') {
         const r = await shareOrCopy({
@@ -215,8 +217,11 @@ export function EmergencyWidget() {
         play(r === 'copied' ? 'interaction.confirm' : 'notification.error');
       } else {
         const blob = await renderEmergencyCard(items, alerts, powerCount ?? undefined);
+        const d = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const imgName = `queonda-emergencia-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}.png`;
         if (canShareFiles() && navigator.share) {
-          const file = new File([blob], 'queonda-emergencia.png', { type: 'image/png' });
+          const file = new File([blob], imgName, { type: 'image/png' });
           await navigator.share({
             files: [file],
             title: 'Emergencias Chile — ¿Qué Onda?',
@@ -224,7 +229,7 @@ export function EmergencyWidget() {
           });
           setShareMsg('Imagen compartida');
         } else {
-          downloadBlob(blob, 'queonda-emergencia.png');
+          downloadBlob(blob, imgName);
           setShareMsg('Imagen descargada');
         }
         play('interaction.confirm');
@@ -319,7 +324,8 @@ export function EmergencyWidget() {
                 </div>
               )}
               {shareMsg && (
-                <span role="status" className="absolute top-full right-0 mt-2 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap animate-[fadeSlideIn_0.15s_ease-out]">
+                <span key={shareMsgKey} role="status" 
+                    className="absolute -top-7 -right-2 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap queonda-toast-long">
                   {shareMsg}
                 </span>
               )}

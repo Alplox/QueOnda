@@ -720,6 +720,29 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   </button>
                 )}
               </div>
+                {states.length > 0 && (
+                <div className="mt-2">
+                  <select
+                    value={activeState}
+                    onChange={(e) => { play('interaction.tap'); setActiveState(e.target.value); }}
+                    aria-label="Filtrar por ciudad"
+                    className="w-full text-xs bg-base-100 border border-base-300 rounded-lg px-2 py-1.5 text-base-content focus:outline-none focus:border-primary/50 transition-colors"
+                  >
+                    <option value="">Todas las ciudades ({states.reduce((s, c) => s + (stateCounts[c] || 0), 0)})</option>
+                    {states.map((s) => (
+                      <option key={s} value={s}>{s} ({stateCounts[s] || 0})</option>
+                    ))}
+                  </select>
+                  {activeState && (
+                    <button
+                      onClick={() => { play('interaction.confirm'); setActiveState(''); }}
+                      className="text-[10px] text-base-content/50 hover:text-base-content/70 ml-2 transition-colors"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+              )}
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {tags.map((tag) => {
@@ -742,29 +765,6 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                     <button
                       onClick={() => { play('interaction.confirm'); setActiveTags([]); }}
                       className="text-[10px] px-2 py-1 rounded-full border border-transparent text-base-content/50 hover:text-base-content/70 transition-colors"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-              )}
-              {states.length > 0 && (
-                <div className="mt-2">
-                  <select
-                    value={activeState}
-                    onChange={(e) => { play('interaction.tap'); setActiveState(e.target.value); }}
-                    aria-label="Filtrar por ciudad"
-                    className="w-full text-xs bg-base-100 border border-base-300 rounded-lg px-2 py-1.5 text-base-content focus:outline-none focus:border-primary/50 transition-colors"
-                  >
-                    <option value="">Todas las ciudades ({states.reduce((s, c) => s + (stateCounts[c] || 0), 0)})</option>
-                    {states.map((s) => (
-                      <option key={s} value={s}>{s} ({stateCounts[s] || 0})</option>
-                    ))}
-                  </select>
-                  {activeState && (
-                    <button
-                      onClick={() => { play('interaction.confirm'); setActiveState(''); }}
-                      className="text-[10px] text-base-content/50 hover:text-base-content/70 ml-2 transition-colors"
                     >
                       Limpiar
                     </button>
@@ -865,6 +865,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
 
       {/* Sticky bottom player */}
       <div
+        id="sticky-radio-player"
         className={`fixed bottom-0 left-0 right-0 z-[9999] bg-base-100 border-t border-base-300 px-3 py-2 flex items-center gap-3 shadow-2xl shadow-neutral/60 transition-transform duration-300 ease-out ${
           showSticky && current ? 'translate-y-0' : 'translate-y-full'
         }`}

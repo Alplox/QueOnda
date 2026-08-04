@@ -46,17 +46,23 @@ export function GoogleTrendsWidget() {
   const [trends, setTrends] = useState<Trend[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
     fetch('/api/trends')
       .then((r) => r.json())
       .then((data) => {
+        if (cancelled) return;
         setTrends(data.trends || []);
         if (data.error) setError(data.error);
       })
-      .catch(() => setError('Error de conexión al servidor'))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => { if (!cancelled) setError('Error de conexión al servidor'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [retryKey]);
 
   if (loading) {
     return (
@@ -84,7 +90,14 @@ export function GoogleTrendsWidget() {
         {error && (
           <p className="text-[10px] text-base-content/50 mt-1.5">{error}</p>
         )}
-        <div className="mt-2">
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => { play('interaction.tap'); setRetryKey(k => k + 1); }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-base-300 text-base-content text-xs font-medium hover:bg-base-content/10 transition-colors active:scale-[0.96] cursor-pointer"
+          >
+            Reintentar
+          </button>
           <a href="https://trends.google.com/trending?geo=CL" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')}            className="text-[10px] text-base-content/70 underline underline-offset-2 hover:text-base-content transition-colors">
             Ver en Google Trends →
           </a>
