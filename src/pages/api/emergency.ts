@@ -53,6 +53,10 @@ interface EmergencyItem {
 
 const MIN_MAGNITUDE = 1.0;
 
+// Alertas SENAPRED no expiran explícitamente en el feed de Telegram, pero una alerta
+// de hace 2 días ya no es "vigente". Mostrar solo las últimas 24h evita stale datos previos.
+const ALERT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
 function getSeverity(mag: number): 'low' | 'moderate' | 'high' | 'critical' {
   if (mag >= 6) return 'critical';
   if (mag >= 5) return 'high';
@@ -65,13 +69,15 @@ function getSeverity(mag: number): 'low' | 'moderate' | 'high' | 'critical' {
 // parseChileLocal lives in src/lib/chile-time.ts (shared with the client so both
 // attach coordinates by the exact same epoch).
 
-async function fetchGaelCloud(): Promise<EmergencyItem[]> {
+async function fetchGaelCloud(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
   let items: EmergencyItem[] = [];
+  let ok = false;
   try {
     const chileRes = await fetch('https://api.gael.cloud/general/public/sismos', {
       signal: AbortSignal.timeout(10000),
     });
     if (!chileRes.ok) throw new Error(`API returned ${chileRes.status}`);
+    ok = true;
     const chileData = await chileRes.json() as ChileanEarthquake[];
     const filteredData = chileData.filter(eq => parseFloat(eq.Magnitud) >= MIN_MAGNITUDE);
     filteredData.sort((a, b) => parseChileLocal(b.Fecha) - parseChileLocal(a.Fecha));
@@ -92,13 +98,15 @@ async function fetchGaelCloud(): Promise<EmergencyItem[]> {
     }
   } catch (err) {
     console.error('Emergency: Gael Cloud API fetch failed:', err);
-    return [];
+    return { items: [], ok: false };
   }
+
+  if (items.length === 0) return { items, ok };
 
   // Gael sends no coordinates; Boostr serves the same CSN data with lat/lon,
   // so attach them by matching the Chile-local timestamp.
   const candidates: Array<{ time: number; mag: number; lat: number; lon: number }> = [];
-  for (const b of await fetchBoostr()) {
+  for (const b of (await fetchBoostr()).items) {
     if (b.lat != null && b.lon != null) {
       candidates.push({ time: b.time, mag: b.mag!, lat: b.lat, lon: b.lon });
     }
@@ -108,7 +116,7 @@ async function fetchGaelCloud(): Promise<EmergencyItem[]> {
   // Workers IP, fall back to USGS coords so at least the notable quakes get pins.
   if (candidates.length === 0) {
     try {
-      for (const u of await fetchUSGS()) {
+      for (const u of (await fetchUSGS()).items) {
         if (u.lat != null && u.lon != null) {
           candidates.push({ time: u.time, mag: u.mag!, lat: u.lat, lon: u.lon });
         }
@@ -142,10 +150,10 @@ async function fetchGaelCloud(): Promise<EmergencyItem[]> {
       it.lon = near.lon;
     }
   }
-  return items;
+  return { items, ok };
 }
 
-async function fetchBoostr(): Promise<EmergencyItem[]> {
+async function fetchBoostr(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
   try {
     const res = await fetch('https://api.boostr.cl/earthquakes/recent.json', {
       signal: AbortSignal.timeout(10000),
@@ -176,21 +184,22 @@ async function fetchBoostr(): Promise<EmergencyItem[]> {
       });
     }
     items.sort((a, b) => b.time - a.time);
-    return items.slice(0, 25);
+    return { items: items.slice(0, 25), ok: true };
   } catch (err) {
     console.error('Emergency: Boostr API fetch failed:', err);
-    return [];
+    return { items: [], ok: false };
   }
 }
 
-async function fetchUSGS(): Promise<EmergencyItem[]> {
+async function fetchUSGS(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
   try {
     const res = await fetch(
       'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson',
       { signal: AbortSignal.timeout(10000) }
     );
+    if (!res.ok) throw new Error(`API returned ${res.status}`);
     const data = await res.json() as { features: Array<{ properties: USGSEarthquake['properties']; geometry: USGSEarthquake['geometry']; id: string }> };
-    return data.features
+    const items: EmergencyItem[] = data.features
       .filter(f => {
         const place = f.properties.place || '';
         return (f.properties.mag >= MIN_MAGNITUDE) &&
@@ -211,9 +220,10 @@ async function fetchUSGS(): Promise<EmergencyItem[]> {
         lat: f.geometry.coordinates[1],
         lon: f.geometry.coordinates[0],
       }));
+    return { items, ok: true };
   } catch (err) {
     console.error('Emergency: USGS API fetch failed:', err);
-    return [];
+    return { items: [], ok: false };
   }
 }
 
@@ -251,7 +261,8 @@ function senapredSeverity(text: string): 'low' | 'moderate' | 'high' | 'critical
   return 'low';
 }
 
-async function fetchSenapred(): Promise<EmergencyItem[]> {
+async function fetchSenapred(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
+  let okFlag = false;
   const run = async (): Promise<EmergencyItem[]> => {
     try {
       const res = await fetch('https://t.me/s/SenapredChile', {
@@ -259,6 +270,7 @@ async function fetchSenapred(): Promise<EmergencyItem[]> {
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) throw new Error(`Telegram returned ${res.status}`);
+      okFlag = true;
       const html = await res.text();
 
     // t.me web preview: each post is a <div class="tgme_widget_message_wrap"> wrapper
@@ -298,7 +310,8 @@ async function fetchSenapred(): Promise<EmergencyItem[]> {
     }
 
     items.sort((a, b) => b.time - a.time);
-    return items.slice(0, 12);
+    const now = Date.now();
+    return items.filter(a => now - a.time <= ALERT_MAX_AGE_MS).slice(0, 12);
     } catch (err) {
       console.error('Emergency: SENAPRED Telegram fetch failed:', err);
       return [];
@@ -307,23 +320,46 @@ async function fetchSenapred(): Promise<EmergencyItem[]> {
 
   // ponytail: a transient Telegram hiccup must not cache senapred: [] for 5 min — retry once
   const first = await run();
-  return first.length > 0 ? first : run();
+  const items = first.length > 0 ? first : await run();
+  return { items, ok: okFlag };
 }
 
 export const GET: APIRoute = async () => {
-  const { items, senapred } = await dedupeFetch<{ items: EmergencyItem[]; senapred: EmergencyItem[] }>('emergency', async () => {
-    let result = await fetchGaelCloud();
-    if (result.length === 0) result = await fetchBoostr();
-    if (result.length === 0) result = await fetchUSGS();
+  const { items, senapred, error, senapredError } = await dedupeFetch<{
+    items: EmergencyItem[];
+    senapred: EmergencyItem[];
+    error: boolean;
+    senapredError: boolean;
+  }>('emergency', async () => {
+    // error solo si TODAS las fuentes fallaron (HTTP/parse), no si un feed legítimamente
+    // devuelve vacío — eso sería "no hay sismos", no un fallo de carga.
+    let result: EmergencyItem[] = [];
+    let sourcesOk = false;
+    const gael = await fetchGaelCloud();
+    result = gael.items;
+    sourcesOk = gael.ok;
+    if (result.length === 0) {
+      const boostr = await fetchBoostr();
+      result = boostr.items;
+      sourcesOk = sourcesOk || boostr.ok;
+    }
+    if (result.length === 0) {
+      const usgs = await fetchUSGS();
+      result = usgs.items;
+      sourcesOk = sourcesOk || usgs.ok;
+    }
     // Most recent first so the latest event is always visible (matches senapred ordering)
     result.sort((a, b) => b.time - a.time);
+    const senapred = await fetchSenapred(); // independent: SAE alerts (official telegram), not earthquakes
     return {
       items: result.slice(0, 10),
-      senapred: await fetchSenapred(), // independent: SAE alerts (official telegram), not earthquakes
+      senapred: senapred.items,
+      error: !sourcesOk,
+      senapredError: !senapred.ok,
     };
   });
 
-  return new Response(JSON.stringify({ items, senapred }), {
+  return new Response(JSON.stringify({ items, senapred, error, senapredError }), {
     headers: edgeCacheHeaders(300),
   });
 };

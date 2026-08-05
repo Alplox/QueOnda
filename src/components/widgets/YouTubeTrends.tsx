@@ -160,6 +160,7 @@ export function YouTubeTrends() {
   const [expandedErrors, setExpandedErrors] = useState<Set<string>>(new Set());
   const [retryingChannel, setRetryingChannel] = useState<string | null>(null);
   const [isRetryingAll, setIsRetryingAll] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const configRef = useRef<HTMLDivElement>(null);
 
   const retryChannels = useCallback(async (chs: ChannelStatus[]) => {
@@ -201,6 +202,26 @@ export function YouTubeTrends() {
     retryChannels(errorChs);
   }, [channels, retryChannels]);
 
+  // Shared fresh-fetch for both the mount effect and the empty/error-state retry.
+  // A failed fetch is an error, never "no hay videos hoy".
+  const loadTrends = useCallback(async () => {
+    try {
+      const r = await fetch('/api/youtube');
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      setVideos(data.videos || []);
+      setChannels(data.channelStatuses || []);
+      idbSet(IDB_KEY, { videos: data.videos || [], channels: data.channelStatuses || [] }, IDB_TTL);
+      const errorChs = (data.channelStatuses || []).filter((c: ChannelStatus) => c.status === 'error');
+      if (errorChs.length > 0) retryChannels(errorChs);
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [retryChannels]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -214,23 +235,12 @@ export function YouTubeTrends() {
     });
 
     // Phase 1: Fetch fresh data
-    fetch('/api/youtube')
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        setVideos(data.videos || []);
-        setChannels(data.channelStatuses || []);
-        idbSet(IDB_KEY, { videos: data.videos || [], channels: data.channelStatuses || [] }, IDB_TTL);
-        const errorChs = (data.channelStatuses || []).filter((c: ChannelStatus) => c.status === 'error');
-        if (errorChs.length > 0) retryChannels(errorChs);
-      })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
+    loadTrends();
 
     const saved = loadJSON<string[] | null>(STORAGE_KEY, null);
     if (saved && saved.length > 0) setSelectedIds(new Set(saved));
     return () => { cancelled = true; };
-  }, [retryChannels]);
+  }, [loadTrends]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -312,14 +322,26 @@ export function YouTubeTrends() {
   }
 
   if (videos.length === 0) {
+    if (loadError) {
+      return (
+        <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center text-base-content/70 text-sm">
+          No se pudieron cargar los videos de YouTube en este momento.
+          <div className="mt-3">
+            <button onClick={() => { play('interaction.subtle'); loadTrends(); }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                <path d="M21 3v6h-6" />
+              </svg>
+              Reintentar
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center text-base-content/70 text-sm">
         No hay videos nuevos de canales chilenos hoy
-        <div className="mt-2">
-          <a href="https://www.youtube.com/feed/trending?gl=CL" target="_blank" rel="noopener noreferrer" className="text-[10px] text-base-content/70 underline underline-offset-2 hover:text-base-content transition-colors">
-            Ver en YouTube →
-          </a>
-        </div>
       </div>
     );
   }

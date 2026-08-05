@@ -35,18 +35,19 @@ const IDB_KEY = 'emergency';
 const IDB_TTL = 5 * 60 * 1000;
 
 // ponytail: server-side /api/emergency aggregates Gael → Boostr → USGS (CORS + edge cache)
-// ok=false → the API itself was unreachable (keep last-good); ok=true → trust the payload even if empty
+// error=true → sources failed (never render as "no quakes"); trust a reachable server otherwise
 async function fetchEmergency() {
   try {
     const res = await fetch('/api/emergency', { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return { items: [], senapred: [], ok: false };
+    if (!res.ok) return { items: [], senapred: [], error: true, senapredError: false };
     const data = await res.json();
     return {
       items: (data.items || []) as EmergencyItem[],
       senapred: (data.senapred || []) as EmergencyItem[],
-      ok: true,
+      error: !!data.error,
+      senapredError: !!data.senapredError,
     };
-  } catch { return { items: [], senapred: [], ok: false }; }
+  } catch { return { items: [], senapred: [], error: true, senapredError: false }; }
 }
 
 // Client-side coordinate enrichment. /api/emergency attaches lat/lon from Boostr,
@@ -118,6 +119,8 @@ export function EmergencyWidget() {
   const [items, setItems] = useState<EmergencyItem[]>([]);
   const [alerts, setAlerts] = useState<EmergencyItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sismosError, setSismosError] = useState(false);
+  const [alertsError, setAlertsError] = useState(false);
   const [powerCount, setPowerCount] = useState<number | null>(null);
   // senapred no se cachea en IDB (solo items), así que mantiene su propio flag de carga
   const [alertsLoaded, setAlertsLoaded] = useState(false);
@@ -140,10 +143,10 @@ export function EmergencyWidget() {
   };
 
   const refresh = useCallback(async () => {
-    const { items: eqs, senapred, ok } = await fetchEmergency();
-    if (ok) {
+    const { items: eqs, senapred, error, senapredError } = await fetchEmergency();
+    if (!error) {
       // Trust a reachable server: a genuinely empty day clears to the placeholder instead of
-      // showing stale alerts forever. Only a failed fetch keeps last-known data.
+      // showing stale alerts forever. Only a failed fetch keeps the error state.
       const enriched = await enrichWithBoostr(eqs);
       setItems(enriched);
       setAlerts(senapred);
@@ -158,7 +161,11 @@ export function EmergencyWidget() {
       if (newSismos[0]) setLiveMsg(`Nuevo sismo: ${newSismos[0].mag != null ? `magnitud ${newSismos[0].mag.toFixed(1)} ` : ''}${newSismos[0].place || newSismos[0].title}`);
       else if (newAlerts[0]) setLiveMsg(`Nueva alerta SENAPRED: ${newAlerts[0].title}`);
     }
+    setSismosError(error);
+    setAlertsError(senapredError);
 
+    // ponytail: a failed fetch must not leave stale quakes on screen — treat any in-flight
+    // cached data as an error state. Retry via the buttons below re-runs refresh().
     try {
       const res = await fetch('/api/power', { signal: AbortSignal.timeout(10000) });
       if (res.ok) {
@@ -352,9 +359,17 @@ export function EmergencyWidget() {
                 </div>
               ))}
             </div>
+          ) : alertsError ? (
+            <LoadErrorBox onRetry={() => { setAlertsLoaded(false); refresh(); }} />
           ) : alerts.length === 0 ? (
             <p className="text-xs text-base-content/60 pb-1">
-              Sin alertas SENAPRED activas. <a href="https://t.me/SenapredChile" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Ver en Telegram</a>
+              Sin alertas SENAPRED activas dentro de las últimas 24 horas. 
+              Ver SENAPRED en: <a href="https://www.senapred.gov.cl/eventos/" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Sitio oficial</a> - 
+             <a href="https://x.com/senapred" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">X</a> - 
+             <a href="https://web.facebook.com/SenapredChile/" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Facebook</a> - 
+             <a href="https://www.youtube.com/@senapredchile" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">YouTube</a> - 
+             <a href="https://www.whatsapp.com/channel/0029Va4UhwYEwEjuiauxoM09" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">WhatsApp</a> - 
+              <a href="https://t.me/SenapredChile" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Telegram</a>
             </p>
           ) : (
             <ScrollRow>
@@ -370,7 +385,7 @@ export function EmergencyWidget() {
                   <div className="mb-1.5 flex items-center justify-between gap-2">
                     <span className={severityBadges[a.severity] + ' shrink-0'}>{severityLabels[a.severity]}</span>
                     <span className="shrink-0 text-[9px] text-base-content/50">
-                      {new Date(a.time).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(a.time).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   <p className="text-xs text-base-content leading-snug line-clamp-4">{a.description}</p>
@@ -397,6 +412,8 @@ export function EmergencyWidget() {
                 </div>
               ))}
             </div>
+          ) : sismosError ? (
+            <LoadErrorBox onRetry={() => { setLoading(true); refresh(); }} />
           ) : items.length === 0 ? (
             <p className="text-xs text-base-content/50 pb-1">Sin sismos recientes -{' '}
               <a href="https://www.sismologia.cl/" target="_blank" rel="noopener noreferrer"
@@ -500,6 +517,26 @@ export function EmergencyWidget() {
         <PowerOutageWidget />
       </section>
     </>
+  );
+}
+
+// Shown when the emergency sources failed to load — never claim "no hay sismo/alertas"
+function LoadErrorBox({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-xs text-base-content/70">
+      <span>No se pudieron cargar los datos de emergencia en este momento.</span>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+          <path d="M21 3v6h-6" />
+        </svg>
+        Reintentar
+      </button>
+    </div>
   );
 }
 
