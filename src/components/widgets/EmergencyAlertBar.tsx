@@ -11,7 +11,7 @@ const severityColors: Record<string, string> = {
   critical: 'bg-error',
   high: 'bg-warning',
   moderate: 'bg-info',
-  low: 'bg-warning',
+  low: 'bg-success',
 };
 
 export function EmergencyAlertBar({ items, onClose }: Props) {
