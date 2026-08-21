@@ -89,8 +89,8 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
   }, [playing]);
 
   return (
-    <div className="flex flex-col items-center justify-center flex-1 w-full px-6">
-      <div className="relative w-24 h-24">
+    <div className="flex flex-row md:flex-col items-center justify-center flex-1 w-full gap-3 px-4 md:px-6">
+      <div className="relative w-24 h-24 max-md:w-14 max-md:h-14 shrink-0">
         {/* CD disc — expands from logo when playing, spins via JS */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -113,7 +113,7 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
         )}
         {/* Station logo (on top) */}
         <div className={[
-          'relative w-24 h-24 rounded-full overflow-hidden bg-base-100 ring-2 transition-all duration-500 z-10',
+          'relative w-24 h-24 max-md:w-14 max-md:h-14 rounded-full overflow-hidden bg-base-100 ring-2 transition-all duration-500 z-10',
           playing ? 'ring-primary shadow-[0_0_30px_-8px_var(--color-primary)]' : 'ring-base-content/10',
         ].join(' ')}>
           {station.logo ? (
@@ -124,23 +124,25 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
           </div>
         </div>
       </div>
-      <h3 className="text-lg font-semibold text-balance text-base-content mt-4 text-center">{station.name}</h3>
-      {station.website && (
-        <a
-          href={station.website}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => play('interaction.tap')}
-          className="mt-1 flex items-center gap-1 text-[10px] text-base-content/50 hover:text-base-content underline-offset-2 underline transition-colors"
-        >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-          <span>Sitio web</span>
-        </a>
-      )}
+      <div className="min-w-0 flex flex-col items-center justify-center gap-1 max-md:items-start md:mt-4">
+        <h3 className="text-lg font-semibold text-base-content text-center max-md:text-left max-md:text-sm max-md:line-clamp-2 md:text-balance">{station.name}</h3>
+        {station.website && (
+          <a
+            href={station.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => play('interaction.tap')}
+            className="flex items-center gap-1 text-[10px] text-base-content/50 hover:text-base-content underline-offset-2 underline transition-colors"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            <span>Sitio web</span>
+          </a>
+        )}
+      </div>
     </div>
   );
 }
@@ -165,45 +167,47 @@ function BoomboxControls({
   onVolumeChange: (v: number) => void;
 }) {
   return (
-    <div className="w-full space-y-3 px-6 pb-4">
-      <div className="flex items-center justify-center gap-4">
-        <button
-          onClick={onPlayPause}
-          className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center hover:bg-primary/90 transition-all active:scale-[0.96] shadow-lg"
-          title={playing ? 'Pausar' : 'Reproducir'}
-        >
-          {playing ? PAUSE_ICON : PLAY_ICON}
-        </button>
-        <button
-          onClick={onStop}
-          disabled={stopped}
-          className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-all active:scale-[0.96] disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Detener"
-        >
-          {STOP_ICON}
-        </button>
-      </div>
+    <div className="w-full px-4 pb-3 md:px-6 md:pb-4 mt-2 md:mt-0">
+      <div className="flex items-center gap-3 md:flex-col md:gap-3">
+        <div className="flex items-center gap-2.5 shrink-0 md:w-full md:justify-center">
+          <button
+            onClick={onPlayPause}
+            className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center hover:bg-primary/90 transition-all active:scale-[0.96] shadow-lg"
+            title={playing ? 'Pausar' : 'Reproducir'}
+          >
+            {playing ? PAUSE_ICON : PLAY_ICON}
+          </button>
+          <button
+            onClick={onStop}
+            disabled={stopped}
+            className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-all active:scale-[0.96] disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Detener"
+          >
+            {STOP_ICON}
+          </button>
+        </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onMute}
-          aria-label={muted ? 'Activar sonido' : 'Silenciar'}
-          className="text-base-content/70 hover:text-base-content transition-colors shrink-0 active:scale-[0.96]"
-        >
-          {muted || volume === 0 ? MUTED_ICON : volume > 0.5 ? VOLUME_HIGH : VOLUME_LOW}
-        </button>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.05"
-          value={muted ? 0 : volume}
-          onChange={(e) => { play('interaction.subtle'); onVolumeChange(parseFloat(e.target.value)); }}
-          className="flex-1 h-1 rounded-full appearance-none cursor-pointer range-thumb"
-          style={{
-            background: `linear-gradient(to right, var(--color-primary) ${(muted ? 0 : volume) * 100}%, var(--color-base-300) ${(muted ? 0 : volume) * 100}%)`,
-          }}
-        />
+        <div className="flex items-center gap-2 flex-1 min-w-0 md:w-full">
+          <button
+            onClick={onMute}
+            aria-label={muted ? 'Activar sonido' : 'Silenciar'}
+            className="text-base-content/70 hover:text-base-content transition-colors shrink-0 active:scale-[0.96]"
+          >
+            {muted || volume === 0 ? MUTED_ICON : volume > 0.5 ? VOLUME_HIGH : VOLUME_LOW}
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={muted ? 0 : volume}
+            onChange={(e) => { play('interaction.subtle'); onVolumeChange(parseFloat(e.target.value)); }}
+            className="flex-1 h-1 rounded-full appearance-none cursor-pointer range-thumb"
+            style={{
+              background: `linear-gradient(to right, var(--color-primary) ${(muted ? 0 : volume) * 100}%, var(--color-base-300) ${(muted ? 0 : volume) * 100}%)`,
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -609,7 +613,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
       ].join(' ')}>
         <div className="flex flex-col md:flex-row">
           {/* Boombox player panel */}
-          <div className="relative md:w-72 lg:w-80 shrink-0 flex flex-col items-center py-8 border-b md:border-b-0 md:border-r border-base-300 min-h-[320px]">
+          <div className="relative md:w-72 lg:w-80 shrink-0 flex flex-col items-center py-3 md:py-8 border-b md:border-b-0 md:border-r border-base-300 min-h-0 md:min-h-[320px]">
             {/* Ambient glow — no layout shift */}
             <div
               className="absolute inset-0 pointer-events-none z-0"
@@ -623,9 +627,9 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
             {current ? (
               <>
                 {error && (
-                  <div className="mx-6 mb-2 w-full max-w-[200px] flex items-start gap-2 bg-error/10 border border-error/20 rounded-xl px-3 py-2">
+                  <div className="mx-4 md:mx-6 mb-3 w-full flex items-start gap-2 bg-error/10 border border-error/20 rounded-xl px-3 py-2">
                     <span className="text-error shrink-0 mt-0.5 text-xs">⚠</span>
-                    <p className="text-[11px] text-error leading-snug">{error}</p>
+                    <p className="text-[11px] text-error leading-snug flex-1">{error}</p>
                     <button
                       onClick={() => { play('interaction.subtle'); setError(null); }}
                       aria-label="Cerrar error"
@@ -641,7 +645,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                 
                 {/* Signal selector - shown if multiple signals available */}
                 {current.signals && current.signals.length > 1 && (
-                  <div className="flex gap-1.5 mt-4">
+                  <div className="flex gap-1.5 mt-2 md:mt-4 max-md:w-full max-md:flex-wrap max-md:justify-center">
                     {current.signals.map((signal, idx) => (
                       <button
                         key={idx}
@@ -701,57 +705,58 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
           <div className="flex-1 p-4 min-w-0 flex flex-col">
             {/* Search + filter bar */}
             <div className="shrink-0 mb-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar radios..."
-                  className="w-full text-sm bg-base-100 border border-base-300 rounded-xl px-3 py-2 pr-8 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary/50 transition-colors"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => { play('interaction.subtle'); setSearchQuery(''); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content/70 transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+              <div className="flex gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar radios..."
+                    className="w-full text-sm bg-base-100 border border-base-300 rounded-xl px-3 py-2 pr-8 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary/50 transition-colors"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => { play('interaction.subtle'); setSearchQuery(''); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content/70 transition-colors"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
                 {states.length > 0 && (
-                <div className="mt-2">
                   <select
                     value={activeState}
                     onChange={(e) => { play('interaction.tap'); setActiveState(e.target.value); }}
                     aria-label="Filtrar por ciudad"
-                    className="w-full text-xs bg-base-100 border border-base-300 rounded-lg px-2 py-1.5 text-base-content focus:outline-none focus:border-primary/50 transition-colors"
+                    className="shrink-0 max-w-[45%] text-xs bg-base-100 border border-base-300 rounded-xl px-2 py-2 text-base-content focus:outline-none focus:border-primary/50 transition-colors"
                   >
                     <option value="">Todas las ciudades ({states.reduce((s, c) => s + (stateCounts[c] || 0), 0)})</option>
                     {states.map((s) => (
                       <option key={s} value={s}>{s} ({stateCounts[s] || 0})</option>
                     ))}
                   </select>
-                  {activeState && (
-                    <button
-                      onClick={() => { play('interaction.confirm'); setActiveState(''); }}
-                      className="text-[10px] text-base-content/50 hover:text-base-content/70 ml-2 transition-colors"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
+                )}
+              </div>
+              {activeState && (
+                <button
+                  onClick={() => { play('interaction.confirm'); setActiveState(''); }}
+                  className="mt-1.5 text-[10px] text-base-content/50 hover:text-base-content/70 transition-colors"
+                >
+                  Limpiar ciudad
+                </button>
               )}
               {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
+                <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1 -mx-1 px-1 md:flex-wrap md:overflow-visible md:mx-0 md:px-0 md:pb-0">
                   {tags.map((tag) => {
                     const active = activeTags.includes(tag);
                     return (
                       <button
                         key={tag}
                         onClick={() => { play('interaction.tap'); toggleTag(tag); }}
-                        className={`text-[10px] px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+                        aria-pressed={active}
+                        className={`shrink-0 whitespace-nowrap text-[10px] px-2 py-1 rounded-full border transition-colors cursor-pointer ${
                           active
                             ? 'bg-primary text-primary-content border-primary'
                             : 'bg-base-100 text-base-content/70 border-base-content/20 hover:border-base-content/30 hover:text-base-content'
@@ -764,7 +769,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   {activeTags.length > 0 && (
                     <button
                       onClick={() => { play('interaction.confirm'); setActiveTags([]); }}
-                      className="text-[10px] px-2 py-1 rounded-full border border-transparent text-base-content/50 hover:text-base-content/70 transition-colors"
+                      className="shrink-0 whitespace-nowrap text-[10px] px-2 py-1 rounded-full border border-transparent text-base-content/50 hover:text-base-content/70 transition-colors"
                     >
                       Limpiar
                     </button>
