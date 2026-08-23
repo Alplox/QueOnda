@@ -37,6 +37,7 @@ src/
       trends.ts              # Google Trends Chile (server-cached 30 min)
       weather.ts             # Open-Meteo fallback chain (server-cached 10 min)
       transport.ts           # Metro + buses (server-cached 5 min)
+      air-quality.ts         # SINCA estaciones calidad del aire + fallback Open-Meteo (server-cached 30 min)
       sports.ts              # Sports RSS (server-cached 10 min)
       futbol.ts              # Chilean football standings + matches + news fallback chain (server-cached 10 min)
       emergency.ts           # Sismos (server-cached 5 min)
@@ -81,6 +82,8 @@ src/
       GoogleTrendsWidget.tsx   # Google Trends Chile list (client:idle)
       WeatherWidget.tsx        # Multi-city weather cards (client:idle)
       TransportWidget.tsx      # Metro grid + estaciones + llegada de buses (client:idle)
+      AirQualityWidget.tsx     # Calidad del aire SINCA: peor estación + conteos por banda + filtro región + filas (client:idle; IDB cache: air-quality 30min)
+      AirQualityMap.tsx        # Leaflet mapa de estaciones por estado ICAP (colores oficiales SINCA, filtros región/comuna)
       FootballTable.tsx        # Chilean football standings + matches + news feed (client:idle; IDB cache: football-standings 6h, football-matches 1h, football-articles 30min; progressive per-tab rendering)
       JobList.tsx              # Job listings placeholder (client:idle)
       ClientJobList.tsx        # Client job listings widget (client:idle)
@@ -106,6 +109,7 @@ src/
     clustering.ts            # Pure functions: extractKeywords, clusterArticles, extractTrendingFromArticles (server + client; code-split via dynamic import in ClientNewsFeed)
     radios.ts                # Radio station data + extraction
     sound.ts                 # Web Audio API sound engine — oscillator + noise synthesis
+    air-quality.ts           # Tipos AirStation/AirRow + AIR_STATUS (paleta oficial SINCA) + umbrales ICAP MP2.5 + airSeverity() sort
     transport.ts             # City configs, stop predictions, Metro API, POPULAR_STOPS list
     comunas-coords.ts        # Comuna → [lat, lon] table (monitor-sinluz + supplements) + comunaCoords() matcher
     ua.ts                    # BROWSER_UA constant (shared by rss.ts + radios.ts, client-safe)
@@ -154,7 +158,8 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/weather?city=`              | 10 min | `{ weather }` — **fallback only** (WeatherWidget fetches Open-Meteo directly, server for Gael/Boostr)                  |
 | `GET /api/transport?city=&stop=`      | 5 min  | `{ city, metro, stations, stopInfo }` — Metro lines + estaciones + llegada de buses RED                                 |
 | `GET /api/transport?city=&route=`     | 5 min  | `{ routeStops }` — Paraderos de un recorrido (ej: route=506)                                                            |
-| `GET /api/transport?mode=route-names` | 1 hour | `{ routes }` — Lista de todos los números de recorrido RED                                                              |
+| `GET /api/transport?mode=route-names` | 1 hour | `{ routes }` — Lista de todos los números de recorrido RED                              |
+| `GET /api/air-quality`               | 30 min | `{ source, stations }` — SINCA estaciones (PM2.5/PM10 + estado ICAP) o fallback Open-Meteo ciudades |
 | `GET /api/sports`                     | 30 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
 | `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
 | `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain (coords attached from Boostr); senapred: 🚨 SAE alerts via Telegram. If Boostr is unreachable from the Worker, EmergencyWidget re-enriches `lat/lon` client-side from Boostr (API is CORS-open) so sismo pins always render |
@@ -351,6 +356,12 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
   - [cd_dvd_PNG9081](https://pngimg.com/image/9081), [cd_dvd_PNG9079](https://pngimg.com/image/9079), [cd_dvd_PNG9075](https://pngimg.com/image/9075), [cd_dvd_PNG9080](https://pngimg.com/image/9080), [cd_dvd_PNG9065](https://pngimg.com/image/9065)
 - Randomly picked per station in `BoomboxDisplay` component
 
+### Air quality (`/api/air-quality`) — fallback secuencial
+1. **[SINCA · MMA](https://sinca.mma.gob.cl)** (primario) — `sinca.mma.gob.cl/index.php/json/listadomapa2k19/` — timeout 12s, ~118 estaciones con lat/lon + PM2.5/PM10 (más O3/SO2/NO2 disponibles) con estado ICAP ya calculado por SINCA (`tableRow`: value/status/statuscode/color/icap). Pasa al fallback si 0 estaciones con datos vigentes
+2. **[Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api)** (secundario) — `air-quality-api.open-meteo.com/v1/air-quality` — timeout 10s, modelo CAMS, una llamada multi-coordenada para 18 ciudades de referencia (respuesta: un solo objeto con valores separados por espacios, NO un array) — status derivado con umbrales ICAP MP2.5 DS 59/2023 (bueno ≤50 · regular ≤80 · alerta ≤110 · pre-emergencia ≤140 · emergencia >140; verificado contra los valores icap del propio SINCA). Estaciones SINCA sin PM2.5 usan su fila PM10 y el widget las etiqueta "MP10"
+3. **Stale cache** — CDN edge cache 30 min con stale-while-revalidate cubre caídas de ambas
+- Boostr y Gael Cloud no exponen calidad del aire (verificado); WAQI/IQAir/PurpleAir requieren API key
+
 ### Football / Fútbol (`/api/futbol`) — paths paralelos
 - **Standings + Matches**: [ESPN Deportes API](https://github.com/pseudo-r/Public-ESPN-API) — `site.web.api.espn.com/apis/v2/sports/soccer/chi.1/standings` + `site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard` — timeout 8s. Sin fallback: si ESPN falla → `standings: [], matches: [], source: 'rss'`
 - **Artículos**: RSS sports feeds (desde `awesome-chilean-rss` DB, categoría sports) — siempre se carga, independiente de ESPN
@@ -374,6 +385,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 | Google Trends | [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` |
 | Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GavIqMTeb` (Top 50 Chile) |
 | Sports RSS | awesome-chilean-rss DB (categoría `sports`) | múltiples fuentes RSS deportivas chilenas |
+| Air quality | [SINCA · MMA](https://sinca.mma.gob.cl) | `sinca.mma.gob.cl/index.php/json/listadomapa2k19/` — fallback Open-Meteo Air Quality (CAMS) |
 | Holidays | [Nager.Date](https://date.nager.at) | `date.nager.at/api/v3/publicholidays/{year}/CL` — bundled fallback JSON (auto-updated via `update-holidays-db.mjs`) |
 | Article proxy | [cheerio](https://cheerio.js.org) scraping | URL enviada por el cliente |
 | RED routes DB | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` (build-time via `update-stops-db.mjs`) |
@@ -403,7 +415,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 - **Static asset caching**: `public/_headers` sets immutable cache for `/_astro/*`, `/emoji/*`, `/cd-disc-*.webp` (1 year) and 86400 for favicons/og-image
 - **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate
   - Critical (rAF): `/api/emergency`
-  - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`
+  - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/air-quality`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`
   - Scheduled: `/api/cron` (external cron job for persistent cache warming)
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)
 - **ClientNewsFeed** hydrates at idle (`client:idle`) instead of eagerly (`client:load`)

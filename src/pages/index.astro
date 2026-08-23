@@ -12,6 +12,7 @@ import { SpotifyChart } from '../components/widgets/SpotifyChart';
 import { GoogleTrendsWidget } from '../components/widgets/GoogleTrendsWidget';
 import { WeatherWidget } from '../components/widgets/WeatherWidget';
 import { TransportWidget } from '../components/widgets/TransportWidget';
+import { AirQualityWidget } from '../components/widgets/AirQualityWidget';
 import { FootballTable } from '../components/widgets/FootballTable';
 import { JobList } from '../components/widgets/JobList';
 import { EmergencyWidget } from '../components/widgets/EmergencyWidget';
@@ -199,6 +200,11 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
         <TransportWidget client:idle />
       </Section>
 
+      <!-- Calidad del Aire -->
+      <Section id="aire" title="Calidad del Aire" subtitle="Estaciones SINCA en tiempo real">
+        <AirQualityWidget client:idle />
+      </Section>
+
       <!-- Deportes -->
       <Section id="deportes" title="Deportes" subtitle="Noticias del fútbol chileno">
         <FootballTable client:idle />
@@ -267,6 +273,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
           '/api/youtube',
           '/api/trends',
           '/api/transport',
+          '/api/air-quality',
           '/api/sports',
           '/api/futbol',
           '/api/jobs',

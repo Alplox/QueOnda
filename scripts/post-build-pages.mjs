@@ -44,9 +44,12 @@ if (existsSync(wranglerJson)) {
 }
 
 // Remove .wrangler/ deploy config (points to server/wrangler.json which no longer exists)
+// ponytail: tolerate EBUSY — local `astro dev` (workerd) locks state/v3/cache; harmless to leave
 const dotWrangler = join(dist, '..', '.wrangler');
 if (existsSync(dotWrangler)) {
-  rmSync(dotWrangler, { recursive: true });
+  try {
+    rmSync(dotWrangler, { recursive: true });
+  } catch {}
 }
 
 console.log('✓ Restructured dist/ for Cloudflare Pages');

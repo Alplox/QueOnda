@@ -9,6 +9,7 @@ export const SECTIONS = [
   { id: 'tendencias-web', label: 'Tendencias' },
   { id: 'clima', label: 'Clima' },
   { id: 'transporte', label: 'Transporte' },
+  { id: 'aire', label: 'Aire' },
   { id: 'deportes', label: 'Deportes' },
   { id: 'trabajos', label: 'Trabajos' },
   { id: 'feriados', label: 'Feriados' },
