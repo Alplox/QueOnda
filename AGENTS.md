@@ -50,6 +50,7 @@ src/
     layout/
       Header.tsx             # Fixed nav bar with section scroll links (client:load)
       SideIndex.tsx          # Side navigation index (client:load)
+      BottomNav.tsx          # Mobile-only floating dock tab bar (<lg) with 4 quick sections + "Más" bottom sheet (all sections grid, focus-trapped dialog); lifts above sticky radio player; BackToTop lifts above it
       ShareButton.tsx        # Header share button — native share on touch, clipboard copy on desktop (client:load)
       SectionShareHandler.tsx  # Single delegated client:isidle island wiring every [data-section-share] button to share its section anchor (no per-section hydration)
       Footer.tsx

@@ -35,6 +35,7 @@ npm run update-holidays # regenera src/lib/holidays.json (feriados)
 - **Spotify**: Top 50 Chile vía proxy server-side
 - **Google Trends**: tendencias Chile
 - **Clima**: Open-Meteo directo client-side + Gael Cloud/Boostr server fallback, IDB cache (10 min)
+- **Aire**: estaciones SINCA (MP2.5/PM10 + estado ICAP) con mapa Leaflet, fallback Open-Meteo CAMS, IDB cache (30 min)
 - **Transporte**: Metro de Santiago + RED (buses) con predicciones
 - **Deportes**: RSS deportivo + tabla de posiciones fútbol chileno (ESPN API client-side), IDB cache (1h)
 - **Trabajos**: ofertas laborales desde múltiples fuentes
@@ -46,6 +47,8 @@ npm run update-holidays # regenera src/lib/holidays.json (feriados)
 | Fuente | URL | Sección | Orden en fallback |
 | ------ | ---- | ------- | ----------------- |
 | [Open-Meteo](https://open-meteo.com) | `api.open-meteo.com/v1/forecast` | Clima (1°), geolocalización | Primario |
+| [SINCA · MMA](https://sinca.mma.gob.cl) | `sinca.mma.gob.cl/index.php/json/listadomapa2k19/` | Aire (1°) | Primario |
+| [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | `air-quality-api.open-meteo.com/v1/air-quality` (CAMS) | Aire (2°) | Secundario |
 | [Gael Cloud](https://api.gael.cloud) | `api.gael.cloud/general/public/clima/{ICAO}` + `/sismos` | Clima (2°), Sismos (1°) | Secundario / Primario |
 | [Boostr](https://docs.boostr.cl) | `api.boostr.cl/weather/` + `/earthquakes/` + `/economy/` + `/holidays.json` | Clima (3°), Sismos (2°), Finanzas (2°), Feriados | Terciario / Secundario |
 | [mindicador.cl](https://mindicador.cl) | `mindicador.cl/api` | Finanzas (1°) | Primario |

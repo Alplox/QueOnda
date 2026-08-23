@@ -1,6 +1,7 @@
 ---
 import { Header } from '../components/layout/Header';
 import { SideIndex } from '../components/layout/SideIndex';
+import { BottomNav } from '../components/layout/BottomNav';
 import { Footer } from '../components/layout/Footer';
 import { BackToTop } from '../components/layout/BackToTop';
 import { Section } from '../components/layout/Section';
@@ -106,6 +107,8 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
 
     <SideIndex client:load />
 
+    <BottomNav client:load />
+
     <EmergencyTicker client:load />
 
     <main id="main" class="max-w-7xl mx-auto px-4 py-6 pb-56 space-y-8 md:space-y-12">
@@ -195,14 +198,14 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
         <WeatherWidget client:idle />
       </Section>
 
-      <!-- Transporte -->
-      <Section id="transporte" title="Transporte" subtitle="Metro y buses en tiempo real (Santiago)">
-        <TransportWidget client:idle />
-      </Section>
-
       <!-- Calidad del Aire -->
       <Section id="aire" title="Calidad del Aire" subtitle="Estaciones SINCA en tiempo real">
         <AirQualityWidget client:idle />
+      </Section>
+
+      <!-- Transporte -->
+      <Section id="transporte" title="Transporte" subtitle="Metro y buses en tiempo real (Santiago)">
+        <TransportWidget client:idle />
       </Section>
 
       <!-- Deportes -->

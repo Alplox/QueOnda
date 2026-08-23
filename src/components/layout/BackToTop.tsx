@@ -14,6 +14,14 @@ export function BackToTop() {
       const btnH = 44; // h-11
       const btnInset = 24; // bottom-6
       let inset = btnInset;
+      // Lift clear of the mobile bottom nav dock (<lg only)
+      const dock = document.getElementById('bottom-nav');
+      if (dock) {
+        const rect = dock.getBoundingClientRect();
+        if (rect.top < vh && window.innerWidth < 1024) {
+          inset = Math.max(inset, vh - rect.top + 12);
+        }
+      }
       // Lift clear of the sticky radio player when it's on-screen (z-[9999] would otherwise cover us)
       if (player) {
         const rect = player.getBoundingClientRect();
