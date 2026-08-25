@@ -41,7 +41,8 @@ export function Footer() {
         {/* Top fade into page */}
         <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-base-100 to-transparent" aria-hidden="true" />
 
-        <div className="relative max-w-7xl mx-auto px-4 pt-56 pb-10 md:pt-56 md:pb-14">
+        {/* pb clears the floating bottom dock (auto-hide nav) on <lg so it never covers #footer-credits */}
+        <div className="relative max-w-7xl mx-auto px-4 pt-56 pb-24 md:pb-20 lg:pb-14">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
             {/* Col 1: Brand */}
             <div>

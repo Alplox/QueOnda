@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SECTIONS } from '../../lib/sections';
 import { play } from '@/lib/sound';
 
 const DOCK_IDS = ['emergencia', 'noticias', 'tv', 'clima'];
+
+// Swipe-to-dismiss: close when pulled past this distance, or flung downward
+const DISMISS_PX = 110;
+const FLING_PXMS = 0.5;
 
 const ICONS: Record<string, ReactNode> = {
   emergencia: (
@@ -126,8 +130,24 @@ export function BottomNav() {
   const [activeSection, setActiveSection] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [lift, setLift] = useState(0);
+  const [hidden, setHidden] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
+  const lastScrollY = useRef(0);
+  const liftRef = useRef(0);
+  const dragState = useRef({ active: false, startY: 0, lastY: 0, lastT: 0, velocity: 0, moved: false });
+  const dragYRef = useRef(0);
+  const suppressHandleClick = useRef(false);
+  const slideOutTimer = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (slideOutTimer.current !== null) window.clearTimeout(slideOutTimer.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     const sections = document.querySelectorAll('section[id]');
@@ -148,14 +168,34 @@ export function BottomNav() {
   }, []);
 
   // Lift clear of the sticky radio player when it slides in (same pattern as BackToTop)
+  // + auto-hide on scroll-down / reveal on scroll-up (same pattern as Header)
   useEffect(() => {
     let raf = false;
     const update = () => {
       const player = document.getElementById('sticky-radio-player');
-      if (!player) return;
-      const rect = player.getBoundingClientRect();
-      const vh = window.innerHeight;
-      setLift(rect.top < vh - 4 ? vh - rect.top : 0);
+      if (player) {
+        const rect = player.getBoundingClientRect();
+        const vh = window.innerHeight;
+        const nextLift = rect.top < vh - 4 ? vh - rect.top : 0;
+        liftRef.current = nextLift;
+        setLift(nextLift);
+      }
+      const y = window.scrollY;
+      let show = y < 56 || y < lastScrollY.current;
+      // Never reveal over the footer credits — stay tucked away until they clear
+      if (show) {
+        const credits = document.getElementById('footer-credits');
+        const nav = document.getElementById('bottom-nav');
+        if (credits && nav) {
+          const cr = credits.getBoundingClientRect();
+          const bottomOffset = parseFloat(getComputedStyle(nav).bottom) || 12;
+          const dockTop =
+            window.innerHeight - liftRef.current - nav.offsetHeight - bottomOffset;
+          if (cr.top < window.innerHeight && cr.bottom > dockTop) show = false;
+        }
+      }
+      setHidden(!show);
+      lastScrollY.current = y;
     };
     update();
     const onScroll = () => {
@@ -210,10 +250,84 @@ export function BottomNav() {
     };
   }, [sheetOpen]);
 
+  // Deferred so React commits first — the dock is inert while hidden/sheet-open,
+  // and focus() silently fails on inert elements
+  const restoreDockFocus = () => {
+    window.setTimeout(() => moreRef.current?.focus({ preventScroll: true }), 60);
+  };
+
+  const onHandlePointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!sheetOpen || slideOutTimer.current !== null) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    suppressHandleClick.current = false;
+    const st = dragState.current;
+    st.active = true;
+    st.startY = e.clientY;
+    st.lastY = e.clientY;
+    st.lastT = performance.now();
+    st.velocity = 0;
+    st.moved = false;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* pointer already gone */
+    }
+    setDragging(true);
+  };
+
+  const onHandlePointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const st = dragState.current;
+    if (!st.active) return;
+    const now = performance.now();
+    const dt = now - st.lastT;
+    if (dt > 0) st.velocity = st.velocity * 0.7 + ((e.clientY - st.lastY) / dt) * 0.3;
+    st.lastY = e.clientY;
+    st.lastT = now;
+    if (!st.moved && Math.abs(e.clientY - st.startY) > 8) st.moved = true;
+    const y = Math.max(0, e.clientY - st.startY);
+    dragYRef.current = y;
+    setDragY(y);
+  };
+
+  const endHandleDrag = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const st = dragState.current;
+    if (!st.active) return;
+    st.active = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+    setDragging(false);
+    const y = dragYRef.current;
+    if (st.moved) suppressHandleClick.current = true; // dragged, not a tap: swallow the trailing click
+    if (y > DISMISS_PX || (st.moved && st.velocity > FLING_PXMS)) {
+      play('overlay.close');
+      setSheetOpen(false); // unlocks scroll + fades backdrop immediately
+      setDragY(window.innerHeight); // inline transform rides the transition off-screen
+      slideOutTimer.current = window.setTimeout(() => {
+        slideOutTimer.current = null;
+        dragYRef.current = 0;
+        setDragY(0);
+      }, 320);
+      restoreDockFocus();
+    } else {
+      setDragY(0); // spring back
+    }
+  };
+
+  const onHandleClick = () => {
+    if (suppressHandleClick.current) {
+      suppressHandleClick.current = false;
+      return;
+    }
+    closeSheet();
+  };
+
   const closeSheet = () => {
     play('overlay.close');
     setSheetOpen(false);
-    moreRef.current?.focus({ preventScroll: true });
+    restoreDockFocus();
   };
 
   const handleNavClick = () => {
@@ -228,9 +342,15 @@ export function BottomNav() {
       <nav
         id="bottom-nav"
         aria-label="Navegación de secciones"
+        aria-hidden={sheetOpen || hidden}
+        inert={sheetOpen || hidden}
         style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))', transform: lift ? `translateY(-${lift}px)` : undefined }}
         className={`fixed left-3 right-3 z-40 lg:hidden rounded-2xl bg-base-100/90 backdrop-blur-lg shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)] transition-transform duration-300 ${
-          sheetOpen ? '-translate-y-2 opacity-0 pointer-events-none' : 'opacity-100'
+          sheetOpen
+            ? '-translate-y-2 opacity-0 pointer-events-none'
+            : hidden
+              ? 'translate-y-[calc(100%_+_max(0.75rem,_env(safe-area-inset-bottom)))] pointer-events-none'
+              : 'opacity-100'
         }`}
       >
         <div className="flex items-stretch px-1.5 py-1.5">
@@ -263,7 +383,11 @@ export function BottomNav() {
           <button
             ref={moreRef}
             type="button"
-            onClick={() => { play('overlay.open'); setSheetOpen(true); }}
+            onClick={() => {
+              if (slideOutTimer.current !== null) return; // still sliding out from a swipe dismiss
+              play('overlay.open');
+              setSheetOpen(true);
+            }}
             aria-haspopup="dialog"
             aria-expanded={sheetOpen}
             aria-label="Todas las secciones"
@@ -299,13 +423,23 @@ export function BottomNav() {
         aria-label="Todas las secciones"
         aria-hidden={!sheetOpen}
         inert={!sheetOpen}
-        className={`fixed inset-x-0 bottom-0 z-[10001] lg:hidden bg-base-100 rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.25)] border-t border-base-300 max-h-[80vh] flex flex-col transition-transform duration-300 ease-out ${
-          sheetOpen ? 'translate-y-0' : 'translate-y-full'
-        }`}
+        style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
+        className={`fixed inset-x-0 bottom-0 z-[10001] lg:hidden bg-base-100 rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.25)] border-t border-base-300 max-h-[80vh] flex flex-col ease-out ${
+          dragging ? '' : 'transition-transform duration-300'
+        } ${sheetOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
-        <div className="pt-2.5 pb-1 flex justify-center shrink-0" aria-hidden="true">
-          <span className="w-10 h-1 rounded-full bg-base-content/20" />
-        </div>
+        <button
+          type="button"
+          onClick={onHandleClick}
+          onPointerDown={onHandlePointerDown}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={endHandleDrag}
+          onPointerCancel={endHandleDrag}
+          aria-label="Cerrar"
+          className="shrink-0 w-full pt-3 pb-2 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none rounded-t-3xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+        >
+          <span className="w-10 h-1 rounded-full bg-base-content/20" aria-hidden="true" />
+        </button>
         <div className="flex items-center justify-between px-5 pt-1 pb-2 shrink-0">
           <span className="text-lg font-bold text-base-content">Secciones</span>
           <button
