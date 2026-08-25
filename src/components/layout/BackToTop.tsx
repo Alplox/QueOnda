@@ -14,13 +14,14 @@ export function BackToTop() {
       const btnH = 44; // h-11
       const btnInset = 24; // bottom-6
       let inset = btnInset;
-      // Lift clear of the mobile bottom nav dock (<lg only)
+      // Lift clear of the mobile bottom nav dock (<lg only) while it's visible.
+      // Uses its logical footprint (height + bottom inset) instead of the live
+      // rect: the dock auto-hides by translating off-screen, and sampling its
+      // rect mid-slide-animation produced stale lifts that overlapped it.
       const dock = document.getElementById('bottom-nav');
-      if (dock) {
-        const rect = dock.getBoundingClientRect();
-        if (rect.top < vh && window.innerWidth < 1024) {
-          inset = Math.max(inset, vh - rect.top + 12);
-        }
+      if (dock && window.innerWidth < 1024 && !dock.inert) {
+        const dockInset = parseFloat(getComputedStyle(dock).bottom) || 12;
+        inset = Math.max(inset, dock.offsetHeight + dockInset + 12);
       }
       // Lift clear of the sticky radio player when it's on-screen (z-[9999] would otherwise cover us)
       if (player) {
@@ -46,11 +47,16 @@ export function BackToTop() {
         update();
       });
     };
+    // Re-run when the dock shows/hides (auto-hide, sheet) so the button
+    // restacks in the same frame instead of waiting for the next scroll
+    const onDockVisibility = () => onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', update);
+    document.addEventListener('dock:visibility', onDockVisibility);
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', update);
+      document.removeEventListener('dock:visibility', onDockVisibility);
     };
   }, []);
 

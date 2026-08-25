@@ -181,21 +181,26 @@ export function BottomNav() {
         setLift(nextLift);
       }
       const y = window.scrollY;
-      let show = y < 56 || y < lastScrollY.current;
-      // Never reveal over the footer credits — stay tucked away until they clear
-      if (show) {
-        const credits = document.getElementById('footer-credits');
-        const nav = document.getElementById('bottom-nav');
-        if (credits && nav) {
-          const cr = credits.getBoundingClientRect();
-          const bottomOffset = parseFloat(getComputedStyle(nav).bottom) || 12;
-          const dockTop =
-            window.innerHeight - liftRef.current - nav.offsetHeight - bottomOffset;
-          if (cr.top < window.innerHeight && cr.bottom > dockTop) show = false;
+      // Only re-evaluate direction when the page actually scrolled:
+      // on mobile, expanding the URL bar fires `resize` with unchanged
+      // scrollY and would wrongly hide a just-revealed dock
+      if (y !== lastScrollY.current) {
+        let show = y < 56 || y < lastScrollY.current;
+        // Never reveal over the footer credits — stay tucked away until they clear
+        if (show) {
+          const credits = document.getElementById('footer-credits');
+          const nav = document.getElementById('bottom-nav');
+          if (credits && nav) {
+            const cr = credits.getBoundingClientRect();
+            const bottomOffset = parseFloat(getComputedStyle(nav).bottom) || 12;
+            const dockTop =
+              window.innerHeight - liftRef.current - nav.offsetHeight - bottomOffset;
+            if (cr.top < window.innerHeight && cr.bottom > dockTop) show = false;
+          }
         }
+        setHidden(!show);
+        lastScrollY.current = y;
       }
-      setHidden(!show);
-      lastScrollY.current = y;
     };
     update();
     const onScroll = () => {
@@ -213,6 +218,12 @@ export function BottomNav() {
       window.removeEventListener('resize', update);
     };
   }, []);
+
+  // Broadcast visibility flips so fixed siblings (BackToTop) can restack
+  // instantly instead of sampling the dock mid-slide animation
+  useEffect(() => {
+    document.dispatchEvent(new CustomEvent('dock:visibility'));
+  }, [sheetOpen, hidden]);
 
   useEffect(() => {
     if (!sheetOpen) return;
