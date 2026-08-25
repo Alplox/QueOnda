@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SECTIONS } from '../../lib/sections';
 import { play } from '@/lib/sound';
+import { dockDebug, initDockDebugOverlay } from '../../lib/dock-debug';
 
 const DOCK_IDS = ['emergencia', 'noticias', 'tv', 'clima'];
 
@@ -133,12 +134,52 @@ export function BottomNav() {
   const [hidden, setHidden] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
+  // Firefox Android: collapsing the URL bar grows window.innerHeight but
+  // KEEPS the fixed-element containing block at an unpredictable height,
+  // so fixed elements float above the true screen bottom and translated-
+  // off-screen elements peek in the newly exposed band. A bottom sentinel
+  // measures the real gap every frame and the dock rides it.
+  const [bottomDelta, setBottomDelta] = useState(0);
+  // Self-correcting hide: after the slide-out, measure where the dock
+  // actually rendered and push any remainder fully off-screen (the stale
+  // anchor often stops it right over the radio miniplayer)
+  const [hideCorrection, setHideCorrection] = useState(0);
+
+  useEffect(() => {
+    if (!(hidden && !sheetOpen)) {
+      setHideCorrection(0);
+      return;
+    }
+    const t = setTimeout(() => {
+      const el = dockRef.current;
+      const sent = sentinelRef.current;
+      if (!el || !sent) return;
+      const r = el.getBoundingClientRect();
+      const target = Math.max(
+        window.innerHeight,
+        sent.getBoundingClientRect().bottom,
+      );
+      const err = Math.ceil(target + 6 - r.bottom);
+      setHideCorrection(err > 0 ? err : 0);
+      dockDebug('hide correction', () => `err=${err} bottom=${Math.round(r.bottom)}`);
+    }, 380); // > 300ms slide-out
+    return () => clearTimeout(t);
+  }, [hidden, sheetOpen]);
+
+  useEffect(() => {
+    initDockDebugOverlay();
+    dockDebug('mount', () => `y=${window.scrollY} vh=${window.innerHeight}`);
+  }, []);
   const sheetRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   const lastScrollY = useRef(0);
   const liftRef = useRef(0);
+  const hiddenRef = useRef(false);
+  const deltaRef = useRef(0);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const dragState = useRef({ active: false, startY: 0, lastY: 0, lastT: 0, velocity: 0, moved: false });
   const dragYRef = useRef(0);
+  const dockRef = useRef<HTMLElement>(null);
   const suppressHandleClick = useRef(false);
   const slideOutTimer = useRef<number | null>(null);
 
@@ -171,7 +212,23 @@ export function BottomNav() {
   // + auto-hide on scroll-down / reveal on scroll-up (same pattern as Header)
   useEffect(() => {
     let raf = false;
-    const update = () => {
+    // Heavy DOM sampling (player/credits rects) goes in rAF; direction is
+    // decided per scroll EVENT below — Firefox Android coalesces momentum
+    // scroll events into one rAF frame, and APZ sub-pixel jitter made the
+    // frame-sampled direction flip so the dock never stayed hidden
+    const guards = () => {
+      // Sentinel measures where the layout viewport bottom really renders:
+      // Fenix freezes it at the pre-collapse height, leaving a ghost band
+      // between layout-bottom and the true screen bottom
+      const sentinel = sentinelRef.current;
+      let d = 0;
+      if (sentinel) {
+        d = Math.round(sentinel.getBoundingClientRect().bottom - window.innerHeight);
+      }
+      if (d !== deltaRef.current) {
+        deltaRef.current = d;
+        setBottomDelta(d);
+      }
       const player = document.getElementById('sticky-radio-player');
       if (player) {
         const rect = player.getBoundingClientRect();
@@ -179,51 +236,132 @@ export function BottomNav() {
         const nextLift = rect.top < vh - 4 ? vh - rect.top : 0;
         liftRef.current = nextLift;
         setLift(nextLift);
+      } else if (liftRef.current !== 0) {
+        // Player unmounted (no station selected): clear stale lift or the
+        // dock stays permanently raised and peeks when hidden
+        liftRef.current = 0;
+        setLift(0);
       }
-      const y = window.scrollY;
-      // Only re-evaluate direction when the page actually scrolled:
-      // on mobile, expanding the URL bar fires `resize` with unchanged
-      // scrollY and would wrongly hide a just-revealed dock
-      if (y !== lastScrollY.current) {
-        let show = y < 56 || y < lastScrollY.current;
-        // Never reveal over the footer credits — stay tucked away until they clear
-        if (show) {
-          const credits = document.getElementById('footer-credits');
-          const nav = document.getElementById('bottom-nav');
-          if (credits && nav) {
-            const cr = credits.getBoundingClientRect();
-            const bottomOffset = parseFloat(getComputedStyle(nav).bottom) || 12;
-            const dockTop =
-              window.innerHeight - liftRef.current - nav.offsetHeight - bottomOffset;
-            if (cr.top < window.innerHeight && cr.bottom > dockTop) show = false;
+      // Never reveal over the footer credits — stay tucked away until they clear
+      if (!hiddenRef.current) {
+        const credits = document.getElementById('footer-credits');
+        const nav = document.getElementById('bottom-nav');
+        if (credits && nav) {
+          const cr = credits.getBoundingClientRect();
+          const bottomOffset = parseFloat(getComputedStyle(nav).bottom) || 12;
+          const dockTop =
+            window.innerHeight - liftRef.current - nav.offsetHeight - bottomOffset;
+          if (cr.top < window.innerHeight && cr.bottom > dockTop) {
+            hiddenRef.current = true;
+            setHidden(true);
           }
         }
-        setHidden(!show);
-        lastScrollY.current = y;
       }
     };
-    update();
+    const HYST = 24; // px of sustained movement required to flip direction
+    let anchorY = 0; // scroll position where the last direction decision happened
     const onScroll = () => {
-      if (raf) return;
-      raf = true;
-      requestAnimationFrame(() => {
-        raf = false;
-        update();
-      });
+      const y = window.scrollY;
+      if (y === lastScrollY.current) return; // resize w/o scroll must not flip direction
+      lastScrollY.current = y;
+      let show: boolean;
+      if (y < 56) {
+        show = true;
+        anchorY = y;
+      } else if (hiddenRef.current) {
+        // Hidden: anchor follows deeper scrolls so revealing only needs
+        // HYST of upward movement from wherever the user is now
+        anchorY = Math.max(anchorY, y);
+        show = y < anchorY - HYST;
+        if (show) anchorY = y;
+      } else {
+        // Visible: anchor follows upward scrolls; hide after HYST of net
+        // downward drift. Absorbs APZ end-of-momentum corrections (~3px)
+        // that used to flip-flop the dock open/closed
+        anchorY = Math.min(anchorY, y);
+        show = !(y > anchorY + HYST);
+        if (!show) anchorY = y;
+      }
+      dockDebug('scroll', () => `y=${Math.round(y)} anchor=${Math.round(anchorY)} -> ${show ? 'SHOW' : 'HIDE'}`);
+      hiddenRef.current = !show;
+      setHidden(!show);
+      if (!raf) {
+        raf = true;
+        requestAnimationFrame(() => {
+          raf = false;
+          guards();
+        });
+      }
     };
+    guards();
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', update);
+    window.addEventListener('resize', guards);
+    // Safety net for browsers with flaky scroll-event delivery (Firefox
+    // Android APZ can batch/delay window scroll events): poll the position
+    // so direction changes are never missed. onScroll no-ops when y is
+    // unchanged, so this is cheap.
+    const poll = window.setInterval(onScroll, 250);
     return () => {
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', update);
+      window.removeEventListener('resize', guards);
+      window.clearInterval(poll);
     };
   }, []);
 
   // Broadcast visibility flips so fixed siblings (BackToTop) can restack
   // instantly instead of sampling the dock mid-slide animation
+  // Fully unpaint the hidden dock once its slide-out finishes: Fenix can
+  // leave a sliver composited in the ghost band between layout-bottom and
+  // the true screen bottom even with the transform applied
+  const [dockParked, setDockParked] = useState(false);
   useEffect(() => {
+    if (hidden && !sheetOpen) {
+      const t = setTimeout(() => setDockParked(true), 350); // > 300ms slide-out
+      return () => clearTimeout(t);
+    }
+    setDockParked(false);
+  }, [hidden, sheetOpen]);
+
+  useEffect(() => {
+    dockDebug('effect hidden/sheetOpen', () => `hidden=${hidden} sheetOpen=${sheetOpen}`);
     document.dispatchEvent(new CustomEvent('dock:visibility'));
   }, [sheetOpen, hidden]);
+
+  // Fully unpaint the closed sheet once its slide-out finishes: no browser
+  // quirk (sub-pixel rounding, dynamic toolbar shifts) can leave a sliver
+  // of the rounded top edge or its shadow composited above the fold
+  const [sheetParked, setSheetParked] = useState(false);
+  useEffect(() => {
+    if (sheetOpen) {
+      setSheetParked(false);
+      return;
+    }
+    const t = setTimeout(() => setSheetParked(true), 400); // > 300ms slide-out
+    return () => clearTimeout(t);
+  }, [sheetOpen]);
+
+  // Swallow the tap's synthesized compatibility click right after opening:
+  // per spec, click fires even when pointerdown was canceled, and by then
+  // the sheet covers the finger position — the retargeted click would hit
+  // the backdrop/grabber and instantly close what just opened (seen live:
+  // sheetOpen=true -> false within 28ms)
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const swallow = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dockDebug('swallowed stray compat click');
+    };
+    document.addEventListener('click', swallow, { capture: true });
+    const t = setTimeout(
+      () => document.removeEventListener('click', swallow, { capture: true }),
+      120,
+    );
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('click', swallow, { capture: true });
+    };
+  }, [sheetOpen]);
 
   useEffect(() => {
     if (!sheetOpen) return;
@@ -268,6 +406,7 @@ export function BottomNav() {
   };
 
   const onHandlePointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    dockDebug('grabber pointerdown', () => `sheetOpen=${sheetOpen} timer=${slideOutTimer.current !== null}`);
     if (!sheetOpen || slideOutTimer.current !== null) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     suppressHandleClick.current = false;
@@ -311,10 +450,11 @@ export function BottomNav() {
     }
     setDragging(false);
     const y = dragYRef.current;
+    dockDebug('grabber release', () => `y=${Math.round(y)} vel=${st.velocity.toFixed(2)} moved=${st.moved}`);
     if (st.moved) suppressHandleClick.current = true; // dragged, not a tap: swallow the trailing click
     if (y > DISMISS_PX || (st.moved && st.velocity > FLING_PXMS)) {
-      play('overlay.close');
       setSheetOpen(false); // unlocks scroll + fades backdrop immediately
+      play('overlay.close');
       setDragY(window.innerHeight); // inline transform rides the transition off-screen
       slideOutTimer.current = window.setTimeout(() => {
         slideOutTimer.current = null;
@@ -336,23 +476,31 @@ export function BottomNav() {
   };
 
   const closeSheet = () => {
-    play('overlay.close');
     setSheetOpen(false);
     restoreDockFocus();
+    play('overlay.close');
+  };
+
+  // Pre-cancel a pending swipe-dismiss cleanup on touch-down: pointerdown
+  // fires before any click synthesis, so even a delayed/eaten first tap
+  // leaves the sheet ready to open
+  const prepOpenSheet = () => {
+    if (slideOutTimer.current !== null) {
+      window.clearTimeout(slideOutTimer.current);
+      slideOutTimer.current = null;
+      dragYRef.current = 0;
+      setDragY(0);
+    }
   };
 
   // Opening always wins: if the tap lands while a swipe-dismiss is still
   // sliding out, cancel its pending cleanup and open right away instead of
   // silently dropping the first tap
   const openSheet = () => {
-    if (slideOutTimer.current !== null) {
-      window.clearTimeout(slideOutTimer.current);
-      slideOutTimer.current = null;
-      dragYRef.current = 0;
-      setDragY(0); // drop the inline offset so it slides up cleanly from below
-    }
+    dockDebug('openSheet', () => `timer=${slideOutTimer.current !== null} sheetOpen=${sheetOpen}`);
+    prepOpenSheet();
+    setSheetOpen(true); // state first: a failing play() must never block UI
     play('overlay.open');
-    setSheetOpen(true);
   };
 
   const handleNavClick = () => {
@@ -361,20 +509,40 @@ export function BottomNav() {
   };
 
   const dock = SECTIONS.filter((s) => DOCK_IDS.includes(s.id));
+  const pointerArmed = useRef(false);
 
   return (
     <>
+      {/* Layout-bottom sentinel: measures the real anchor Fenix froze */}
+      <div
+        ref={sentinelRef}
+        id="nav-bottom-sentinel"
+        aria-hidden="true"
+        className="pointer-events-none fixed bottom-0 left-0 h-px w-px opacity-0"
+      />
       <nav
+        ref={dockRef}
         id="bottom-nav"
         aria-label="Navegación de secciones"
         aria-hidden={sheetOpen || hidden}
         inert={sheetOpen || hidden}
-        style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))', transform: lift ? `translateY(-${lift}px)` : undefined }}
-        className={`fixed left-3 right-3 z-40 lg:hidden rounded-2xl bg-base-100/90 backdrop-blur-lg shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)] transition-transform duration-300 ${
+        style={{
+          // Signed delta rides the real screen bottom: negative (Fenix
+          // ghost band) pushes down, positive lifts up
+          bottom: `calc(max(0.75rem, env(safe-area-inset-bottom)) ${bottomDelta < 0 ? '-' : '+'} ${Math.abs(bottomDelta)}px)`,
+          transform: !sheetOpen && hidden
+            ? `translateY(calc(100% + max(0.75rem, env(safe-area-inset-bottom))))${hideCorrection ? ` translateY(${hideCorrection}px)` : ''}`
+            : lift
+              ? `translateY(-${lift}px)`
+              : 'translateY(0px)',
+        }}
+        className={`fixed left-3 right-3 z-40 lg:hidden rounded-2xl bg-base-100/90 backdrop-blur-lg shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)] transition-transform duration-300 touch-manipulation ${
           sheetOpen
             ? '-translate-y-2 opacity-0 pointer-events-none'
             : hidden
-              ? 'translate-y-[calc(100%_+_max(0.75rem,_env(safe-area-inset-bottom)))] pointer-events-none'
+              ? dockParked
+                ? 'invisible pointer-events-none'
+                : 'pointer-events-none'
               : 'opacity-100'
         }`}
       >
@@ -408,7 +576,30 @@ export function BottomNav() {
           <button
             ref={moreRef}
             type="button"
-            onClick={() => { openSheet(); }}
+            onPointerDown={(e) => {
+              // Suppress the browser-synthesized click: after scrolling,
+              // mobile browsers classify the next tap as scroll-intent and
+              // silently drop its click (seen on-device). We open on
+              // pointerup instead; keyboard activation still uses click.
+              e.preventDefault();
+              dockDebug('mas pointerdown');
+              prepOpenSheet();
+              pointerArmed.current = true;
+            }}
+            onPointerUp={() => {
+              if (!pointerArmed.current) return;
+              pointerArmed.current = false;
+              dockDebug('mas pointerup -> open');
+              openSheet();
+            }}
+            onClick={() => {
+              // Keyboard activation (Enter/Space) only — touch never
+              // reaches here because pointerdown prevented the synthetic
+              // click
+              if (pointerArmed.current) pointerArmed.current = false;
+              dockDebug('mas click', () => `sheetOpen=${sheetOpen}`);
+              openSheet();
+            }}
             aria-haspopup="dialog"
             aria-expanded={sheetOpen}
             aria-label="Todas las secciones"
@@ -447,7 +638,9 @@ export function BottomNav() {
         style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
         className={`fixed inset-x-0 bottom-0 z-[10001] lg:hidden bg-base-100 rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.25)] border-t border-base-300 max-h-[80vh] flex flex-col ease-out ${
           dragging ? '' : 'transition-transform duration-300'
-        } ${sheetOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        } ${sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%_+_1.5rem)]'} ${
+          sheetParked ? 'invisible' : ''
+        }`}
       >
         <button
           type="button"

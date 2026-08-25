@@ -137,13 +137,18 @@ export function isMuted() { return muted; }
 export function toggleMuted() { muted = !muted; return muted; }
 
 export function play(role: SoundRole) {
-  if (muted) return;
-  const fn = SOUNDS[role];
-  if (!fn) return;
-  const c = getCtx();
-  if (c.state !== "running") c.resume();
-  lastPlayedAt = Date.now();
-  fn(c, c.currentTime, vol);
+  try {
+    if (muted) return;
+    const fn = SOUNDS[role];
+    if (!fn) return;
+    const c = getCtx();
+    if (c.state !== "running") c.resume();
+    lastPlayedAt = Date.now();
+    fn(c, c.currentTime, vol);
+  } catch {
+    /* AudioContext creation/resume can throw on mobile (autoplay policy,
+       Brave shields, context limits) — audio must never break the UI */
+  }
 }
 
 // Global safety net: every interactive element gets a sound even if its

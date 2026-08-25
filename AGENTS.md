@@ -50,11 +50,12 @@ src/
     layout/
       Header.tsx             # Fixed nav bar with section scroll links (client:load)
       SideIndex.tsx          # Side navigation index (client:load)
-      BottomNav.tsx          # Mobile-only floating dock tab bar (<lg) with 4 quick sections + "Más" bottom sheet (all sections grid, focus-trapped dialog, grabber supports tap-to-close + swipe-down/fling to dismiss); auto-hides on scroll-down / reappears on scroll-up or near top (inert while hidden); lifts above sticky radio player; BackToTop lifts above it
+      BottomNav.tsx          # Mobile-only floating dock tab bar (<lg) with 4 quick sections + "Más" bottom sheet (all sections grid, focus-trapped dialog, grabber supports tap-to-close + swipe-down/fling to dismiss); auto-hides on scroll-down / reappears on scroll-up with 24px hysteresis (inert + parked invisible while hidden); anchored via a 1px bottom sentinel that measures Fenix's stale fixed-anchor (dynamic toolbar) and rides the real screen bottom; hide transform self-measures after slide-out and pushes any remainder off-screen; opens on pointerup (click suppressed via preventDefault on pointerdown) so eaten/retargeted synthesized clicks can't break it; broadcasts `dock:visibility` for fixed siblings; lifts above sticky radio player; BackToTop lifts above it. Debug overlay behind ?dockdebug=1 (src/lib/dock-debug.ts)
       ShareButton.tsx        # Header share button — native share on touch, clipboard copy on desktop (client:load)
       SectionShareHandler.tsx  # Single delegated client:isidle island wiring every [data-section-share] button to share its section anchor (no per-section hydration)
       Footer.tsx             # pb reserves space so the floating dock never covers the footer credits
       Section.tsx            # Reusable section wrapper — renders header + a "Compartir sección" button (data-section-share) per section
+      BackToTop.tsx          # Appears after 500px scroll; lifts above dock/sheet/radio miniplayer using the nav sentinel bottom + dock's rendered rect incl. its lift transform (parsed from inline style); reacts to `dock:visibility`
     news/
       ClientNewsFeed.tsx      # Client wrapper — 6-slot orchestrator (client:idle; clustering code-split via dynamic import)
       NewsFeed.tsx            # Slot grid + clusters + trending (presentational)
@@ -73,7 +74,7 @@ src/
       UnifiedPlayer.tsx       # Single player for both inline + PiP modes (hls.js loaded per-play)
     radio/
       ClientRadios.tsx        # Client wrapper (client:idle)
-      RadioPlayer.tsx         # Boombox-style radio player (hls.js loaded per-play)
+      RadioPlayer.tsx         # Boombox-style radio player (hls.js loaded per-play); sticky miniplayer only mounts when a station is selected/current (empty shell peeked through FF Android's dynamic toolbar)
     widgets/
       TrendingTags.tsx         # Tag chips
       FinanceWidget.tsx        # UF, USD, EUR, IPC, UTM (client:idle)

@@ -869,6 +869,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
       </div>
 
       {/* Sticky bottom player */}
+      {(showSticky || current) && (
       <div
         id="sticky-radio-player"
         className={`fixed bottom-0 left-0 right-0 z-[9999] bg-base-100 border-t border-base-300 px-3 py-2 flex items-center gap-3 shadow-2xl shadow-neutral/60 transition-transform duration-300 ease-out ${
@@ -922,7 +923,8 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
           </div>
         </>
       )}
-    </div>
+      </div>
+      )}
     </>
   );
 }

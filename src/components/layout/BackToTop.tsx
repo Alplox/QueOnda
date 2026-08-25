@@ -14,14 +14,21 @@ export function BackToTop() {
       const btnH = 44; // h-11
       const btnInset = 24; // bottom-6
       let inset = btnInset;
-      // Lift clear of the mobile bottom nav dock (<lg only) while it's visible.
-      // Uses its logical footprint (height + bottom inset) instead of the live
-      // rect: the dock auto-hides by translating off-screen, and sampling its
-      // rect mid-slide-animation produced stale lifts that overlapped it.
+      // Lift clear of the mobile bottom nav dock (<lg only) while it's
+      // visible. Uses the sentinel (true rendered layout bottom) plus the
+      // dock's live rendered top (includes its lift transform) — formulas
+      // from offsetHeight/computed-bottom went stale once the dock gained
+      // dynamic bottom offsets and lift transforms.
       const dock = document.getElementById('bottom-nav');
       if (dock && window.innerWidth < 1024 && !dock.inert) {
-        const dockInset = parseFloat(getComputedStyle(dock).bottom) || 12;
-        inset = Math.max(inset, dock.offsetHeight + dockInset + 12);
+        // Final-position math: resolved bottom + offsetHeight + the dock's
+        // dynamic lift (parsed from its inline transform — the radio
+        // miniplayer keeps it permanently raised). Computed bottom alone
+        // ignores transforms and left the arrow overlapping the dock.
+        const resolvedInset = parseFloat(getComputedStyle(dock).bottom) || 12;
+        const m = /translateY\(-([\d.]+)px\)/.exec(dock.style.transform);
+        const liftPx = m ? parseFloat(m[1]) : 0;
+        inset = Math.max(inset, resolvedInset + dock.offsetHeight + liftPx + 12);
       }
       // Lift clear of the sticky radio player when it's on-screen (z-[9999] would otherwise cover us)
       if (player) {
