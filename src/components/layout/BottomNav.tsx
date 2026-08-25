@@ -341,6 +341,20 @@ export function BottomNav() {
     restoreDockFocus();
   };
 
+  // Opening always wins: if the tap lands while a swipe-dismiss is still
+  // sliding out, cancel its pending cleanup and open right away instead of
+  // silently dropping the first tap
+  const openSheet = () => {
+    if (slideOutTimer.current !== null) {
+      window.clearTimeout(slideOutTimer.current);
+      slideOutTimer.current = null;
+      dragYRef.current = 0;
+      setDragY(0); // drop the inline offset so it slides up cleanly from below
+    }
+    play('overlay.open');
+    setSheetOpen(true);
+  };
+
   const handleNavClick = () => {
     play('navigation.forward');
     setSheetOpen(false);
@@ -394,11 +408,7 @@ export function BottomNav() {
           <button
             ref={moreRef}
             type="button"
-            onClick={() => {
-              if (slideOutTimer.current !== null) return; // still sliding out from a swipe dismiss
-              play('overlay.open');
-              setSheetOpen(true);
-            }}
+            onClick={() => { openSheet(); }}
             aria-haspopup="dialog"
             aria-expanded={sheetOpen}
             aria-label="Todas las secciones"
