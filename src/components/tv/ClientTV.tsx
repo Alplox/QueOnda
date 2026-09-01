@@ -56,7 +56,11 @@ export function ClientTV() {
     try { return localStorage.getItem('tv-view-mode') === 'multiview' ? 'multiview' : 'single'; } catch { return 'single'; }
   });
   const [multiviewLayout, setMultiviewLayout] = useState<MultiviewLayout>(() => {
-    try { const v = localStorage.getItem('tv-multiview-layout'); return v === '2x3' || v === '3x3' || v === '1x3' ? v : '2x2'; } catch { return '2x2'; }
+    try {
+      const v = localStorage.getItem('tv-multiview-layout');
+      if (v === '1x1' || v === '1x2' || v === '1x3' || v === '2x2' || v === '2x3' || v === '3x3') return v;
+      return '2x2';
+    } catch { return '2x2'; }
   });
   const [multiviewSlots, setMultiviewSlots] = useState<Array<{ channel: Channel; signalIndex: number }>>(() => {
     try { return JSON.parse(localStorage.getItem('tv-multiview-slots') || '[]'); } catch { return []; }
@@ -612,9 +616,10 @@ export function ClientTV() {
               Multi
             </button>
             {viewMode === 'multiview' && (
-              <div className="flex items-center gap-0.5 ml-1">
-                {(['1x3', '2x2', '2x3', '3x3'] as const).map((l) => (
+              <div className="flex items-center gap-0.5 ml-1 flex-wrap">
+                {(['1x1', '1x2', '1x3', '2x2', '2x3', '3x3'] as const).map((l) => (
                   <button key={l} onClick={() => { play('interaction.tap'); setMultiviewLayout(l); }}
+                    title={l === '1x1' ? '1 canal — pantalla completa (móvil)' : l === '1x2' ? '2 canales vertical (móvil)' : l}
                     className={`text-[9px] px-1.5 py-1 rounded transition-colors cursor-pointer ${
                       multiviewLayout === l ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
                     }`}>

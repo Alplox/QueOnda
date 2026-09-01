@@ -3,6 +3,7 @@ import { PowerOutageMap } from './PowerOutageMap';
 import { PowerEvolutionChart } from './PowerEvolutionChart';
 import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 import { play } from '@/lib/sound';
+import { idbGet, idbSet } from '@/lib/idb-cache';
 
 interface Comuna {
   region: string;
@@ -22,6 +23,8 @@ interface PowerData {
   total: number;
   pct: number;
   updatedAt: number;
+  fetchedAt?: number;
+  stale?: boolean;
   regions: Array<{ region: string; affected: number }>;
   comunas: Comuna[];
   series: SeriesPoint[];
@@ -30,10 +33,28 @@ interface PowerData {
 async function fetchPower(): Promise<PowerData | null> {
   try {
     const res = await fetch('/api/power', { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.affected != null ? data : null;
+    const data = await res.json().catch(() => null);
+    if (!data) return null;
+    // 502 error payload has affected === null
+    if (data.affected == null) return null;
+    return data as PowerData;
   } catch { return null; }
+}
+
+const IDB_KEY = 'power';
+const IDB_TTL = 10 * 60 * 1000;
+const STALE_MS = 90 * 60 * 1000;
+const WARN_MS = 60 * 60 * 1000;
+
+function fmtRelative(ms: number): string {
+  const diff = Date.now() - ms;
+  const mins = Math.round(diff / 60000);
+  if (mins < 60) return `hace ${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h < 24) return m ? `hace ${h}h ${m}min` : `hace ${h}h`;
+  const d = Math.floor(h / 24);
+  return `hace ${d}d`;
 }
 
 const miles = (n: number) => Number(n).toLocaleString('es-CL');
@@ -42,6 +63,7 @@ const maxAffected = (rows: Array<{ affected: number }>) => rows[0]?.affected ?? 
 export function PowerOutageWidget() {
   const [data, setData] = useState<PowerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showChart, setShowChart] = useState(false);
   const [mapMounted, setMapMounted] = useState(false);
@@ -58,14 +80,31 @@ export function PowerOutageWidget() {
     else { const t = setTimeout(() => setChartMounted(false), 300); return () => clearTimeout(t); }
   }, [showChart]);
 
-  const refresh = useCallback(() => {
-    fetchPower().then(d => {
-      if (d) setData(d);
-      setLoading(false);
-    });
+  const refresh = useCallback(async () => {
+    const d = await fetchPower();
+    if (d) {
+      setData(d);
+      setError(false);
+      idbSet(IDB_KEY, d, IDB_TTL);
+    } else {
+      // keep stale data visible but mark error so banner/retry shows
+      setError(true);
+    }
+    setLoading(false);
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    let cancelled = false;
+    idbGet<PowerData>(IDB_KEY).then(cached => {
+      if (cancelled || !cached?.data) return;
+      if (cached.data.affected != null) {
+        setData(cached.data);
+        setLoading(false);
+      }
+    });
+    refresh();
+    return () => { cancelled = true; };
+  }, [refresh]);
 
   useEffect(() => subscribeAutoRefresh(refresh), [refresh]);
 
@@ -91,22 +130,50 @@ export function PowerOutageWidget() {
     );
   }
 
-  if (!data || data.total === 0) return null;
+  if (!data || data.total === 0) {
+    if (error) {
+      return (
+        <div className="mt-4 rounded-xl p-4 border border-warning/30 bg-warning/10 shadow-sm animate-[fadeInUp_0.3s_ease-out]">
+          <p className="text-xs text-base-content/80">No se pudo cargar el estado eléctrico (SEC no disponible).</p>
+          <button type="button" onClick={() => { setLoading(true); setError(false); refresh(); }} className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer">Reintentar</button>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const rows = tab === 'regiones' ? data.regions : topComunas;
+  const isStale = !!data.stale || (data.updatedAt != null && Date.now() - data.updatedAt > STALE_MS);
+  const isWarn = !isStale && data.updatedAt != null && Date.now() - data.updatedAt > WARN_MS;
+  const absTime = new Date(data.updatedAt).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const rel = fmtRelative(data.updatedAt);
 
   return (
-    <div className="mt-4 rounded-xl p-4 border border-base-300 shadow-sm bg-base-200 animate-[fadeInUp_0.3s_ease-out]">
+    <div className={`mt-4 rounded-xl p-4 border shadow-sm animate-[fadeInUp_0.3s_ease-out] ${isStale ? 'border-warning/40 bg-warning/10' : isWarn ? 'border-warning/25 bg-warning/5' : 'border-base-300 bg-base-200'}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="em-subhead !mb-0 !pb-1">
           <span><span className="mr-1.5" role="img" aria-label="rayo">⚡</span>Clientes sin suministro eléctrico</span>
-          <span className="text-[10px] text-base-content/50">
-            {new Date(data.updatedAt).toLocaleString('es-CL', {
-              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-            })}
+          <span className={`text-[10px] ${isStale ? 'text-warning font-semibold' : isWarn ? 'text-warning/80' : 'text-base-content/50'}`} title={new Date(data.updatedAt).toISOString()}>
+            {absTime} · {rel}
+            {isStale ? ' · desactualizado' : isWarn ? ' · puede estar desactualizado' : ''}
           </span>
         </p>
       </div>
+
+      {(isStale || isWarn) && (
+        <div className={`mt-2 rounded-lg px-3 py-2 text-xs flex items-start justify-between gap-3 ${isStale ? 'bg-warning/15 border border-warning/30 text-warning' : 'bg-warning/10 border border-warning/20 text-base-content/80'}`} role="status" aria-live="polite">
+          <span className="leading-snug">
+            {isStale
+              ? `⚠️ Datos desactualizados — SEC sin actualizar ${rel} (último reporte ${absTime}). Este número puede no reflejar cortes actuales.`
+              : `Dato de ${rel} — SEC publica por hora; puede tardar hasta 60 min en reflejar cortes recientes.`}
+          </span>
+          <button type="button" onClick={() => { play('interaction.tap'); refresh(); }} className="shrink-0 px-2.5 py-1 rounded-md bg-base-100 border border-base-300 text-[11px] font-semibold hover:bg-base-200 transition-colors cursor-pointer active:scale-[0.97]">Actualizar</button>
+        </div>
+      )}
+
+      {error && !isStale && (
+        <div className="mt-2 text-[11px] text-warning flex items-center gap-2">No se pudo actualizar — mostrando último dato disponible.<button type="button" onClick={() => refresh()} className="underline hover:text-base-content cursor-pointer">Reintentar</button></div>
+      )}
 
       <div className="flex items-baseline gap-3 mt-2 animate-[heroFadeUp_0.4s_ease-out]">
         <span className="text-3xl font-bold text-base-content tabular-nums">{miles(data.affected)}</span>

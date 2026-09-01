@@ -3,10 +3,10 @@ import { MultiviewCell } from './MultiviewCell';
 import type { Channel } from '../../types';
 import { play } from '@/lib/sound';
 
-export type MultiviewLayout = '1x3' | '2x2' | '2x3' | '3x3';
+export type MultiviewLayout = '1x1' | '1x2' | '1x3' | '2x2' | '2x3' | '3x3';
 
 const LAYOUT_MAX: Record<MultiviewLayout, number> = {
-  '1x3': 4, '2x2': 4, '2x3': 6, '3x3': 9,
+  '1x1': 2, '1x2': 3, '1x3': 4, '2x2': 4, '2x3': 6, '3x3': 9,
 };
 
 export function maxSlots(layout: MultiviewLayout): number {
@@ -127,6 +127,29 @@ export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, o
   );
 
   const max = LAYOUT_MAX[layout];
+
+  if (layout === '1x1') {
+    return wrapper(
+      <div className="grid grid-cols-1 gap-2">
+        {[0, 1].map((i) => (
+          <div key={i} data-slot-index={i}>{renderCell(i)}</div>
+        ))}
+      </div>
+    );
+  }
+
+  if (layout === '1x2') {
+    return wrapper(
+      <div className="grid grid-rows-[2fr_1fr] gap-2">
+        <div data-slot-index={0}>{renderCell(0)}</div>
+        <div className="grid grid-cols-2 gap-2">
+          {[1, 2].map((i) => (
+            <div key={i} data-slot-index={i}>{renderCell(i)}</div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (layout === '1x3') {
     return wrapper(

@@ -122,6 +122,7 @@ export function EmergencyWidget() {
   const [sismosError, setSismosError] = useState(false);
   const [alertsError, setAlertsError] = useState(false);
   const [powerCount, setPowerCount] = useState<number | null>(null);
+  const [powerMeta, setPowerMeta] = useState<{ updatedAt: number | null; stale: boolean } | null>(null);
   // senapred no se cachea en IDB (solo items), así que mantiene su propio flag de carga
   const [alertsLoaded, setAlertsLoaded] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -170,7 +171,12 @@ export function EmergencyWidget() {
       const res = await fetch('/api/power', { signal: AbortSignal.timeout(10000) });
       if (res.ok) {
         const d = await res.json();
+        const stale = !!d?.stale || (d?.updatedAt != null && Date.now() - d.updatedAt > 90 * 60 * 1000);
         setPowerCount(d?.affected != null ? d.affected : null);
+        setPowerMeta(d?.updatedAt != null ? { updatedAt: d.updatedAt, stale } : null);
+      } else {
+        // try to parse error payload that may still contain updatedAt
+        try { const d = await res.json(); setPowerMeta(d?.updatedAt ? { updatedAt: d.updatedAt, stale: true } : null); } catch {}
       }
     } catch { /* power unavailable — omit from summary */ }
 
@@ -219,11 +225,11 @@ export function EmergencyWidget() {
         setShareMsg(r === 'copied' ? 'Enlace copiado' : r === 'shared' ? 'Compartido' : 'No se pudo compartir');
         play(r === 'copied' || r === 'shared' ? 'interaction.confirm' : 'notification.error');
       } else if (action === 'summary') {
-        const r = await copyToClipboard(buildEmergencySummary(items, alerts, powerCount ?? undefined).text);
+        const r = await copyToClipboard(buildEmergencySummary(items, alerts, powerCount ?? undefined, powerMeta ?? undefined).text);
         setShareMsg(r === 'copied' ? 'Resumen copiado' : 'No se pudo copiar');
         play(r === 'copied' ? 'interaction.confirm' : 'notification.error');
       } else {
-        const blob = await renderEmergencyCard(items, alerts, powerCount ?? undefined);
+        const blob = await renderEmergencyCard(items, alerts, powerCount ?? undefined, powerMeta ?? undefined);
         const d = new Date();
         const pad = (n: number) => String(n).padStart(2, '0');
         const imgName = `queonda-emergencia-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}.png`;

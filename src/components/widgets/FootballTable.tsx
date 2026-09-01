@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArticleReader } from '../news/ArticleReader';
 import { play } from '@/lib/sound';
 import { idbGet, idbSet } from '@/lib/idb-cache';
+import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 
 const IDB_KEY_STANDINGS = 'football-standings';
 const IDB_TTL_STANDINGS = 6 * 60 * 60 * 1000; // 6 hours (standings change 1-2x per matchday)
@@ -46,6 +47,30 @@ interface Article {
 
 const INITIAL_COUNT = 6;
 const LOAD_MORE = 6;
+
+const STALE_STANDINGS = 6 * 60 * 60 * 1000;
+const WARN_STANDINGS = 3 * 60 * 60 * 1000;
+const STALE_MATCHES = 60 * 60 * 1000;
+const WARN_MATCHES = 30 * 60 * 1000;
+const WARN_LIVE = 3 * 60 * 1000;
+const STALE_ARTICLES = 45 * 60 * 1000;
+const WARN_ARTICLES = 30 * 60 * 1000;
+
+function fmtRelative(ms: number): string {
+  const diff = Date.now() - ms;
+  const mins = Math.round(diff / 60000);
+  if (mins < 1) return 'ahora';
+  if (mins < 60) return `hace ${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h < 24) return m ? `hace ${h}h ${m}min` : `hace ${h}h`;
+  const d = Math.floor(h / 24);
+  return `hace ${d}d`;
+}
+
+function formatAbs(ms: number): string {
+  return new Date(ms).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
 
 const SPORT_SOURCE_STYLES: Record<string, string> = {
   'La Tercera': 'bg-info/10 text-info border-info/20',
@@ -120,10 +145,15 @@ async function fetchMatches(calendar: string[]): Promise<MatchEntry[]> {
     const now = new Date();
     const uniqueDates = [...new Set(calendar.map((d: string) => d.slice(0, 10).replace(/-/g, '')))].sort();
     const todayStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    // ensure today is always included even if calendar stale (live matches otherwise missed)
+    if (!uniqueDates.includes(todayStr)) uniqueDates.push(todayStr);
+    uniqueDates.sort();
     const recentDates = uniqueDates.filter(d => d <= todayStr).slice(-3);
     const upcomingDates = uniqueDates.filter(d => d >= todayStr).slice(0, 2);
+    // dedup after adding todayStr
+    const targetDates = [...new Set([...recentDates, ...upcomingDates])];
     const dateResults = await Promise.all(
-      [...recentDates, ...upcomingDates].map(date =>
+      targetDates.map(date =>
         fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard?dates=${date}&limit=20`, { signal: AbortSignal.timeout(6000) })
           .then(r => r.json()).catch(() => null)
       )
@@ -170,25 +200,36 @@ export function FootballTable() {
   const [activeTab, setActiveTab] = useState<Tab>('standings');
   const [limit, setLimit] = useState(INITIAL_COUNT);
   const [readerUrl, setReaderUrl] = useState<string | null>(null);
+  const [standingsFetchedAt, setStandingsFetchedAt] = useState<number | null>(null);
+  const [matchesFetchedAt, setMatchesFetchedAt] = useState<number | null>(null);
+  const [articlesFetchedAt, setArticlesFetchedAt] = useState<number | null>(null);
+  const [calendarCache, setCalendarCache] = useState<string[]>([]);
   const loadMoreRef = useRef<HTMLButtonElement>(null);
+  // force re-render cada minuto para que "hace X min" no quede congelado
+  const [, setTick] = useState(0);
+  useEffect(() => { const id = setInterval(() => setTick(t => t + 1), 60_000); return () => clearInterval(id); }, []);
 
   useEffect(() => {
     let cancelled = false;
 
-    // Phase 0: IDB cache → instant render per data type
+    // Phase 0: IDB cache → instant render per data type (timestamp viene de entry.timestamp)
     idbGet<StandingEntry[]>(IDB_KEY_STANDINGS).then(cached => {
       if (cancelled || !cached?.data) return;
       setStandings(cached.data);
+      setStandingsFetchedAt(cached.timestamp);
+      // calendar no se persistió antes, se revalidará en Phase 1
       setLoadingStandings(false);
     });
     idbGet<MatchEntry[]>(IDB_KEY_MATCHES).then(cached => {
       if (cancelled || !cached?.data) return;
       setMatches(cached.data);
+      setMatchesFetchedAt(cached.timestamp);
       setLoadingMatches(false);
     });
     idbGet<Article[]>(IDB_KEY_ARTICLES).then(cached => {
       if (cancelled || !cached?.data) return;
       setArticles(cached.data);
+      setArticlesFetchedAt(cached.timestamp);
       setLoadingArticles(false);
     });
 
@@ -198,12 +239,17 @@ export function FootballTable() {
       if (cancelled) return;
 
       if (standingsResult) {
+        const now = Date.now();
         setStandings(standingsResult.standings);
+        setStandingsFetchedAt(now);
+        setCalendarCache(standingsResult.calendar);
         idbSet(IDB_KEY_STANDINGS, standingsResult.standings, IDB_TTL_STANDINGS);
         // Matches depend on calendar from standings
         const matchesResult = await fetchMatches(standingsResult.calendar);
         if (cancelled) return;
+        const mNow = Date.now();
         setMatches(matchesResult);
+        setMatchesFetchedAt(mNow);
         idbSet(IDB_KEY_MATCHES, matchesResult, IDB_TTL_MATCHES);
       } else {
         setError('No se pudieron obtener datos de ESPN');
@@ -216,7 +262,9 @@ export function FootballTable() {
       const sportsResult = await fetch('/api/sports').then(r => r.ok ? r.json() : null).catch(() => null);
       if (cancelled) return;
       const arts: Article[] = (sportsResult?.articles || []).slice(0, 30);
+      const aNow = Date.now();
       setArticles(arts);
+      setArticlesFetchedAt(aNow);
       setLoadingArticles(false);
       idbSet(IDB_KEY_ARTICLES, arts, IDB_TTL_ARTICLES);
     }
@@ -224,6 +272,53 @@ export function FootballTable() {
     load();
     return () => { cancelled = true; };
   }, []);
+
+  // Live polling for partidos — en vivo cada 30s, idle cada 60s, más focus/visibility
+  const refreshMatches = useCallback(async () => {
+    try {
+      let calendar = calendarCache;
+      // si no tenemos calendar (IDB viejo), revalida standings primero
+      if (calendar.length === 0) {
+        const standingsResult = await fetchStandings();
+        if (standingsResult) {
+          calendar = standingsResult.calendar;
+          setCalendarCache(calendar);
+          setStandings(standingsResult.standings);
+          const now = Date.now();
+          setStandingsFetchedAt(now);
+          idbSet(IDB_KEY_STANDINGS, standingsResult.standings, IDB_TTL_STANDINGS);
+        }
+      }
+      const res = await fetchMatches(calendar);
+      const now = Date.now();
+      setMatches(res);
+      setMatchesFetchedAt(now);
+      idbSet(IDB_KEY_MATCHES, res, IDB_TTL_MATCHES);
+    } catch { /* keep stale */ }
+  }, [calendarCache]);
+
+  const refreshArticles = useCallback(async () => {
+    try {
+      const sportsResult = await fetch('/api/sports').then(r => r.ok ? r.json() : null).catch(() => null);
+      const arts: Article[] = (sportsResult?.articles || []).slice(0, 30);
+      const now = Date.now();
+      setArticles(arts);
+      setArticlesFetchedAt(now);
+      idbSet(IDB_KEY_ARTICLES, arts, IDB_TTL_ARTICLES);
+    } catch { /* keep stale */ }
+  }, []);
+
+  useEffect(() => subscribeAutoRefresh(() => {
+    void refreshMatches();
+    void refreshArticles();
+  }), [refreshMatches, refreshArticles]);
+
+  useEffect(() => {
+    const hasLive = matches.some(m => m.status === 'IN_PLAY' || m.status === 'PAUSED');
+    const interval = hasLive ? 30_000 : 60_000;
+    const id = setInterval(() => { void refreshMatches(); }, interval);
+    return () => clearInterval(id);
+  }, [matches, refreshMatches]);
 
   const visibleArticles = articles.slice(0, limit) || [];
   const hasMore = limit < articles.length;
@@ -246,15 +341,61 @@ export function FootballTable() {
     { key: 'news', label: 'Noticias' },
   ];
 
+  const activeFetchedAt = activeTab === 'standings' ? standingsFetchedAt : activeTab === 'matches' ? matchesFetchedAt : articlesFetchedAt;
+  const activeStaleMs = activeTab === 'standings' ? STALE_STANDINGS : activeTab === 'matches' ? STALE_MATCHES : STALE_ARTICLES;
+  const activeWarnMs = activeTab === 'standings' ? WARN_STANDINGS : activeTab === 'matches' ? (liveMatches.length ? WARN_LIVE : WARN_MATCHES) : WARN_ARTICLES;
+  const activeIsStale = activeFetchedAt != null && Date.now() - activeFetchedAt > activeStaleMs;
+  const activeIsWarn = !activeIsStale && activeFetchedAt != null && Date.now() - activeFetchedAt > activeWarnMs;
+  const handleRefreshActive = () => {
+    if (activeTab === 'matches') { play('interaction.tap'); void refreshMatches(); }
+    else if (activeTab === 'standings') {
+      play('interaction.tap');
+      void (async () => {
+        const r = await fetchStandings();
+        if (r) {
+          const now = Date.now();
+          setStandings(r.standings);
+          setStandingsFetchedAt(now);
+          setCalendarCache(r.calendar);
+          idbSet(IDB_KEY_STANDINGS, r.standings, IDB_TTL_STANDINGS);
+          const mr = await fetchMatches(r.calendar);
+          const mNow = Date.now();
+          setMatches(mr);
+          setMatchesFetchedAt(mNow);
+          idbSet(IDB_KEY_MATCHES, mr, IDB_TTL_MATCHES);
+        }
+      })();
+    } else { play('interaction.tap'); void refreshArticles(); }
+  };
+
   return (
     <>
-    <div className="rounded-xl bg-base-200 border border-base-300 shadow-sm overflow-hidden">
-      <div className="p-4 border-b border-base-300 flex items-baseline justify-between">
+    <div className={`rounded-xl border shadow-sm overflow-hidden ${activeIsStale ? 'bg-warning/10 border-warning/30' : activeIsWarn ? 'bg-warning/5 border-warning/20' : 'bg-base-200 border-base-300'}`}>
+      <div className="p-4 border-b border-base-300 flex items-baseline justify-between gap-2">
         <p className="text-xs text-base-content/70 uppercase tracking-wider">Fútbol chileno</p>
-        {standings.length > 0 && (
-          <p className="text-[10px] text-base-content/50">{totalTeams} equipos</p>
-        )}
+        <div className="flex items-center gap-2">
+          {activeFetchedAt && (
+            <p className={`text-[10px] ${activeIsStale ? 'text-warning font-semibold' : activeIsWarn ? 'text-warning/80' : 'text-base-content/50'}`} title={new Date(activeFetchedAt).toISOString()}>
+              {formatAbs(activeFetchedAt)} · {fmtRelative(activeFetchedAt)}{activeIsStale ? ' · desactualizado' : activeIsWarn ? ' · puede estar desactualizado' : ''}
+            </p>
+          )}
+          {standings.length > 0 && activeTab === 'standings' && (
+            <p className="text-[10px] text-base-content/50 hidden sm:inline">{totalTeams} equipos</p>
+          )}
+        </div>
       </div>
+      {(activeIsStale || activeIsWarn) && activeFetchedAt && (
+        <div className={`mx-3 mt-3 rounded-lg px-3 py-2 text-xs flex items-start justify-between gap-3 ${activeIsStale ? 'bg-warning/15 border border-warning/30 text-warning' : 'bg-warning/10 border border-warning/20 text-base-content/80'}`} role="status" aria-live="polite">
+          <span className="leading-snug">
+            {activeTab === 'standings'
+              ? activeIsStale ? `⚠️ Tabla desactualizada — sin actualizar ${fmtRelative(activeFetchedAt)} (último ${formatAbs(activeFetchedAt)}). Puede no reflejar la fecha actual.` : `Tabla de ${fmtRelative(activeFetchedAt)} — standings cambian 1-2× por fecha.`
+              : activeTab === 'matches'
+                ? activeIsStale ? `⚠️ Partidos desactualizados — último refresco ${fmtRelative(activeFetchedAt)} (último ${formatAbs(activeFetchedAt)}). Marcadores en vivo pueden estar desfasados.` : `Partidos de ${fmtRelative(activeFetchedAt)} — en vivo se actualiza cada 30s.`
+                : activeIsStale ? `⚠️ Noticias desactualizadas — último refresco ${fmtRelative(activeFetchedAt)}.` : `Noticias de ${fmtRelative(activeFetchedAt)}.`}
+          </span>
+          <button type="button" onClick={handleRefreshActive} className="shrink-0 px-2.5 py-1 rounded-md bg-base-100 border border-base-300 text-[11px] font-semibold hover:bg-base-200 transition-colors cursor-pointer active:scale-[0.97]">Actualizar</button>
+        </div>
+      )}
 
       <div className="flex gap-1 px-4 pb-4 border-b border-base-300">
         {tabs.map((t) => (

@@ -95,7 +95,59 @@ export const GET: APIRoute = async ({ request }) => {
     } else { log.push('youtube: skipped (cached)'); }
   } catch (e: any) { failed.push('youtube'); log.push(`youtube: ${e?.message || e}`); }
 
-  // 3. Pre-warm trends (Google Trends RSS — dual source, CORS-blocked)
+  // 3. Pre-warm power (SEC clientes sin suministro — single source, hourly, no fallback)
+  try {
+    const existing = await getCached('power');
+    if (!existing) {
+      const stale = await getStaleCached('power');
+      try {
+        const BASE = 'https://apps.sec.cl/INTONLINEv1/ClientesAfectados/';
+        const postSec = async (endpoint: string, body: Record<string, unknown> = {}) => {
+          const r = await fetch(BASE + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000) });
+          if (!r.ok) throw new Error(String(r.status));
+          return r.json();
+        };
+        const parseChileLocal = (await import('../../lib/chile-time')).parseChileLocal;
+        const comunaCoords = (await import('../../lib/comunas-coords')).comunaCoords;
+        const pad2 = (n: number) => String(n).padStart(2, '0');
+        const toMs = (p: { anho: number; mes: number; dia: number; hora: number }) =>
+          parseChileLocal(`${p.anho}-${pad2(p.mes)}-${pad2(p.dia)} ${pad2(p.hora)}:00:00`);
+        const [series, nacional] = await Promise.all([postSec('Get'), postSec('GetClientesNacional')]);
+        const last = (series as any[])[series.length - 1];
+        if (last) {
+          const regiones = await postSec('GetPorFecha', { anho: last.anho, mes: last.mes, dia: last.dia, hora: last.hora });
+          const byRegion = new Map<string, number>();
+          const comunas: any[] = [];
+          for (const r of regiones as any[]) {
+            byRegion.set(r.NOMBRE_REGION, (byRegion.get(r.NOMBRE_REGION) ?? 0) + r.CLIENTES_AFECTADOS);
+            const coords = comunaCoords(r.NOMBRE_COMUNA);
+            if (coords) comunas.push({ region: r.NOMBRE_REGION, comuna: r.NOMBRE_COMUNA, affected: r.CLIENTES_AFECTADOS, lat: coords[0], lon: coords[1] });
+          }
+          const total = (nacional as any[])[0]?.CLIENTES ?? 0;
+          const affected = last.clientes_afectados;
+          const data = {
+            affected,
+            total,
+            pct: total > 0 ? (affected * 100) / total : 0,
+            updatedAt: toMs(last),
+            fetchedAt: Date.now(),
+            stale: false,
+            regions: [...byRegion.entries()].map(([region, n]) => ({ region, affected: n })).sort((a: any, b: any) => b.affected - a.affected),
+            comunas: comunas.sort((a: any, b: any) => b.affected - a.affected),
+            series: (series as any[]).map((p: any) => ({ t: toMs(p), v: p.clientes_afectados })),
+          };
+          await setCache('power', data, 15 * 60 * 1000);
+          warmed.push('power');
+          log.push(`power: ${affected} afectados, ${comunas.length} comunas`);
+        } else { throw new Error('SEC empty series'); }
+      } catch (e: any) {
+        if (stale) { warmed.push('power (stale)'); log.push('power: serving stale cache'); }
+        else { failed.push('power'); log.push(`power: ${e?.message || e}`); }
+      }
+    } else { log.push('power: skipped (cached)'); }
+  } catch (e: any) { failed.push('power'); log.push(`power: ${e?.message || e}`); }
+
+  // 4. Pre-warm trends (Google Trends RSS — dual source, CORS-blocked)
   try {
     const existing = await getCached('trends');
     if (!existing) {

@@ -90,7 +90,23 @@ function fmtItemTime(t?: number): string {
   return new Date(t).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-export function buildEmergencySummary(items: ShareableItem[], alerts: ShareableItem[], powerCount?: number): SharePayload {
+function fmtRelative(t: number): string {
+  const diff = Date.now() - t;
+  const mins = Math.round(diff / 60000);
+  if (mins < 60) return `hace ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  const rem = mins % 60;
+  if (hours < 24) return rem ? `hace ${hours}h ${rem}min` : `hace ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `hace ${days}d`;
+}
+
+export function buildEmergencySummary(
+  items: ShareableItem[],
+  alerts: ShareableItem[],
+  powerCount?: number,
+  powerMeta?: { updatedAt?: number | null; stale?: boolean },
+): SharePayload {
   const lines: string[] = ['🚨 Emergencias en Chile ahora mismo', ''];
   const eqs = items.slice(0, 6).map((i) => `• ${i.mag != null ? `M ${i.mag.toFixed(1)} — ` : ''}${i.place || i.title}${i.time ? ` · ${fmtItemTime(i.time)}` : ''}`);
   const als = alerts.slice(0, 4).map((a) => `• ${a.title}${a.time ? ` · ${fmtItemTime(a.time)}` : ''}`);
@@ -98,7 +114,10 @@ export function buildEmergencySummary(items: ShareableItem[], alerts: ShareableI
   if (als.length) lines.push('🚨 Alertas SENAPRED:', ...als, '');
   if (powerCount != null && powerCount > 0) {
     if (lines[lines.length - 1] !== '') lines.push('');
-    lines.push(`⚡ ${powerCount.toLocaleString('es-CL')} clientes sin suministro eléctrico`);
+    const isStale = !!powerMeta?.stale || (powerMeta?.updatedAt != null && Date.now() - powerMeta.updatedAt > 90 * 60 * 1000);
+    const when = powerMeta?.updatedAt ? ` · ${fmtItemTime(powerMeta.updatedAt)}` : '';
+    const staleNote = isStale ? ` ⚠️ dato desactualizado (${powerMeta?.updatedAt ? fmtRelative(powerMeta.updatedAt) : 'SEC sin actualizar'}) — no refleja cortes en curso` : '';
+    lines.push(`⚡ ${powerCount.toLocaleString('es-CL')} clientes sin suministro eléctrico${when}${staleNote}`);
     lines.push('');
   }
   const generated = new Date().toLocaleString('es-CL', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });

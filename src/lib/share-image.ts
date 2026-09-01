@@ -47,7 +47,12 @@ function fmtTime(t?: number): string {
   return new Date(t).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-export async function renderEmergencyCard(items: ImageShareItem[], alerts: ImageShareItem[], powerCount?: number): Promise<Blob> {
+export async function renderEmergencyCard(
+  items: ImageShareItem[],
+  alerts: ImageShareItem[],
+  powerCount?: number,
+  powerMeta?: { updatedAt?: number | null; stale?: boolean },
+): Promise<Blob> {
   const W = 1080;
   const H = 1350;
   const canvas = document.createElement('canvas');
@@ -135,7 +140,23 @@ export async function renderEmergencyCard(items: ImageShareItem[], alerts: Image
   if (alertItems.length) { drawHeader('🚨 Alertas SENAPRED'); alertItems.forEach((i) => drawItem(i.severity, i.label)); }
   if (powerCount != null && powerCount > 0) {
     if (drawHeader('⚡ Sin suministro eléctrico')) {
-      drawItem('high', `${powerCount.toLocaleString('es-CL')} clientes sin suministro eléctrico en Chile`);
+      const isStale = !!powerMeta?.stale || (powerMeta?.updatedAt != null && Date.now() - powerMeta.updatedAt > 90 * 60 * 1000);
+      const when = powerMeta?.updatedAt ? ` · ${fmtTime(powerMeta.updatedAt)}` : '';
+      const staleSuffix = isStale ? ' ⚠️ desactualizado' : '';
+      const label = `${powerCount.toLocaleString('es-CL')} clientes sin suministro${when}${staleSuffix}`;
+      drawItem(isStale ? 'moderate' : 'high', label);
+      if (isStale && y + 36 <= footerY) {
+        ctx.globalAlpha = 0.75;
+        ctx.font = `500 22px ${font}`;
+        ctx.fillStyle = '#f59e0b';
+        const note = powerMeta?.updatedAt
+          ? `Dato de hace ${Math.round((Date.now() - powerMeta.updatedAt) / 60000)} min — SEC sin actualizar`
+          : 'Dato desactualizado — SEC sin actualizar';
+        const nLines = wrapText(ctx, note, W - 104).slice(0, 2);
+        nLines.forEach((ln) => { ctx.fillText(ln, 52, y); y += 28; });
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = fg;
+      }
     }
   }
   if (!eqItems.length && !alertItems.length && (powerCount == null || powerCount <= 0)) {
