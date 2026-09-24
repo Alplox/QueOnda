@@ -37,7 +37,7 @@ pnpm run update-holidays      # regenera src/lib/holidays.json (feriados)
 - **Spotify**: Top 50 Chile vía proxy server-side
 - **Google Trends**: tendencias Chile
 - **Clima**: Open-Meteo directo client-side + Gael Cloud/Boostr server fallback, IDB cache (10 min)
-- **Aire**: estaciones SINCA (MP2.5/PM10 + estado ICAP) con mapa Leaflet, fallback Open-Meteo CAMS, IDB cache (30 min)
+- **Aire**: estaciones SINCA (MP2.5/PM10 + estado ICAP) con mapas Leaflet/OpenFreeMap, fallback Open-Meteo CAMS, IDB cache (30 min)
 - **Transporte**: Metro de Santiago + RED (buses) con predicciones
 - **Deportes**: RSS deportivo + tabla de posiciones fútbol chileno (ESPN API client-side), IDB cache (1h)
 - **Trabajos**: ofertas laborales desde múltiples fuentes
@@ -73,6 +73,7 @@ pnpm run update-holidays      # regenera src/lib/holidays.json (feriados)
 | [YouTube RSS](https://www.youtube.com/) | `youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) | YouTube | Único |
 | [GetOnBoard](https://www.getonbrd.com) + [Remotive](https://remotive.com) + [WorkAnywhere](https://workanywhere.com) | múltiples APIs | Trabajos | Agregado vía proxy |
 | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` | Geolocalización clima | Único |
+| [OpenFreeMap](https://openfreemap.org/) + [MapLibre GL](https://maplibre.org/) | `tiles.openfreemap.org/styles/{positron,dark}` | Basemap de todos los mapas | Único, open source, sin API key |
 | [DMC MeteoChile](https://www.meteochile.gob.cl) | `archivos.meteochile.gob.cl/portaldmc/meteochile/js/pronostico.js` | Clima (pronóstico 5 días) | Único |
 | [cheerio](https://cheerio.js.org) | scraping vía `/api/article?url=` | Lector de artículos | Único |
 

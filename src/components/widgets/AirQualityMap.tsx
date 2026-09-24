@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import leafletCssUrl from 'leaflet/dist/leaflet.css?url';
 import { AIR_STATUS, orderedRegions } from '@/lib/air-quality';
 import type { AirStation } from '@/lib/air-quality';
+import { addOpenFreeMapLayer } from './openfreemap-layer';
 
 interface Props {
   stations: AirStation[];
@@ -65,21 +66,21 @@ export function AirQualityMap({ stations }: Props) {
       const map = L.map(containerRef.current, {
         zoomControl: true,
         attributionControl: true,
+        minZoom: 1,
+        maxBounds: [[-85, -180], [85, 180]],
+        maxBoundsViscosity: 1,
       }).setView([-35.5, -71], 4);
 
       const isDark = () => !document.documentElement.classList.contains('light-theme');
-      const tileUrl = (dark: boolean) =>
-        dark
-          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-
-      const tiles = L.tileLayer(tileUrl(isDark()), {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 19,
-      }).addTo(map);
+      const basemap = await addOpenFreeMapLayer(map, isDark());
+      if (destroyed) {
+        basemap.destroy();
+        map.remove();
+        return;
+      }
 
       // swap basemap live on theme change
-      const observer = new MutationObserver(() => tiles.setUrl(tileUrl(isDark())));
+      const observer = new MutationObserver(() => basemap.setDark(isDark()));
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
       const group = L.layerGroup().addTo(map);
@@ -87,6 +88,7 @@ export function AirQualityMap({ stations }: Props) {
       mapRef.current = {
         destroy: () => {
           observer.disconnect();
+          basemap.destroy();
           map.remove();
           mapRef.current = null;
         },

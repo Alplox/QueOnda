@@ -28,6 +28,7 @@
   "dependencies": {
     "@astrojs/cloudflare": "^14.3.3",
     "@astrojs/react": "^6.0.1",
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@mozilla/readability": "^0.6.0",
     "@tailwindcss/vite": "^4.0.0",
     "astro": "^7.3.5",
@@ -39,6 +40,7 @@
     "hover-tilt": "^1.0.0",
     "leaflet": "^1.9.4",
     "linkedom": "^0.18.12",
+    "maplibre-gl": "^6.11.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-leaflet": "^5.0.0",

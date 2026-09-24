@@ -86,21 +86,22 @@ src/
       WeatherWidget.tsx        # Multi-city weather cards (client:idle)
       TransportWidget.tsx      # Metro grid + estaciones + llegada de buses (client:idle)
       AirQualityWidget.tsx     # Calidad del aire SINCA: peor estación + conteos por banda + filtro región + filas (client:idle; IDB cache: air-quality 30min)
-      AirQualityMap.tsx        # Leaflet mapa de estaciones por estado ICAP (colores oficiales SINCA, filtros región/comuna)
+      AirQualityMap.tsx        # Leaflet + OpenFreeMap map de estaciones por estado ICAP (colores oficiales SINCA, filtros región/comuna)
       FootballTable.tsx        # Chilean football standings + matches + news feed (client:idle; IDB cache: football-standings 6h, football-matches 1h, football-articles 30min; progressive per-tab rendering)
       JobList.tsx              # Job listings placeholder (client:idle)
       ClientJobList.tsx        # Client job listings widget (client:idle)
       EmergencyWidget.tsx      # Sismos recientes widget (client:load)
-      EmergencyMap.tsx         # Leaflet map of sismos by magnitude (toggle inside EmergencyWidget)
+      EmergencyMap.tsx         # Leaflet + OpenFreeMap map of sismos by magnitude (toggle inside EmergencyWidget)
       EmergencyTicker.tsx      # Sticky collapsible alert ticker bar under navbar (client:load)
       EmergencyAlertBar.tsx    # Auto-scrolling alert ticker bar
-      PowerOutageWidget.tsx    # SEC clientes sin suministro + mapa Leaflet por comuna + gráfico evolución (client:load)
-      PowerOutageMap.tsx       # Leaflet comuna dot map (theme-aware tiles, rank-band circles, filtros región/comuna)
+      PowerOutageWidget.tsx    # SEC clientes sin suministro + mapa Leaflet/OpenFreeMap por comuna + gráfico evolución (client:load)
+      PowerOutageMap.tsx       # Leaflet + OpenFreeMap comuna dot map (theme-aware styles, rank-band circles, filtros región/comuna)
       PowerEvolutionChart.tsx  # Chart.js evolución horaria de clientes sin suministro (24h/48h/72h/7d)
       HolidaysWidget.tsx       # Chilean holidays calendar (client:idle)
       FiestasCountdown.tsx     # Fiestas Patrias countdown (client:idle)
       EmojiCard.tsx           # Card component for FiestasCountdown (client:idle)
-      RouteMap.tsx             # Transit route map component (client:idle)
+      RouteMap.tsx             # Transit route map component (Leaflet + OpenFreeMap, client:idle)
+      openfreemap-layer.ts     # Shared lazy MapLibre/OpenFreeMap basemap + theme switching for Leaflet maps
       ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
   lib/
     cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch. Exports edgeCacheHeaders(ttlSeconds) for CDN-level edge caching with stale-while-revalidate
@@ -403,6 +404,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 | RED routes DB | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` (build-time via `update-stops-db.mjs`) |
 | Weather widget geolocation | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` |
 | Weather widget forecast | [DMC MeteoChile](https://www.meteochile.gob.cl) | `archivos.meteochile.gob.cl/portaldmc/meteochile/js/pronostico.js` — 5-day forecast for ~60 Chilean cities |
+| Map basemaps | [OpenFreeMap](https://openfreemap.org/) + [MapLibre GL](https://maplibre.org/) | `tiles.openfreemap.org/styles/{positron,dark}` — open source, sin API key; datos OpenMapTiles/OpenStreetMap |
 
 ## Sound System (Web Audio API)
 
@@ -430,6 +432,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
   - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/air-quality`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`
   - Scheduled: `/api/cron` (external cron job for persistent cache warming)
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)
+- **Map rendering**: Leaflet stays lazy; MapLibre GL/OpenFreeMap and its worker load only when a map is first opened, then are shared across map widgets
 - **ClientNewsFeed** hydrates at idle (`client:idle`) instead of eagerly (`client:load`)
 - All 35 DaisyUI themes are bundled (no reduction — user preference)
 

@@ -40,8 +40,31 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-- **Uso**: mapas interactivos (PowerOutageMap, EmergencyMap), vía `import('leaflet')`.
+- **Uso**: mapas interactivos, controles, marcadores y popups, vía `import('leaflet')`.
 - **Fuente**: https://github.com/Leaflet/Leaflet
+
+### MapLibre GL JS — BSD 3-Clause License
+
+Copyright (c) 2023, MapLibre contributors. Todos los derechos reservados.
+
+Se permite la redistribución y el uso en código fuente y binario, con o sin
+modificaciones, bajo las condiciones de la licencia BSD 3-Clause. El texto
+completo, incluidos los componentes históricos derivados de Mapbox GL JS, está
+en `node_modules/maplibre-gl/LICENSE.txt`.
+
+- **Uso**: renderizado vectorial de los mapas Leaflet, vía `import('maplibre-gl')`.
+- **Fuente**: https://github.com/maplibre/maplibre-gl-js
+
+### MapLibre GL Leaflet — ISC License
+
+Copyright (c) 2021 MapLibre contributors; Copyright (c) 2014, Mapbox.
+
+Se permite usar, copiar, modificar y distribuir el software para cualquier
+propósito, con o sin pago, conservando el aviso de copyright y el permiso. El
+texto completo está en `node_modules/@maplibre/maplibre-gl-leaflet/LICENSE`.
+
+- **Uso**: integración del mapa vectorial MapLibre dentro de Leaflet.
+- **Fuente**: https://github.com/maplibre/maplibre-gl-leaflet
 
 ### hls.js — Apache License 2.0
 
@@ -143,11 +166,15 @@ https://openfontlicense.org/
   - [cd_dvd_PNG9080](https://pngimg.com/image/9080)
   - [cd_dvd_PNG9065](https://pngimg.com/image/9065)
 
-### Teselas de mapa — OpenStreetMap & CARTO
+### Basemap y datos — OpenFreeMap, OpenMapTiles & OpenStreetMap
 
-Los mapas Leaflet usan teselas de CARTO con atribución a OSM y CARTO
-(visible en el control de atribución de cada mapa):
-`&copy; OpenStreetMap contributors &copy; CARTO`.
+Los mapas usan el servicio vectorial gratuito y open source
+[OpenFreeMap](https://openfreemap.org/), con datos de
+[OpenMapTiles](https://www.openmaptiles.org/) y
+[OpenStreetMap](https://www.openstreetmap.org/copyright). No requiere API key.
+
+Atribución visible en cada mapa:
+`OpenFreeMap © OpenMapTiles © OpenStreetMap`.
 
 ### Datos generados
 
