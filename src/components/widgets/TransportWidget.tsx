@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { POPULAR_STOPS } from '../../lib/transport';
-import type { StopPrediction, StopInfo, PopularStop } from '../../lib/transport';
+import type { StopInfo, PopularStop } from '../../lib/transport';
 import { idbGet, idbSet } from '../../lib/idb-cache';
 import { play } from '@/lib/sound';
 
@@ -31,13 +31,6 @@ const STATUS_COLORS: Record<string, string> = {
   detenido: 'badge badge-xs badge-error',
   parcial: 'badge badge-xs badge-warning',
   demorado: 'badge badge-xs badge-warning',
-};
-
-const STATION_STATUS: Record<number, { label: string; color: string }> = {
-  0: { label: 'Operativa', color: 'badge badge-xs badge-success' },
-  1: { label: 'Cerrada', color: 'badge badge-xs badge-error' },
-  2: { label: 'No habilitada', color: 'badge badge-xs badge-ghost' },
-  3: { label: 'Accesos cerrados', color: 'badge badge-xs badge-warning' },
 };
 
 const QUICK_PILLS = ['PA433', 'PA1', 'PA123', 'PA146'];
@@ -105,36 +98,6 @@ function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: s
             </a>
           </>
         )}
-      </div>
-    </div>
-  );
-}
-
-function StationAlerts({ stations }: { stations: MetroStation[] }) {
-  const affected = stations.filter(s => s.status !== 0);
-  if (affected.length === 0) return null;
-
-  return (
-    <div className="mb-4">
-      <h4 className="text-sm font-semibold text-base-content mb-3">
-        Estado de estaciones
-        <span className="text-[10px] text-base-content/70 ml-2 font-normal">
-          ({affected.length} con novedades)
-        </span>
-      </h4>
-      <div className="flex flex-wrap gap-2">
-        {affected.map((s, i) => {
-          const info = STATION_STATUS[s.status] || STATION_STATUS[0];
-          return (
-            <div
-              key={`${s.name}-${i}`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-base-200 border border-base-300"
-            >
-              <span>{s.name}{s.line && <> ({s.line})</>}</span>
-              <span className={info.color}>{info.label}</span>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
@@ -328,7 +291,7 @@ function StopCombobox() {
     setLoadingRoute(false);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (mode === 'paradero') doSearch(stopId);
     else if (routeInput.trim()) loadRouteStops(routeInput.trim());
@@ -364,7 +327,7 @@ function StopCombobox() {
     if (!isOpen || filtered.length === 0) {
       if (e.key === 'Enter') {
         e.preventDefault();
-        handleSubmit(e as unknown as React.FormEvent);
+        handleSubmit(e as unknown as React.SubmitEvent<HTMLFormElement>);
       }
       return;
     }
@@ -384,7 +347,7 @@ function StopCombobox() {
           if (mode === 'paradero') handleSelect((filtered[highlightIdx] as PopularStop).code);
           else handleSelect(filtered[highlightIdx] as string);
         } else {
-          handleSubmit(e as unknown as React.FormEvent);
+          handleSubmit(e as unknown as React.SubmitEvent<HTMLFormElement>);
         }
         break;
       case 'Escape':

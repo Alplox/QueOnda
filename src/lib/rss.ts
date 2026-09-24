@@ -1,7 +1,8 @@
 import { XMLParser } from 'fast-xml-parser';
 import feedsDb from './feeds-database.json';
-import type { Article, NewsCluster, SourceResult, SourceFeed } from '../types';
+import type { Article, SourceResult, SourceFeed } from '../types';
 import { BROWSER_UA } from './ua';
+import { validateFetchUrl } from './url-validator';
 
 
 const FEEDS_DB_URLS = [
@@ -213,7 +214,21 @@ async function fetchSingleSource(
   source: { name: string; url: string; sourceKey?: string; source?: string }
 ): Promise<{ articles: Article[]; sourceResult: SourceResult }> {
   try {
-    const res = await fetch(source.url, {
+    const urlCheck = validateFetchUrl(source.url);
+    if (!urlCheck.valid) {
+      return {
+        articles: [],
+        sourceResult: {
+          name: source.name,
+          url: source.url,
+          success: false,
+          articlesCount: 0,
+          error: urlCheck.error,
+        },
+      };
+    }
+
+    const res = await fetch(urlCheck.url, {
       headers: { 'User-Agent': BROWSER_UA },
       signal: AbortSignal.timeout(FEED_FETCH_TIMEOUT),
     });

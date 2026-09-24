@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
 import type { RadioStation } from '../../lib/radios';
-import { getRadioStreamType } from '../../lib/radios';
 import { play } from '@/lib/sound';
 
 interface Props {

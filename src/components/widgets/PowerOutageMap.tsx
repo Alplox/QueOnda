@@ -134,13 +134,20 @@ export function PowerOutageMap({ comunas }: Props) {
           opacity: 0.9,
           fillOpacity: 0.75,
         });
-        const content = `<div style="font-family:sans-serif;font-size:12px;color:#222">
-            <strong>${c.comuna}</strong><br/>
-            <span>${c.region}</span><br/>
-            <strong>${c.affected.toLocaleString('es-CL')} clientes</strong>
-          </div>`;
-        marker.bindTooltip(content, { sticky: true });
-        marker.bindPopup(content);
+        const createContent = () => {
+          const content = document.createElement('div');
+          content.style.cssText = 'font-family:sans-serif;font-size:12px;color:#222';
+          const place = document.createElement('strong');
+          place.textContent = c.comuna;
+          const region = document.createElement('span');
+          region.textContent = c.region;
+          const affected = document.createElement('strong');
+          affected.textContent = `${c.affected.toLocaleString('es-CL')} clientes`;
+          content.append(place, document.createElement('br'), region, document.createElement('br'), affected);
+          return content;
+        };
+        marker.bindTooltip(createContent(), { sticky: true });
+        marker.bindPopup(createContent());
         marker.on('popupopen', () => marker.closeTooltip());
         markers.push(marker);
       }

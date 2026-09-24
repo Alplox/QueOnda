@@ -13,13 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
-      - run: npm run update-feeds
-      - run: npm run update-stops
-      - run: npm run update-holidays
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run update-feeds
+      - run: pnpm run update-stops
+      - run: pnpm run update-holidays
       - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"

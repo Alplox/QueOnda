@@ -8,12 +8,13 @@ Chilean news aggregator + live TV/radio streaming in a single-page, ad-free dash
 Stack: **Astro 7** (SSR) + **React 19** + **TypeScript** + **Tailwind CSS 4**.
 
 ```bash
-npm run dev       # localhost:4321
-npm run build     # dist/
-npm run preview   # npx astro preview
-npm run update-feeds  # Regenerate src/lib/feeds-database.json from remote DB
-npm run update-stops  # Regenerate src/lib/stops-database.json from DTPM GTFS
-npm run update-holidays  # Regenerate src/lib/holidays.json from nager.at API
+pnpm install --frozen-lockfile  # Install exact versions from pnpm-lock.yaml
+pnpm dev                        # localhost:4321
+pnpm build                      # dist/ + Cloudflare Pages restructure
+pnpm preview                    # Preview the production build
+pnpm run update-feeds           # Regenerate src/lib/feeds-database.json from remote DB
+pnpm run update-stops           # Regenerate src/lib/stops-database.json from DTPM GTFS
+pnpm run update-holidays        # Regenerate src/lib/holidays.json from nager.at API
 ```
 
 ## Directory Structure
@@ -104,9 +105,9 @@ src/
   lib/
     cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch. Exports edgeCacheHeaders(ttlSeconds) for CDN-level edge caching with stale-while-revalidate
     channels.ts              # Channel fetch + cache logic
-    feeds-database.json      # @generated local fallback of ~2056 active/verified RSS feeds (regenerate via `npm run update-feeds`)
-    stops-database.json      # @generated RED bus routes + stops from DTPM GTFS (regenerate via `npm run update-stops`)
-    holidays.json            # @generated Chilean holidays fallback from nager.at (regenerate via `npm run update-holidays`)
+    feeds-database.json      # @generated local fallback of ~2056 active/verified RSS feeds (regenerate via `pnpm run update-feeds`)
+    stops-database.json      # @generated RED bus routes + stops from DTPM GTFS (regenerate via `pnpm run update-stops`)
+    holidays.json            # @generated Chilean holidays fallback from nager.at (regenerate via `pnpm run update-holidays`)
     rss.ts                   # RSS parser + feeds DB loader (local-first fallback: feeds-database.json → async GitHub raw → CDN)
     clustering.ts            # Pure functions: extractKeywords, clusterArticles, extractTrendingFromArticles (server + client; code-split via dynamic import in ClientNewsFeed)
     radios.ts                # Radio station data + extraction
@@ -125,7 +126,8 @@ src/
     sections.ts               # Section ID/label constants for nav
     storage.ts                # localStorage JSON get/set helpers
     url.ts                    # extractHost() URL helper
-    url-validator.ts          # SSRF protection / private IP validation
+    url-validator.ts          # SSRF protection / public HTTP(S) URL validation (IPv4/IPv6, local suffixes, credentials)
+    sanitize-html.ts          # Allowlist sanitizer for external article HTML rendered by ArticleReader
     share.ts                  # shareOrCopy (native share on touch, clipboard on desktop), buildEmergencySummary, canShareFiles/downloadBlob
     share-image.ts            # renderEmergencyCard — manual canvas 1080x1350 PNG for sharing the emergency section (no html2canvas)
     jobs/
@@ -191,6 +193,14 @@ All routes return JSON. CORS is not needed (same-origin).
 3. React components mount and either fetch directly from external APIs (CORS-enabled) or from `/api/...` server endpoints (channels, radios, emergency use server endpoints to avoid CORS/subrequest limits)
 4. **IDB caching (IndexedDB)**: All major widgets cache results in IDB for instant reload. Pattern: render from IDB first, fetch in background, update IDB
 5. API routes serve for: CORS-blocked sources (RSS feeds, YouTube), fallback chains (emergency, weather), or client-side CORS avoidance (channels, radios)
+
+### Input and proxy security
+
+- APIs that expose user-controlled query parameters validate allowed keys, accepted values, request size, and cache cardinality before reading or writing cache entries.
+- `POST /api/news/batch` accepts at most 40 URLs and canonicalizes them against the current RSS inventory; it never fetches arbitrary client-supplied hosts.
+- `/api/article` validates the initial URL and every redirect with `validateFetchUrl`, follows at most five redirects, rejects credential-bearing/private targets, and sanitizes extracted HTML through `sanitizeArticleHtml` before returning it.
+- External data rendered as Leaflet popup/tooltip HTML must use DOM nodes + `textContent`; do not interpolate API values into HTML strings.
+- `/api/cron` fails closed with 503 when `CRON_SECRET` is unset and otherwise requires `Authorization: Bearer <CRON_SECRET>`.
 
 ### Component patterns
 
@@ -426,7 +436,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 ## Deployment
 
 - **Plataforma**: Cloudflare Pages Functions (SSR), deploy automático via Git integration
-- **Build command**: `npm run build && node scripts/post-build-pages.mjs`
+- **Build command**: `pnpm run build` (the script already runs `scripts/post-build-pages.mjs`)
 - **Adapter**: `@astrojs/cloudflare` v14+, `mode: 'directory'`, `output: 'server'`
 - **`nodejs_compat`** flag activado en dashboard de Pages
 

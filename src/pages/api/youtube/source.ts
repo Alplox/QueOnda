@@ -1,29 +1,52 @@
 import type { APIRoute } from 'astro';
 import { XMLParser } from 'fast-xml-parser';
 import { getCached, setCache, edgeCacheHeaders } from '../../../lib/cache';
-import { BROWSER_UA, pMap } from '../../../lib/rss';
+import { BROWSER_UA } from '../../../lib/rss';
+import { fetchChannels } from '../../../lib/channels';
+import { checkRateLimit } from '../../../lib/rate-limit';
 
-const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseTagValue: false });
 const MAX_PER_CHANNEL = 10;
+const CHANNEL_ID_PATTERN = /^UC[A-Za-z0-9_-]{22}$/;
 
 function todayChile(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
 }
 
 function cacheKey(channelId: string): string {
-  return `youtube:source:${channelId}`;
+  return `youtube:source:v2:${channelId}`;
 }
 
-export const GET: APIRoute = async ({ url }) => {
-  const channelId = url.searchParams.get('channelId');
-  const name = url.searchParams.get('name') || '';
+export const GET: APIRoute = async ({ url, request }) => {
+  if ([...url.searchParams.keys()].some(param => param !== 'channelId')) {
+    return new Response(JSON.stringify({ error: 'Unsupported query parameter' }), { status: 400 });
+  }
 
+  const rateLimited = checkRateLimit(request, 'youtube-source', 20);
+  if (rateLimited) return rateLimited;
+
+  const channelId = url.searchParams.get('channelId')?.trim();
   if (!channelId) {
     return new Response(JSON.stringify({ error: 'channelId required' }), { status: 400 });
   }
+  if (!CHANNEL_ID_PATTERN.test(channelId)) {
+    return new Response(JSON.stringify({ error: 'Invalid channelId' }), { status: 400 });
+  }
 
-  const ck = cacheKey(channelId);
-  const cached = await getCached<{ videos: any[]; status: string; errorMessage?: string }>(ck);
+  let channelName: string;
+  try {
+    const { channels } = await fetchChannels();
+    const channel = channels.find(item => item.youtube === channelId);
+    if (!channel) {
+      return new Response(JSON.stringify({ error: 'Unknown channelId' }), { status: 404 });
+    }
+    channelName = channel.name;
+  } catch {
+    return new Response(JSON.stringify({ error: 'Channel inventory unavailable' }), { status: 503 });
+  }
+
+  const cacheKeyValue = cacheKey(channelId);
+  const cached = await getCached<{ videos: unknown[]; channelId: string; name: string; status: string; errorMessage?: string }>(cacheKeyValue);
   if (cached) {
     return new Response(JSON.stringify(cached), {
       headers: edgeCacheHeaders(300),
@@ -32,21 +55,31 @@ export const GET: APIRoute = async ({ url }) => {
 
   let status = 'error';
   let errorMessage: string | undefined;
-  const videos: any[] = [];
+  const videos: Array<{
+    videoId: string;
+    channelId: string;
+    title: string;
+    author: string;
+    thumbnail: string;
+    link: string;
+    published: string;
+  }> = [];
 
   try {
-    const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, {
+    const response = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, {
       signal: AbortSignal.timeout(8000),
       headers: { 'User-Agent': BROWSER_UA },
     });
 
-    if (!res.ok) {
-      errorMessage = `YouTube respondió con código HTTP ${res.status}`;
+    if (!response.ok) {
+      errorMessage = `YouTube respondió con código HTTP ${response.status}`;
       throw new Error(errorMessage);
     }
 
-    const xml = await res.text();
-    const parsed = parser.parse(xml);
+    const xml = await response.text();
+    const parsed = parser.parse(xml) as {
+      feed?: { entry?: Record<string, any> | Array<Record<string, any>> };
+    };
     const entries = parsed.feed?.entry;
 
     if (!entries) {
@@ -54,43 +87,41 @@ export const GET: APIRoute = async ({ url }) => {
     } else {
       const list = Array.isArray(entries) ? entries : [entries];
       const today = todayChile();
-      const todayEntries = list.filter((e: any) => {
-        const pub = e.published || '';
-        return pub.startsWith(today);
-      });
+      const todayEntries = list.filter(entry => String(entry.published || '').startsWith(today));
 
       if (todayEntries.length === 0) {
         status = 'empty';
       } else {
         status = 'ok';
         const count = Math.min(todayEntries.length, MAX_PER_CHANNEL);
-        for (let j = 0; j < count; j++) {
-          const entry = todayEntries[j];
+        for (let index = 0; index < count; index++) {
+          const entry = todayEntries[index];
+          const videoId = String(entry['yt:videoId'] || '');
           videos.push({
-            videoId: entry['yt:videoId'] || '',
+            videoId,
             channelId,
-            title: entry.title || '',
-            author: name,
-            thumbnail: entry['media:group']?.['media:thumbnail']?.['@_url'] || `https://i.ytimg.com/vi/${entry['yt:videoId']}/hqdefault.jpg`,
-            link: entry['yt:videoId'] ? `https://youtube.com/watch?v=${entry['yt:videoId']}` : '',
-            published: entry.published || '',
+            title: String(entry.title || ''),
+            author: channelName,
+            thumbnail: String(entry['media:group']?.['media:thumbnail']?.['@_url'] || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`),
+            link: videoId ? `https://youtube.com/watch?v=${videoId}` : '',
+            published: String(entry.published || ''),
           });
         }
       }
     }
-  } catch (e) {
-    if (e instanceof DOMException && e.name === 'AbortError') {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
       errorMessage = 'Timeout al conectar con YouTube';
     } else if (!errorMessage) {
-      errorMessage = e instanceof Error ? e.message : 'Error desconocido';
+      errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     }
     status = 'error';
   }
 
-  const result = { videos, channelId, name, status, errorMessage };
-  await setCache(ck, result, 15 * 60 * 1000);
+  const result = { videos, channelId, name: channelName, status, errorMessage };
+  await setCache(cacheKeyValue, result, 5 * 60 * 1000);
 
   return new Response(JSON.stringify(result), {
-    headers: edgeCacheHeaders(900),
+    headers: edgeCacheHeaders(300),
   });
 };

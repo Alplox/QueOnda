@@ -401,7 +401,7 @@ export function WeatherWidget() {
     }
   }, [savedNames]);
 
-  async function handleSearch(e: React.FormEvent) {
+  async function handleSearch(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const q = searchQuery.trim();
     if (!q) return;

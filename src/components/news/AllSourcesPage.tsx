@@ -803,7 +803,6 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
             {addingSources.size > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {[...addingSources].map(key => {
-                  const src = allSources.find(s => s.sourceKey === key);
                   return (
                     <div key={key} className="rounded-xl bg-base-200 border border-base-300 overflow-hidden animate-pulse">
                       <div className="px-3 py-2.5 border-b border-base-300 flex items-center gap-1.5">

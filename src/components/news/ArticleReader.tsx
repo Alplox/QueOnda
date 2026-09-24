@@ -21,6 +21,7 @@ interface Props {
 
 const fetchCache = new Map<string, ArticleContent>();
 const CONTENT_TOO_SHORT = 300;
+const ARTICLE_API_VERSION = 'v2';
 const siteLabel = (url: string) => {
   try { return `Abrir en ${new URL(url).hostname.replace(/^www\./, '')}`; } catch { return 'Abrir en sitio original'; }
 };
@@ -84,7 +85,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
     setError(null);
     setFetchAttempted(false);
 
-    fetch(`/api/article?url=${encodeURIComponent(url)}`, { signal: controller.signal })
+    fetch(`/api/article?v=${ARTICLE_API_VERSION}&url=${encodeURIComponent(url)}`, { signal: controller.signal })
       .then(r => r.json())
       .then(data => {
         if (data.error) {
@@ -119,7 +120,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
 
     setLoading(true);
     setError(null);
-    fetch(`/api/article?url=${encodeURIComponent(url)}`)
+    fetch(`/api/article?v=${ARTICLE_API_VERSION}&url=${encodeURIComponent(url)}`)
       .then(r => r.json())
       .then(data => {
         if (data.error) { setError({ type: data.error, message: data.message || 'No se pudo cargar el artículo' }); return; }

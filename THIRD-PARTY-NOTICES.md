@@ -158,4 +158,4 @@ Los mapas Leaflet usan teselas de CARTO con atribución a OSM y CARTO
 ---
 
 > Los textos de licencia completos de cada paquete se distribuyen dentro del
-> propio `node_modules/` y son reproducibles con `npm` / `npm ci`.
+> propio `node_modules/` y son reproducibles con `pnpm install --frozen-lockfile`.

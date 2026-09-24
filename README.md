@@ -9,6 +9,7 @@ Agregador de noticias chileno + TV/radio en vivo en un dashboard de una sola pá
 ## Stack
 
 - **Astro 7** (SSR) + **React 19** + **TypeScript**
+- **pnpm 11** como package manager
 - **Tailwind CSS 4** + **DaisyUI 5** (35 temas)
 - **Cloudflare Pages** (despliegue SSR)
 - **Cache API** (caché server-side, dos tier: in-memory + edge)
@@ -16,12 +17,13 @@ Agregador de noticias chileno + TV/radio en vivo en un dashboard de una sola pá
 ## Scripts
 
 ```bash
-npm run dev             # localhost:4321
-npm run build           # dist/
-npm run preview         # npx astro preview
-npm run update-feeds    # regenera src/lib/feeds-database.json
-npm run update-stops    # regenera src/lib/stops-database.json (RED)
-npm run update-holidays # regenera src/lib/holidays.json (feriados)
+pnpm install --frozen-lockfile # instala exactamente pnpm-lock.yaml
+pnpm dev                      # localhost:4321
+pnpm build                    # dist/ + restructure para Cloudflare Pages
+pnpm preview                  # previsualiza el build
+pnpm run update-feeds         # regenera src/lib/feeds-database.json
+pnpm run update-stops         # regenera src/lib/stops-database.json (RED)
+pnpm run update-holidays      # regenera src/lib/holidays.json (feriados)
 ```
 
 ## Secciones

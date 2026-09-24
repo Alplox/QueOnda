@@ -124,19 +124,36 @@ export function AirQualityMap({ stations }: Props) {
           opacity: 0.9,
           fillOpacity: 0.85,
         });
-        const pm25 = s.pm25
-          ? `<strong>MP 2,5:</strong> ${s.pm25.value} µg/m³ — ${AIR_STATUS[s.pm25.statusCode]?.label ?? s.pm25.status}`
-          : '';
-        const pm10 = s.pm10
-          ? `<br/><strong>MP 10:</strong> ${s.pm10.value} µg/m³`
-          : '';
-        const content = `<div style="font-family:sans-serif;font-size:12px;color:#222">
-            <strong>${s.nombre}</strong><br/>
-            <span>${[s.comuna, s.region].filter(Boolean).join(' · ')}</span><br/>
-            ${pm25}${pm10}${s.pm25?.datetime ? `<br/><em>${s.pm25.datetime} hrs.</em>` : ''}
-          </div>`;
-        marker.bindTooltip(content, { sticky: true });
-        marker.bindPopup(content);
+        const createContent = () => {
+          const content = document.createElement('div');
+          content.style.cssText = 'font-family:sans-serif;font-size:12px;color:#222';
+          const name = document.createElement('strong');
+          name.textContent = s.nombre;
+          const location = document.createElement('span');
+          location.textContent = [s.comuna, s.region].filter(Boolean).join(' · ');
+          content.append(name, document.createElement('br'), location);
+
+          for (const [label, row] of [['MP 2,5', s.pm25], ['MP 10', s.pm10]] as const) {
+            if (!row) continue;
+            const line = document.createElement('div');
+            const metric = document.createElement('strong');
+            metric.textContent = `${label}:`;
+            const detail = label === 'MP 2,5'
+              ? ` ${row.value} µg/m³ — ${AIR_STATUS[row.statusCode]?.label ?? row.status}`
+              : ` ${row.value} µg/m³`;
+            line.append(metric, document.createTextNode(detail));
+            content.append(document.createElement('br'), line);
+          }
+
+          if (s.pm25?.datetime) {
+            const time = document.createElement('em');
+            time.textContent = `${s.pm25.datetime} hrs.`;
+            content.append(document.createElement('br'), time);
+          }
+          return content;
+        };
+        marker.bindTooltip(createContent(), { sticky: true });
+        marker.bindPopup(createContent());
         marker.on('popupopen', () => marker.closeTooltip());
         markers.push(marker);
       }

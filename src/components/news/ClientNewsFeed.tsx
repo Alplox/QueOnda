@@ -302,11 +302,14 @@ export function ClientNewsFeed() {
   }
 
   function saveBatchToIDB(sources: SourceFeed[], results: Array<{ name: string; articles: Article[]; error: string | null }>) {
-    const entries: BatchCacheEntry[] = sources.map((src, i) => ({
-      sourceKey: src.sourceKey,
-      articles: results[i]?.articles || [],
-      error: results[i]?.error || null,
-    }));
+    const entries: BatchCacheEntry[] = sources.map(source => {
+      const result = results.find(item => item.name === source.source || item.name === source.name);
+      return {
+        sourceKey: source.sourceKey,
+        articles: result?.articles || [],
+        error: result?.error || null,
+      };
+    });
     cacheSet(batchCacheKey(sources), entries);
   }
 
@@ -323,7 +326,7 @@ export function ClientNewsFeed() {
       const res = await fetch('/api/news/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sources: [{ url: source.url, name: source.name }] }),
+        body: JSON.stringify({ sources: [source] }),
         signal: AbortSignal.timeout(15000),
       });
       const data = await res.json();
@@ -566,10 +569,6 @@ export function ClientNewsFeed() {
     return () => clearInterval(interval);
   }, [skipToasts.length]);
 
-  function cancelSkip(slotIndex: number) {
-    setSkipToasts(prev => prev.filter(t => t.slotIndex !== slotIndex));
-  }
-
   const handleCancelSkip = useCallback((slotIndex: number) => {
     setSkipToasts(prev => prev.filter(t => t.slotIndex !== slotIndex));
   }, []);
@@ -595,7 +594,6 @@ export function ClientNewsFeed() {
     <div className="space-y-3">
       <NewsFeed
         clusters={clusters}
-        articles={allArticles}
         sourceResults={flatSourceResults}
         trending={trending}
         allSources={allSources}

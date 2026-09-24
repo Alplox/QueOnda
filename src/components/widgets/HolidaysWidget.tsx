@@ -127,7 +127,6 @@ export function HolidaysWidget() {
   }
 
   const next = getNextHoliday(holidays);
-  const pastHolidays = holidays.filter((h) => isPast(h.date));
 
   return (
     <div>

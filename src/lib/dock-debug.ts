@@ -73,7 +73,7 @@ export function initDockDebugOverlay() {
   setInterval(() => {
     const sheet = document.getElementById('section-sheet');
     const dock = document.getElementById('bottom-nav');
-    const btt = document.querySelector('button[aria-label="Volver arriba"]');
+    const btt = document.querySelector<HTMLButtonElement>('button[aria-label="Volver arriba"]');
     const player = document.getElementById('sticky-radio-player');
     const parts: string[] = [`probe y=${Math.round(window.scrollY)} vh=${window.innerHeight} lay=${document.documentElement.clientHeight} gap=${Math.max(0, window.innerHeight - document.documentElement.clientHeight)}`];
     if (sheet) {
@@ -168,7 +168,8 @@ export function initDockDebugOverlay() {
       ta.focus();
       ta.select();
       try {
-        document.execCommand('copy');
+        const legacyDocument = document as unknown as { execCommand: (command: string) => boolean };
+        legacyDocument.execCommand('copy');
         btn.textContent = '¡copiado!';
         setTimeout(() => ta.remove(), 600);
       } catch {

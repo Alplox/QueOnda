@@ -66,8 +66,8 @@ export function AirQualityWidget() {
   // Phase 0: instant render from IDB cache
   useEffect(() => {
     idbGet<AirData>(IDB_KEY).then(cached => {
-      if (cached) {
-        setData(cached);
+      if (cached?.data) {
+        setData(cached.data);
         setLoading(false);
       }
     });

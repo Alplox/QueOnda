@@ -26,11 +26,11 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.1.1",
+    "@astrojs/cloudflare": "^14.3.3",
     "@astrojs/react": "^6.0.1",
     "@mozilla/readability": "^0.6.0",
     "@tailwindcss/vite": "^4.0.0",
-    "astro": "^7.0.6",
+    "astro": "^7.3.5",
     "chart.js": "^4.5.1",
     "cheerio": "^1.2.0",
     "daisyui": "^5.5.23",
@@ -53,5 +53,6 @@
     "adm-zip": "^0.6.0",
     "typescript": "^5.9.3",
     "yauzl": "^3.4.0"
-  }
+  },
+  "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"
 }

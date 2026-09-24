@@ -40,7 +40,8 @@ export async function copyToClipboard(text: string): Promise<ShareResult> {
     ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
-    const ok = document.execCommand('copy');
+    const legacyDocument = document as unknown as { execCommand: (command: string) => boolean };
+    const ok = legacyDocument.execCommand('copy');
     ta.remove();
     return ok ? 'copied' : 'failed';
   } catch {

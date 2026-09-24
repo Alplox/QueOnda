@@ -24,7 +24,6 @@ interface SkipToast {
 
 interface Props {
   clusters: NewsCluster[];
-  articles: Article[];
   sourceResults: SourceResult[];
   trending: string[];
   allSources: FeedSource[];
@@ -91,10 +90,6 @@ function SourceErrorPanel({ sourceResults, onRetry }: { sourceResults: SourceRes
   );
 }
 
-function extractDomain(url: string): string {
-  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
-}
-
 const SKELETON_LINE_WIDTHS = ['w-full', 'w-4/5', 'w-3/4', 'w-5/6', 'w-2/3', 'w-11/12'];
 
 function LoadingSkeleton() {
@@ -137,7 +132,7 @@ function ResponsiveSkeleton() {
 }
 
 export function NewsFeed({
-  clusters, articles, sourceResults, trending, allSources, activeTag,
+  clusters, sourceResults, trending, allSources, activeTag,
   loading, inventoryError, onRetry,
   slots, usedSourceKeys, pinnedSources, triedSources,
   onSourceChange, onRetrySlot, onClearSlot, onTogglePin,
@@ -148,7 +143,7 @@ export function NewsFeed({
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | '3d' | 'week'>('all');
-  const [openDirect, setOpenDirect] = useState(() => {
+  const [openDirect] = useState(() => {
     try {
       const saved = localStorage.getItem('open-articles-direct');
       return saved !== null ? saved === 'true' : true;
@@ -157,10 +152,6 @@ export function NewsFeed({
   });
 
   const hasActiveFilter = !!(activeTag || debouncedSearch || dateFilter !== 'all');
-
-  useEffect(() => {
-    localStorage.setItem('open-articles-direct', String(openDirect));
-  }, [openDirect]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);

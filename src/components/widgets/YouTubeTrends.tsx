@@ -168,7 +168,7 @@ export function YouTubeTrends() {
     setIsRetryingAll(true);
     const results = await Promise.allSettled(
       chs.map(ch =>
-        fetch(`/api/youtube/source?channelId=${encodeURIComponent(ch.id)}&name=${encodeURIComponent(ch.name)}`)
+        fetch(`/api/youtube/source?channelId=${encodeURIComponent(ch.id)}`)
           .then(r => r.json())
           .then(data => ({ id: ch.id, data })),
       ),
@@ -293,7 +293,7 @@ export function YouTubeTrends() {
   const handleRetryChannel = useCallback(async (ch: ChannelStatus) => {
     setRetryingChannel(ch.id);
     try {
-      const res = await fetch(`/api/youtube/source?channelId=${encodeURIComponent(ch.id)}&name=${encodeURIComponent(ch.name)}`);
+      const res = await fetch(`/api/youtube/source?channelId=${encodeURIComponent(ch.id)}`);
       const data = await res.json();
       setChannels(prev => prev.map(c => c.id === ch.id ? { ...c, status: data.status, count: data.count || 0, errorMessage: data.status === 'error' ? (data.errorMessage || 'Error desconocido') : undefined } : c));
       if (data.status === 'ok' && data.videos) {

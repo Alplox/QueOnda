@@ -1,0 +1,9 @@
+# Native build scripts required by Astro/Vite and the Cloudflare adapter.
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+# Astro 7.3.5 contains the security fixes adopted during the pnpm migration.
+# Remove this exception once the package is older than pnpm's release-age window.
+minimumReleaseAgeExclude:
+  - astro@7.3.5

@@ -513,7 +513,6 @@ export function Garland({ className = '', enhanced = false }: { className?: stri
 export function FiestasCountdown() {
   const [data, setData] = useState<{ timeLeft: TimeLeft | null; phase: 'before' | 'celebration' | 'after' } | null>(null);
   const [cardIndex, setCardIndex] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
   const [secTick, setSecTick] = useState(0);
   const [msgIndex, setMsgIndex] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -533,14 +532,6 @@ export function FiestasCountdown() {
       });
     }, 1000);
     return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 640px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
   }, []);
 
   useEffect(() => {

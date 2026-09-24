@@ -3,12 +3,6 @@ import { fetchGetOnBrdJobs } from './sources/getonbrd';
 import { fetchWorkAnywhereJobs } from './sources/workanywhere';
 import { fetchRemotiveJobs } from './sources/remotive';
 
-interface FetchResult {
-  jobs: Job[];
-  source: JobSource;
-  ok: boolean;
-}
-
 const LIMIT = 15;
 
 const SOURCE_FETCHERS: Record<JobSource, (limit?: number) => Promise<Job[]>> = {

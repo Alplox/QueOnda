@@ -17,6 +17,8 @@ interface Props {
 export function RouteMap({ stops, routeName, onPickStop }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<{ destroy: () => void } | null>(null);
+  const onPickStopRef = useRef(onPickStop);
+  onPickStopRef.current = onPickStop;
 
   useEffect(() => {
     if (!containerRef.current || stops.length === 0) return;
@@ -58,9 +60,8 @@ export function RouteMap({ stops, routeName, onPickStop }: Props) {
         destroy: () => { observer.disconnect(); map.remove(); instanceRef.current = null; },
       };
 
-      const coords: [number, number][] = stops
-        .filter(s => s.stop_lat && s.stop_lon)
-        .map(s => [s.stop_lat, s.stop_lon]);
+      const locatedStops = stops.filter(stop => stop.stop_lat != null && stop.stop_lon != null);
+      const coords: [number, number][] = locatedStops.map(stop => [stop.stop_lat, stop.stop_lon]);
 
       if (coords.length < 2) return;
 
@@ -71,9 +72,9 @@ export function RouteMap({ stops, routeName, onPickStop }: Props) {
       const markerIndices = new Set([0, coords.length - 1]);
       for (let i = step; i < coords.length - 1; i += step) markerIndices.add(i);
 
-      for (const idx of markerIndices) {
-        const s = stops[idx];
-        const marker = L.circleMarker(coords[idx], {
+      for (const index of markerIndices) {
+        const stop = locatedStops[index];
+        const marker = L.circleMarker(coords[index], {
           radius: 6,
           fillColor: '#e30613',
           color: '#fff',
@@ -81,17 +82,20 @@ export function RouteMap({ stops, routeName, onPickStop }: Props) {
           fillOpacity: 1,
         }).addTo(map);
 
-        const cleanName = s.stop_name?.replace(/^[A-Z0-9]+-/, '') || s.stop_id;
-        marker.bindPopup(`
-          <div style="font-family:sans-serif;font-size:12px">
-            <strong>${s.stop_id}</strong><br/>
-            ${cleanName}<br/>
-            <button
-              onclick="window.__leafletPickStop__('${s.stop_id}')"
-              style="margin-top:4px;padding:2px 8px;font-size:11px;cursor:pointer;background:#e30613;color:#fff;border:none;border-radius:4px"
-            >Consultar llegada</button>
-          </div>
-        `);
+        const cleanName = stop.stop_name.replace(/^[A-Z0-9]+-/, '') || stop.stop_id;
+        const popup = document.createElement('div');
+        popup.style.cssText = 'font-family:sans-serif;font-size:12px';
+        const stopId = document.createElement('strong');
+        stopId.textContent = stop.stop_id;
+        const name = document.createElement('div');
+        name.textContent = cleanName;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = 'Consultar llegada';
+        button.style.cssText = 'margin-top:4px;min-height:24px;padding:3px 8px;font-size:11px;cursor:pointer;background:#e30613;color:#fff;border:none;border-radius:4px';
+        button.addEventListener('click', () => onPickStopRef.current(stop.stop_id));
+        popup.append(stopId, name, button);
+        marker.bindPopup(popup);
       }
 
       map.fitBounds(coords);
@@ -99,12 +103,6 @@ export function RouteMap({ stops, routeName, onPickStop }: Props) {
 
     return () => { destroyed = true; instanceRef.current?.destroy(); };
   }, [stops, routeName]);
-
-  // expose pickStop handler via window
-  useEffect(() => {
-    (window as any).__leafletPickStop__ = onPickStop;
-    return () => { delete (window as any).__leafletPickStop__; };
-  }, [onPickStop]);
 
   return (
     <div className="rounded-xl border border-base-300 overflow-hidden mb-2">

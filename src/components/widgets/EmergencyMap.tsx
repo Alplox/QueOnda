@@ -113,12 +113,23 @@ export function EmergencyMap({ items, focusId }: { items: EmergencyItem[]; focus
         const t = new Date(it.time).toLocaleString('es-CL', {
           day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
         });
-        const content = `<div style="font-family:sans-serif;font-size:12px;color:#222">
-            <strong>M ${it.mag!.toFixed(1)} — ${it.place || it.title}</strong><br/>
-            <span>${t}</span>${it.depth !== undefined ? `<br/><span>Prof: ${it.depth.toFixed(1)} km</span>` : ''}
-          </div>`;
-        marker.bindTooltip(content, { sticky: true });
-        marker.bindPopup(content);
+        const createContent = () => {
+          const content = document.createElement('div');
+          content.style.cssText = 'font-family:sans-serif;font-size:12px;color:#222';
+          const summary = document.createElement('strong');
+          summary.textContent = `M ${it.mag!.toFixed(1)} — ${it.place || it.title}`;
+          const time = document.createElement('span');
+          time.textContent = t;
+          content.append(summary, document.createElement('br'), time);
+          if (it.depth !== undefined) {
+            const depth = document.createElement('span');
+            depth.textContent = `Prof: ${it.depth.toFixed(1)} km`;
+            content.append(document.createElement('br'), depth);
+          }
+          return content;
+        };
+        marker.bindTooltip(createContent(), { sticky: true });
+        marker.bindPopup(createContent());
         marker.on('popupopen', () => marker.closeTooltip());
         markers.push(marker);
         byId.set(it.id, marker);

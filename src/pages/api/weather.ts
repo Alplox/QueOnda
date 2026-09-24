@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
+import { checkRateLimit } from '../../lib/rate-limit';
 
 const DEFAULT_CITIES = [
   { name: 'Santiago', lat: -33.45, lon: -70.67 },
@@ -150,9 +151,26 @@ async function geocode(query: string): Promise<{ name: string; lat: number; lon:
   } catch { return null; }
 }
 
-export const GET: APIRoute = async ({ url }) => {
-  const searchQuery = url.searchParams.get('q');
-  const citiesParam = url.searchParams.get('cities');
+export const GET: APIRoute = async ({ url, request }) => {
+  if ([...url.searchParams.keys()].some(param => param !== 'q' && param !== 'cities')) {
+    return new Response(JSON.stringify({ error: 'Unsupported query parameter' }), { status: 400 });
+  }
+  if (url.searchParams.has('q') && url.searchParams.has('cities')) {
+    return new Response(JSON.stringify({ error: 'Use either q or cities, not both' }), { status: 400 });
+  }
+
+  const rateLimited = checkRateLimit(request, 'weather', 30);
+  if (rateLimited) return rateLimited;
+
+  const searchQuery = url.searchParams.get('q')?.trim() || undefined;
+  const cityNames = (url.searchParams.get('cities') || '')
+    .split(',')
+    .map(city => city.trim())
+    .filter(Boolean);
+  if ((searchQuery?.length ?? 0) > 80 || cityNames.length > 10 || cityNames.some(city => city.length > 80)) {
+    return new Response(JSON.stringify({ error: 'Invalid city query' }), { status: 400 });
+  }
+  const citiesParam = cityNames.length > 0 ? cityNames.join(',') : undefined;
   const cacheKey = (searchQuery ?? citiesParam ?? '__default__').toLowerCase().trim();
 
   const weather = await dedupeFetch<Record<string, unknown> | null>(`weather:${cacheKey}`, async () => {
@@ -174,14 +192,13 @@ export const GET: APIRoute = async ({ url }) => {
 
       let cities = DEFAULT_CITIES;
       if (citiesParam) {
-        const names = citiesParam.split(',').map(s => s.trim()).filter(Boolean);
-        const resolved: { name: string; lat: number; lon: number }[] = [];
-        for (const name of names) {
-          const existing = DEFAULT_CITIES.find(c => c.name.toLowerCase() === name.toLowerCase());
-          if (existing) { resolved.push(existing); }
-          else { const geo = await geocode(name); if (geo) resolved.push(geo); }
-        }
-        if (resolved.length > 0) cities = resolved;
+        const names = citiesParam.split(',').map(city => city.trim()).filter(Boolean);
+        const resolved = await Promise.all(names.map(async name => {
+          const existing = DEFAULT_CITIES.find(city => city.name.toLowerCase() === name.toLowerCase());
+          return existing ?? geocode(name);
+        }));
+        const validCities = resolved.filter((city): city is NonNullable<typeof city> => city !== null);
+        if (validCities.length > 0) cities = validCities;
       }
 
       let weatherMap = await fetchOpenMeteo(cities);

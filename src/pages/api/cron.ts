@@ -10,12 +10,14 @@ import { XMLParser } from 'fast-xml-parser';
 const CRON_SECRET = import.meta.env.CRON_SECRET || '';
 
 export const GET: APIRoute = async ({ request }) => {
-  // ponytail: simple shared-secret auth (set CRON_SECRET env var in Cloudflare dashboard)
-  if (CRON_SECRET) {
-    const auth = request.headers.get('Authorization');
-    if (auth !== `Bearer ${CRON_SECRET}`) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
+  // Fail closed: an unset secret must never expose this expensive public warm-up route.
+  if (!CRON_SECRET) {
+    return new Response(JSON.stringify({ error: 'CRON_SECRET is not configured' }), { status: 503 });
+  }
+
+  const auth = request.headers.get('Authorization');
+  if (auth !== `Bearer ${CRON_SECRET}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
 
   const warmed: string[] = [];

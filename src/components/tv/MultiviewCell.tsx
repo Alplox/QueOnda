@@ -28,7 +28,6 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
   const [muted, setMuted] = useState(!focused);
   const [showControls, setShowControls] = useState(false);
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const mountedRef = useRef(false);
 
   const signals = channel.signals.filter(s => isPlayable(s.type));
   const currentSignal = signals[signalIndex];

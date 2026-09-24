@@ -66,7 +66,6 @@ export function ClientTV() {
     try { return JSON.parse(localStorage.getItem('tv-multiview-slots') || '[]'); } catch { return []; }
   });
   const [focusedSlot, setFocusedSlot] = useState<number | null>(null);
-  const multiviewGridRef = useRef<HTMLDivElement>(null);
   const dragChannelRef = useRef<{ ch: Channel; ghost: HTMLElement; pointerId: number } | null>(null);
 
   playerRef.current = player;
@@ -307,25 +306,25 @@ export function ClientTV() {
 
   const handleAddToMultiview = useCallback((ch: Channel) => {
     play('interaction.tap');
-    let removed = false;
-    let swapIndex = -1;
+    const existing = multiviewSlots.findIndex(slot => slot.channel.id === ch.id);
+    if (existing !== -1) {
+      setMultiviewSlots(prev => prev.filter((_, index) => index !== existing));
+      setFocusedSlot(prev => {
+        if (prev === existing) return null;
+        return prev !== null && prev > existing ? prev - 1 : prev;
+      });
+      return;
+    }
+
+    const max = maxSlots(multiviewLayout);
     setMultiviewSlots(prev => {
-      const existing = prev.findIndex(s => s.channel.id === ch.id);
-      if (existing !== -1) {
-        removed = true;
-        return prev.filter((_, i) => i !== existing);
-      }
-      const max = maxSlots(multiviewLayout);
       if (prev.length < max) return [...prev, { channel: ch, signalIndex: 0 }];
-      // full: replace focused slot, or last slot
       const target = focusedSlot !== null && focusedSlot < prev.length ? focusedSlot : prev.length - 1;
-      swapIndex = target;
       const next = [...prev];
       next[target] = { channel: ch, signalIndex: 0 };
       return next;
     });
-    if (removed) setFocusedSlot(null);
-  }, [multiviewLayout, focusedSlot]);
+  }, [multiviewLayout, multiviewSlots, focusedSlot]);
 
   const handleRemoveFromMultiview = useCallback((index: number) => {
     setMultiviewSlots(prev => prev.filter((_, i) => i !== index));

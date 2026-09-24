@@ -28,7 +28,7 @@ interface Props {
   onReorder?: (fromIndex: number, toIndex: number) => void;
 }
 
-function EmptySlot({ index }: { index: number }) {
+function EmptySlot() {
   return (
     <div className="relative rounded-xl border-2 border-dashed border-base-300/50 flex items-center justify-center aspect-video bg-base-100/50">
       <div className="text-center pointer-events-none">
@@ -84,7 +84,7 @@ export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, o
 
   function renderCell(index: number) {
     const s = slots[index];
-    if (!s) return <EmptySlot index={index} />;
+    if (!s) return <EmptySlot />;
     return (
       <div className="relative group">
         <MultiviewCell

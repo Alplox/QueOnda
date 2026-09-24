@@ -55,7 +55,6 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const inlineRectRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
-  const mountedRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

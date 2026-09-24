@@ -37,7 +37,11 @@ export function checkRateLimit(request: Request, route: string, maxRequests: num
   const rl = rateLimit({ ip: extractIP(request), maxRequests, route });
   if (!rl.allowed) {
     return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
-      status: 429, headers: { 'Content-Type': 'application/json' }
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(rl.retryAfter ?? Math.ceil(WINDOW_MS / 1000)),
+      },
     });
   }
   return null;

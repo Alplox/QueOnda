@@ -290,7 +290,6 @@ export const SlotCard = memo(function SlotCard({
             selectedSource={selectedSource}
             onSelect={handleSelect}
             onClear={handleClear}
-            pinnedSource={pinnedSource}
             allPinnedSources={allPinnedSources}
             currentSlotIndex={slotIndex}
             onTogglePin={onTogglePin}
@@ -526,7 +525,6 @@ export const SlotCard = memo(function SlotCard({
           selectedSource={selectedSource}
           onSelect={handleSelect}
           onClear={handleClear}
-          pinnedSource={pinnedSource}
           allPinnedSources={allPinnedSources}
           currentSlotIndex={slotIndex}
           onTogglePin={onTogglePin}
@@ -561,7 +559,6 @@ interface DropdownProps {
   selectedSource: SourceFeed | null;
   onSelect: (source: SourceFeed) => void;
   onClear: () => void;
-  pinnedSource: PinnedSource | null;
   allPinnedSources: Record<number, PinnedSource>;
   currentSlotIndex: number;
   onTogglePin: (slotIndex: number, source: SourceFeed) => void;
@@ -574,7 +571,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
   regionFilter, onRegionFilterChange, availableRegions,
   filteredSources,
   selectedSource, onSelect, onClear,
-  pinnedSource, allPinnedSources, currentSlotIndex, onTogglePin,
+  allPinnedSources, currentSlotIndex, onTogglePin,
   style,
   closing,
 }, ref) {
