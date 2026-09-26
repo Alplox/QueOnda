@@ -9,7 +9,7 @@ Chilean news aggregator + live TV/radio streaming in a single-page, ad-free dash
 - Icons: inline SVGs (no icon library). No animation library — CSS transitions + `active:scale` only.
 - Sound: Web Audio API singleton (`src/lib/sound.ts`) — triangle wave + bandpass noise, lazy AudioContext.
 - Deploy: Cloudflare Pages Functions (SSR), `nodejs_compat`, `@astrojs/cloudflare` v14+ `mode: 'directory'` + `scripts/post-build-pages.mjs` post-build hook.
-- Build: `npm run build && node scripts/post-build-pages.mjs`. Dev `npm run dev`. Regenerators: `npm run update-feeds` | `update-stops` | `update-holidays`.
+- Build: `pnpm build && node scripts/post-build-pages.mjs`. Dev `pnpm dev`. Regenerators: `pnpm update-feeds` | `update-stops` | `update-holidays`.
 
 ## Key Files
 
