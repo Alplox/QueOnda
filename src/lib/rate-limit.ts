@@ -33,14 +33,14 @@ function rateLimit(opts: {
   return { allowed: true, remaining: opts.maxRequests - entry.timestamps.length };
 }
 
-export function checkRateLimit(request: Request, route: string, maxRequests: number): Response | null {
-  const rl = rateLimit({ ip: extractIP(request), maxRequests, route });
+export function checkRateLimit(request: Request, route: string, maxRequests: number, windowMs?: number): Response | null {
+  const rl = rateLimit({ ip: extractIP(request), maxRequests, route, windowMs });
   if (!rl.allowed) {
     return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
       status: 429,
       headers: {
         'Content-Type': 'application/json',
-        'Retry-After': String(rl.retryAfter ?? Math.ceil(WINDOW_MS / 1000)),
+        'Retry-After': String(rl.retryAfter ?? Math.ceil((windowMs ?? WINDOW_MS) / 1000)),
       },
     });
   }

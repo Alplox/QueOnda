@@ -1,10 +1,14 @@
 import type { APIRoute } from 'astro';
 import { getCached, setCache, getStaleCached, dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
+import { checkRateLimit } from '../../lib/rate-limit';
 import { comunaCoords } from '../../lib/comunas-coords';
 import { parseChileLocal } from '../../lib/chile-time';
 
 const CACHE_KEY = 'power';
 const CACHE_TTL = 15 * 60 * 1000;
+// Forced refresh (bypass cache) budget: 1 request per IP per 2 min — SEC has no
+// fallback chain, so unthrottled bypass would hammer their single endpoint.
+const FRESH_WINDOW_MS = 2 * 60 * 1000;
 
 const BASE = 'https://apps.sec.cl/INTONLINEv1/ClientesAfectados/';
 
@@ -37,12 +41,23 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 const toMs = (p: HourPoint) =>
   parseChileLocal(`${p.anho}-${pad2(p.mes)}-${pad2(p.dia)} ${pad2(p.hora)}:00:00`);
 
-export const GET: APIRoute = async () => {
-  const cached = await getCached<Record<string, unknown>>(CACHE_KEY);
-  if (cached) {
-    return new Response(JSON.stringify(cached), {
-      headers: edgeCacheHeaders(300),
-    });
+export const GET: APIRoute = async ({ url, request }) => {
+  if ([...url.searchParams.keys()].some(param => param !== 'fresh')) {
+    return new Response(JSON.stringify({ error: 'Unsupported query parameter' }), { status: 400 });
+  }
+  // ?fresh=1 skips every cache tier and hits SEC directly. The distinct query
+  // string also gives it a separate CDN edge-cache key, so the bypass is real.
+  const fresh = url.searchParams.get('fresh') === '1';
+  if (fresh) {
+    const rateLimited = checkRateLimit(request, 'power-fresh', 1, FRESH_WINDOW_MS);
+    if (rateLimited) return rateLimited;
+  } else {
+    const cached = await getCached<Record<string, unknown>>(CACHE_KEY);
+    if (cached) {
+      return new Response(JSON.stringify(cached), {
+        headers: edgeCacheHeaders(300),
+      });
+    }
   }
 
   try {
@@ -94,8 +109,10 @@ export const GET: APIRoute = async () => {
 
     await setCache(CACHE_KEY, data, CACHE_TTL);
 
+    // Fresh responses get a short edge TTL so a forced refresh isn't served
+    // to the next user from the CDN for the full 5 minutes.
     return new Response(JSON.stringify(data), {
-      headers: edgeCacheHeaders(300),
+      headers: edgeCacheHeaders(fresh ? 60 : 300),
     });
   } catch (err) {
     const stale = await getStaleCached<Record<string, unknown>>(CACHE_KEY);

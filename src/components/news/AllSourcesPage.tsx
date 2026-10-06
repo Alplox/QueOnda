@@ -4,6 +4,7 @@ import { idbGet, idbSet } from '../../lib/idb-cache';
 import { ArticleReader } from './ArticleReader';
 import { extractHost } from '../../lib/url';
 import { loadJSON, saveJSON } from '../../lib/storage';
+import { REGION_LABELS, REGION_SLUGS_NS } from '@/lib/regions';
 import { play } from '@/lib/sound';
 import { navigate } from 'astro:transitions/client';
 import { ChileMap } from './ChileMap';
@@ -13,31 +14,6 @@ const CACHE_TTL = 30 * 60 * 1000;
 const CHUNK_SIZE = 40;
 const STORAGE_SELECTION = 'all-sources-selection';
 const BATCH_CACHE_TTL_HINT = 'Feeds duplicados se muestran una sola vez. Ejemplo: "Noticiero" y "Noticiero - Politica" se cargan como una sola fuente.';
-
-const REGION_LABELS: Record<string, string> = {
-  'arica-y-parinacota': 'XV Arica y Parinacota',
-  tarapaca: 'I Tarapacá',
-  antofagasta: 'II Antofagasta',
-  atacama: 'III Atacama',
-  coquimbo: 'IV Coquimbo',
-  valparaiso: 'V Valparaíso',
-  metropolitana: 'RM Metropolitana',
-  ohiggins: "VI O'Higgins",
-  maule: 'VII Maule',
-  nuble: 'XVI Ñuble',
-  biobio: 'VIII Biobío',
-  araucania: 'IX La Araucanía',
-  'los-rios': 'XIV Los Ríos',
-  'los-lagos': 'X Los Lagos',
-  aysen: 'XI Aysén',
-  magallanes: 'XII Magallanes',
-};
-
-const ALL_REGIONS_ORDERED = [
-  'arica-y-parinacota', 'tarapaca', 'antofagasta', 'atacama', 'coquimbo',
-  'valparaiso', 'metropolitana', 'ohiggins', 'maule', 'nuble',
-  'biobio', 'araucania', 'los-rios', 'los-lagos', 'aysen', 'magallanes',
-];
 
 type PageStatus = 'loading' | 'selecting' | 'fetching' | 'results';
 
@@ -261,7 +237,7 @@ export function AllSourcesPage() {
 
   const availableRegions = useMemo(() => {
     const regionSet = new Set(allSources.filter(s => s.region).map(s => s.region!));
-    return ALL_REGIONS_ORDERED.filter(r => regionSet.has(r));
+    return REGION_SLUGS_NS.filter(r => regionSet.has(r));
   }, [allSources]);
 
   function makeCacheKey(sourceKeys: string[]): string {

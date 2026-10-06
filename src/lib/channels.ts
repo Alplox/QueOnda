@@ -2,6 +2,10 @@ import { getCached, setCache } from './cache';
 
 const CHANNELS_URL = 'https://raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json';
 const IPTV_ORG_URL = 'https://iptv-org.github.io/iptv/countries/cl.m3u';
+// ponytail: the repo's GitHub Pages (fparrav.github.io/mi-iptv/playlist.m3u)
+// currently 404s, so use the raw file + jsDelivr fallback instead
+const MI_IPTV_URL = 'https://raw.githubusercontent.com/fparrav/mi-iptv/main/output/playlist.m3u';
+const MI_IPTV_FALLBACK_URL = 'https://cdn.jsdelivr.net/gh/fparrav/mi-iptv@main/output/playlist.m3u';
 const CACHE_TTL = 60 * 60 * 1000;
 
 export interface Signal {
@@ -130,6 +134,27 @@ export async function fetchIPTVChannels(): Promise<ChannelsData> {
   if (!res.ok) throw new Error(`Failed to fetch iptv-org channels: ${res.status}`);
 
   const m3uText = await res.text();
+  const channels = parseM3U(m3uText);
+
+  const result = { country: 'cl', channels };
+  await setCache(cacheKey, result, CACHE_TTL);
+  return result;
+}
+
+export async function fetchMiIptvChannels(): Promise<ChannelsData> {
+  const cacheKey = 'channels:mi-iptv';
+  const cached = await getCached<ChannelsData>(cacheKey);
+  if (cached) return cached;
+
+  let m3uText: string | null = null;
+  for (const url of [MI_IPTV_URL, MI_IPTV_FALLBACK_URL]) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (res.ok) { m3uText = await res.text(); break; }
+    } catch { /* try next source */ }
+  }
+  if (!m3uText) throw new Error('Failed to fetch mi-iptv channels');
+
   const channels = parseM3U(m3uText);
 
   const result = { country: 'cl', channels };

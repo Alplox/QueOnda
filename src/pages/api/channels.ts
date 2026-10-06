@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { fetchChannels, fetchIPTVChannels } from '../../lib/channels';
+import { fetchChannels, fetchIPTVChannels, fetchMiIptvChannels } from '../../lib/channels';
 import { edgeCacheHeaders } from '../../lib/cache';
 
 export const GET: APIRoute = async ({ request }) => {
@@ -14,14 +14,14 @@ export const GET: APIRoute = async ({ request }) => {
     const source = url.searchParams.get('source') || 'json-teles';
     const category = url.searchParams.get('category') || undefined;
 
-    if (source !== 'json-teles' && source !== 'iptv-org') {
+    if (source !== 'json-teles' && source !== 'iptv-org' && source !== 'mi-iptv') {
       return new Response(JSON.stringify({ error: 'Invalid source' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const data = source === 'iptv-org' ? await fetchIPTVChannels() : await fetchChannels();
+    const data = source === 'iptv-org' ? await fetchIPTVChannels() : source === 'mi-iptv' ? await fetchMiIptvChannels() : await fetchChannels();
     const categories = ['todas', ...new Set(data.channels.map((ch) => ch.category).filter(Boolean))];
 
     if (category && category !== 'todas' && !categories.includes(category)) {

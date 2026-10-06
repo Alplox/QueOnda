@@ -95,7 +95,7 @@ src/
       EmergencyTicker.tsx      # Sticky collapsible alert ticker bar under navbar (client:load)
       EmergencyAlertBar.tsx    # Auto-scrolling alert ticker bar
       PowerOutageWidget.tsx    # SEC clientes sin suministro + mapa Leaflet/OpenFreeMap por comuna + gráfico evolución (client:load)
-      PowerOutageMap.tsx       # Leaflet + OpenFreeMap comuna dot map (theme-aware styles, rank-band circles, filtros región/comuna)
+      PowerOutageMap.tsx       # Leaflet + OpenFreeMap comuna dot map (theme-aware styles, rank-band circles, filtros región/comuna, foco por región vía pin con flyToBounds)
       PowerEvolutionChart.tsx  # Chart.js evolución horaria de clientes sin suministro (24h/48h/72h/7d)
       HolidaysWidget.tsx       # Chilean holidays calendar (client:idle)
       FiestasCountdown.tsx     # Fiestas Patrias countdown (client:idle)
@@ -123,6 +123,7 @@ src/
     idb-cache.ts              # IndexedDB client-side caching utility (idbGet/idbSet/cacheGet/cacheSet)
     chile-time.ts             # parseChileLocal() — Chile-local time→epoch (DST-safe), shared by /api/emergency + EmergencyWidget client coord enrichment
     rate-limit.ts             # In-memory sliding window rate limiter
+    regions.ts                # Canonical region slugs N→S + labels + SEC name normalizer (SlotCard, AllSourcesPage, PowerOutageWidget)
     auto-refresh.ts           # Module singleton that auto-refreshes the emergency section every 5 min + on tab re-focus (60s throttle; always on, no toggle)
     sections.ts               # Section ID/label constants for nav
     storage.ts                # localStorage JSON get/set helpers
@@ -155,7 +156,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | ------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/news?mode=inventory`        | 15 min | `{ allSources }` — OPML source list                                                                                     |
 | `POST /api/news/batch`                | per-source 15 min | `{ articles, sourceResults }` — per-source caching (`rss:{url}`), only fetches uncached sources              |
-| `GET /api/channels?category=`         | 1 hour | `{ channels, categories }` — **used by ClientTV** (server endpoint avoids CORS + subrequest limits)                        |
+| `GET /api/channels?source=`         | 1 hour | `{ channels, categories }` — **used by ClientTV** (server endpoint avoids CORS + subrequest limits). `source`: `json-teles` (default), `iptv-org`, `mi-iptv` (fparrav/mi-iptv M3U con fallback jsDelivr) |
 | `GET /api/finance`                    | 30 min | `{ uf, dolar, euro, ipc, utm }` — **fallback only** (FinanceWidget fetches mindicador/dolarapi directly)               |
 | `GET /api/youtube`                    | 60 min | `{ videos, channelStatuses }` — YouTube Chile trending via RSS                                                          |
 | `GET /api/youtube/source?channelId=&name=` | 5 min | `{ videos, status }` — retry single channel                                                                        |
@@ -168,7 +169,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/sports`                     | 30 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
 | `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
 | `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain (coords attached from Boostr); senapred: 🚨 SAE alerts via Telegram. If Boostr is unreachable from the Worker, EmergencyWidget re-enriches `lat/lon` client-side from Boostr (API is CORS-open) so sismo pins always render |
-| `GET /api/power`                      | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria)                 |
+| `GET /api/power` (+ `?fresh=1` bypass con rate-limit 1/2min por IP) | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria)                 |
 | `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
 | `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
 | `GET /api/radio-stations`             | 1 hour | `{ stations }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits)                              |
@@ -393,7 +394,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 ### Other sources (single source, sin fallback)
 | Sección | Fuente | URL |
 |---------|--------|-----|
-| TV | [json-teles](https://github.com/Alplox/json-teles) | `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` → jsDelivr CDN fallback |
+| TV | [json-teles](https://github.com/Alplox/json-teles) + [iptv-org](https://github.com/iptv-org/iptv) + [mi-iptv](https://github.com/fparrav/mi-iptv) | `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` → jsDelivr CDN fallback; `iptv-org.github.io/iptv/countries/cl.m3u`; `raw.githubusercontent.com/fparrav/mi-iptv/main/output/playlist.m3u` → jsDelivr fallback (el Pages `fparrav.github.io/mi-iptv/playlist.m3u` da 404) |
 | YouTube | YouTube RSS (canales chilenos) | `www.youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) |
 | Google Trends | [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` |
 | Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GavIqMTeb` (Top 50 Chile) |
@@ -429,7 +430,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 - **Static asset caching**: `public/_headers` sets immutable cache for `/_astro/*`, `/emoji/*`, `/cd-disc-*.webp` (1 year) and 86400 for favicons/og-image
 - **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate
   - Critical (rAF): `/api/emergency`
-  - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/air-quality`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`
+  - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/channels?source=mi-iptv`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/air-quality`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`
   - Scheduled: `/api/cron` (external cron job for persistent cache warming)
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)
 - **Map rendering**: Leaflet stays lazy; MapLibre GL/OpenFreeMap and its worker load only when a map is first opened, then are shared across map widgets

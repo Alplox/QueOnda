@@ -21,7 +21,7 @@ function saveFavorites(favs: Set<string>) {
   localStorage.setItem('tv-favorites', JSON.stringify([...favs]));
 }
 
-async function fetchChannelsApi(source: 'json-teles' | 'iptv-org'): Promise<{ channels: Channel[]; categories: string[] } | null> {
+async function fetchChannelsApi(source: 'json-teles' | 'iptv-org' | 'mi-iptv'): Promise<{ channels: Channel[]; categories: string[] } | null> {
   try {
     const r = await fetch(`/api/channels?source=${source}`, { signal: AbortSignal.timeout(10000) });
     if (r.ok) return await r.json();
@@ -71,8 +71,8 @@ export function ClientTV() {
   playerRef.current = player;
   autoPipRef.current = autoPipEnabled;
 
-  const [source, setSource] = useState<'json-teles' | 'iptv-org' | 'custom'>(() => {
-    try { const s = localStorage.getItem('tv-source'); return s === 'iptv-org' || s === 'custom' ? s : 'json-teles'; } catch { return 'json-teles'; }
+  const [source, setSource] = useState<'json-teles' | 'iptv-org' | 'mi-iptv' | 'custom'>(() => {
+    try { const s = localStorage.getItem('tv-source'); return s === 'iptv-org' || s === 'mi-iptv' || s === 'custom' ? s : 'json-teles'; } catch { return 'json-teles'; }
   });
   const [customChannels, setCustomChannels] = useState<Channel[]>(() => {
     try { return JSON.parse(localStorage.getItem('tv-custom-channels') || '[]'); } catch { return []; }
@@ -195,7 +195,7 @@ export function ClientTV() {
       return;
     }
 
-    const idbKey = source === 'iptv-org' ? `${IDB_KEY}:iptv` : IDB_KEY;
+    const idbKey = source === 'iptv-org' ? `${IDB_KEY}:iptv` : source === 'mi-iptv' ? `${IDB_KEY}:mi-iptv` : IDB_KEY;
     let cancelled = false;
     let resolved = false;
 
@@ -212,8 +212,7 @@ export function ClientTV() {
 
     // Phase 1: background fetch → update (server-cached endpoint)
     async function loadChannels() {
-      const apiSource = source === 'iptv-org' ? 'iptv-org' : 'json-teles';
-      const data = await fetchChannelsApi(apiSource);
+      const data = await fetchChannelsApi(source);
       if (cancelled || !data?.channels) return;
       idbSet(idbKey, { channels: data.channels, categories: data.categories }, IDB_TTL);
       setChannels(data.channels);
@@ -504,12 +503,12 @@ export function ClientTV() {
 
       {/* Source selector */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        {(['json-teles', 'iptv-org', 'custom'] as const).map((s) => (
+        {(['json-teles', 'iptv-org', 'mi-iptv', 'custom'] as const).map((s) => (
           <button key={s} onClick={() => handleSourceChange(s)}
             className={`text-[10px] px-2 py-1 rounded-md transition-colors cursor-pointer ${
               source === s ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
             }`}>
-            {s === 'json-teles' ? 'json-teles' : s === 'iptv-org' ? 'iptv-org' : 'Lista M3U'}
+            {s === 'json-teles' ? 'json-teles' : s === 'iptv-org' ? 'iptv-org' : s === 'mi-iptv' ? 'mi-iptv' : 'Lista M3U'}
           </button>
         ))}
         {source === 'custom' && customChannels.length > 0 && (
@@ -705,6 +704,8 @@ export function ClientTV() {
           <a href="https://github.com/Alplox/json-teles" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
         ) : source === 'iptv-org' ? (
           <a href="https://github.com/iptv-org/iptv" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">iptv-org</a>
+        ) : source === 'mi-iptv' ? (
+          <a href="https://github.com/fparrav/mi-iptv" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">mi-iptv</a>
         ) : (
           <span className="text-base-content/50">Lista personalizada</span>
         )}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import leafletCssUrl from 'leaflet/dist/leaflet.css?url';
-import { addOpenFreeMapLayer } from './openfreemap-layer';
+import { addOpenFreeMapLayer, type OpenFreeMapLayer } from './openfreemap-layer';
 
 interface Comuna {
   region: string;
@@ -12,6 +12,7 @@ interface Comuna {
 
 interface Props {
   comunas: Comuna[];
+  focusRegion?: string | null;
 }
 
 // severity bands as fraction of the max-affected comuna
@@ -33,11 +34,14 @@ const BAND_LABEL: Record<Band, string> = {
   low: '< 1%',
 };
 
-export function PowerOutageMap({ comunas }: Props) {
+export function PowerOutageMap({ comunas, focusRegion }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<{ destroy: () => void } | null>(null);
+  const mapRef = useRef<{ destroy: () => void; map: any } | null>(null);
+  const lastFocusRef = useRef<string | null>(null);
   const groupRef = useRef<{ clearLayers: () => void } | null>(null);
   const [ready, setReady] = useState(false);
+  const [mapError, setMapError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   const byRegion = useMemo(() => {
     const m = new Map<string, number>();
@@ -63,59 +67,85 @@ export function PowerOutageMap({ comunas }: Props) {
       return next;
     });
 
-  // build the map once
+  // build the map once (rebuilt if comunas identity changes or on manual retry)
   useEffect(() => {
     if (!containerRef.current || comunas.length === 0) return;
     let destroyed = false;
 
     (async () => {
-      // ponytail: ?url import + <link> instead of import('*.css') — Vite's CSS preload helper
-      // rejects on first load in the Workers SSR env, which killed the whole map init
-      const L = await import('leaflet');
-      if (destroyed || !containerRef.current) return;
-      if (!document.querySelector('link[data-leaflet]')) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.dataset.leaflet = '';
-        link.href = leafletCssUrl;
-        document.head.appendChild(link);
-      }
+      let map: import('leaflet').Map | null = null;
+      try {
+        // ponytail: ?url import + <link> instead of import('*.css') — Vite's CSS preload helper
+        // rejects on first load in the Workers SSR env, which killed the whole map init
+        const L = await import('leaflet');
+        if (destroyed || !containerRef.current) return;
+        if (!document.querySelector('link[data-leaflet]')) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.dataset.leaflet = '';
+          link.href = leafletCssUrl;
+          document.head.appendChild(link);
+        }
 
-      const map = L.map(containerRef.current, {
-        zoomControl: true,
-        attributionControl: true,
-        minZoom: 1,
-        maxBounds: [[-85, -180], [85, 180]],
-        maxBoundsViscosity: 1,
-      }).setView([-35.5, -71], 5);
+        map = L.map(containerRef.current, {
+          zoomControl: true,
+          attributionControl: true,
+          minZoom: 1,
+          maxBounds: [[-85, -180], [85, 180]],
+          maxBoundsViscosity: 1,
+        }).setView([-35.5, -71], 5);
 
-      const isDark = () => !document.documentElement.classList.contains('light-theme');
-      const basemap = await addOpenFreeMapLayer(map, isDark());
-      if (destroyed) {
-        basemap.destroy();
-        map.remove();
-        return;
-      }
-
-      // swap basemap live on theme change
-      const observer = new MutationObserver(() => basemap.setDark(isDark()));
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-      const group = L.layerGroup().addTo(map);
-      groupRef.current = group;
-      mapRef.current = {
-        destroy: () => {
-          observer.disconnect();
-          basemap.destroy();
+        const isDark = () => !document.documentElement.classList.contains('light-theme');
+        let basemap: OpenFreeMapLayer | null = null;
+        try {
+          basemap = await addOpenFreeMapLayer(map, isDark());
+        } catch {
+          // maplibre unavailable (stale Vite pre-bundle in dev, blocked CDN…) —
+          // OSM raster fallback so markers still render instead of a dead map
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          }).addTo(map);
+        }
+        if (destroyed) {
+          try { basemap?.destroy(); } catch { /* already torn down */ }
           map.remove();
-          mapRef.current = null;
-        },
-      };
-      setReady(true);
+          return;
+        }
+
+        // swap vector basemap live on theme change (raster fallback stays as-is)
+        let observer: MutationObserver | null = null;
+        if (basemap) {
+          const current = basemap;
+          observer = new MutationObserver(() => current.setDark(isDark()));
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        const group = L.layerGroup().addTo(map);
+        groupRef.current = group;
+        mapRef.current = {
+          destroy: () => {
+            try { observer?.disconnect(); } catch { /* already torn down */ }
+            try { basemap?.destroy(); } catch { /* already torn down */ }
+            map?.remove();
+            mapRef.current = null;
+          },
+          map,
+        };
+        setMapError(false);
+        setReady(true);
+      } catch {
+        // Never leave a half-built map on the container: L.map() succeeded but a
+        // later step threw → the div keeps _leaflet_id and every re-init would die
+        // with "Map container is already initialized". Remove it so retry works.
+        try { map?.remove(); } catch { /* already torn down */ }
+        mapRef.current = null;
+        if (!destroyed) setMapError(true);
+      }
     })();
 
-    return () => { destroyed = true; mapRef.current?.destroy(); };
-  }, [comunas]);
+    return () => { destroyed = true; try { mapRef.current?.destroy(); } catch { /* already torn down */ } };
+  }, [comunas, retryKey]);
 
   // render circles whenever filters change
   useEffect(() => {
@@ -157,6 +187,24 @@ export function PowerOutageMap({ comunas }: Props) {
     })();
   }, [ready, filtered, maxFiltered, hidden]);
 
+  // focus a region from the outside (pin button on a region row): filter to it
+  // and fly there once the map is ready — same pattern as EmergencyMap focusId
+  useEffect(() => {
+    if (!ready || !mapRef.current) return;
+    if (!focusRegion) { lastFocusRef.current = null; return; }
+    if (focusRegion === lastFocusRef.current) return;
+    lastFocusRef.current = focusRegion;
+    setRegion(focusRegion);
+    setComuna('');
+    const pts = comunas.filter((c) => c.region === focusRegion);
+    if (pts.length === 0) return;
+    (async () => {
+      const L = await import('leaflet');
+      const bounds = L.latLngBounds(pts.map((c) => [c.lat, c.lon] as [number, number]));
+      mapRef.current?.map.flyToBounds(bounds.pad(0.3), { duration: 0.8 });
+    })();
+  }, [ready, focusRegion, comunas]);
+
   if (comunas.length === 0) return null;
 
   return (
@@ -190,7 +238,20 @@ export function PowerOutageMap({ comunas }: Props) {
         </select>
       </div>
 
-      <div ref={containerRef} className="h-[340px] w-full rounded-xl border border-base-300 overflow-hidden" />
+      {mapError ? (
+        <div className="h-[340px] w-full rounded-xl border border-base-300 overflow-hidden flex flex-col items-center justify-center gap-2 bg-base-200">
+          <p className="text-xs text-base-content/70">No se pudo cargar el mapa.</p>
+          <button
+            type="button"
+            onClick={() => { setMapError(false); setRetryKey((k) => k + 1); }}
+            className="px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer"
+          >
+            Reintentar
+          </button>
+        </div>
+      ) : (
+        <div key={retryKey} ref={containerRef} className="h-[340px] w-full rounded-xl border border-base-300 overflow-hidden" />
+      )}
 
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-base-content/70">
         {(Object.keys(BAND_LABEL) as Band[]).map((b) => {

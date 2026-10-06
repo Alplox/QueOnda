@@ -5,31 +5,7 @@ import { ArticleReader } from './ArticleReader';
 import { FaviconImg } from './FaviconImg';
 import { play } from '@/lib/sound';
 import { extractHost } from '@/lib/url';
-
-const REGION_LABELS: Record<string, string> = {
-  'arica-y-parinacota': 'XV Arica y Parinacota',
-  tarapaca: 'I Tarapacá',
-  antofagasta: 'II Antofagasta',
-  atacama: 'III Atacama',
-  coquimbo: 'IV Coquimbo',
-  valparaiso: 'V Valparaíso',
-  metropolitana: 'RM Metropolitana',
-  ohiggins: "VI O'Higgins",
-  maule: 'VII Maule',
-  nuble: 'XVI Ñuble',
-  biobio: 'VIII Biobío',
-  araucania: 'IX La Araucanía',
-  'los-rios': 'XIV Los Ríos',
-  'los-lagos': 'X Los Lagos',
-  aysen: 'XI Aysén',
-  magallanes: 'XII Magallanes',
-};
-
-const ALL_REGIONS_ORDERED = [
-  'arica-y-parinacota', 'tarapaca', 'antofagasta', 'atacama', 'coquimbo',
-  'valparaiso', 'metropolitana', 'ohiggins', 'maule', 'nuble',
-  'biobio', 'araucania', 'los-rios', 'los-lagos', 'aysen', 'magallanes',
-];
+import { REGION_LABELS, REGION_SLUGS_NS } from '@/lib/regions';
 
 interface SkipProgress {
   newSourceName: string;
@@ -219,7 +195,7 @@ export const SlotCard = memo(function SlotCard({
     for (const s of allSources) {
       if (s.region) regionSet.add(s.region);
     }
-    return ALL_REGIONS_ORDERED.filter(k => regionSet.has(k));
+    return REGION_SLUGS_NS.filter(k => regionSet.has(k));
   }, [allSources]);
 
   const regionFilteredSources = regionFilter
