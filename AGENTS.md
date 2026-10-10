@@ -44,7 +44,7 @@ src/
       emergency.ts           # Sismos (server-cached 5 min)
       holidays.ts            # Chilean holidays (server-cached 30 min)
       article.ts             # Article proxy via cheerio (server-cached 10 min per URL)
-      cron.ts                # Cache pre-warming cron endpoint (sports, youtube, trends) — Bearer auth
+      cron.ts                # Cache pre-warming cron endpoint (sports, youtube, power, trends) — Bearer auth
       radio-stations.ts      # Radio stations from radio-browser.info + json-teles fallback (server-cached 1 hour)
       forecast.ts            # DMC pronóstico 5 días parsing (server-cached 1 hour)
   components/
@@ -104,7 +104,7 @@ src/
       openfreemap-layer.ts     # Shared lazy MapLibre/OpenFreeMap basemap + theme switching for Leaflet maps
       ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
   lib/
-    cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch. Exports edgeCacheHeaders(ttlSeconds) for CDN-level edge caching with stale-while-revalidate
+    cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch. Exports edgeCacheHeaders(ttlSeconds) for CDN-level edge caching with stale-while-revalidate, noStoreHeaders() for never-cached error responses, and setLastGood(key, data, ttlMs)/getStaleCached() for the durable "last known good" snapshot used by routes with no fallback chain (power)
     channels.ts              # Channel fetch + cache logic
     feeds-database.json      # @generated local fallback of ~2056 active/verified RSS feeds (regenerate via `pnpm run update-feeds`)
     stops-database.json      # @generated RED bus routes + stops from DTPM GTFS (regenerate via `pnpm run update-stops`)
@@ -169,7 +169,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/sports`                     | 30 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
 | `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
 | `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain (coords attached from Boostr); senapred: 🚨 SAE alerts via Telegram. If Boostr is unreachable from the Worker, EmergencyWidget re-enriches `lat/lon` client-side from Boostr (API is CORS-open) so sismo pins always render |
-| `GET /api/power` (+ `?fresh=1` bypass con rate-limit 1/2min por IP) | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria)                 |
+| `GET /api/power` (+ `?fresh=1` bypass con rate-limit 1/2min por IP) | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria). **Única fuente, sin cadena de fallback**: si la SEC falla sirve el snapshot durable `power:lastgood` (6 h) con `stale: true`; solo si tampoco existe devuelve 502 `SEC no disponible`, y ese error va con `no-store` (nunca se cachea en el edge) |
 | `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
 | `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
 | `GET /api/radio-stations`             | 1 hour | `{ stations }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits)                              |
@@ -400,6 +400,7 @@ Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya
 | Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GavIqMTeb` (Top 50 Chile) |
 | Sports RSS | awesome-chilean-rss DB (categoría `sports`) | múltiples fuentes RSS deportivas chilenas |
 | Air quality | [SINCA · MMA](https://sinca.mma.gob.cl) | `sinca.mma.gob.cl/index.php/json/listadomapa2k19/` — fallback Open-Meteo Air Quality (CAMS) |
+| Power outages | [SEC](https://www.sec.cl) (clientes sin suministro) | `apps.sec.cl/INTONLINEv1/ClientesAfectados/{Get, GetClientesNacional, GetPorFecha}` (POST, body `{}` / `{anho, mes, dia, hora}`) — **única fuente, sin alternativa pública**. La resiliencia no viene de otra API sino del snapshot durable `power:lastgood` (6 h vía `setLastGood`): si la SEC cae, `/api/power` sirve ese snapshot con `stale: true`. La UI oficial que consume el mismo API es `apps.sec.cl/INTONLINEv1/index.aspx` (ver `scripts/actions-page.js`) |
 | Holidays | [Nager.Date](https://date.nager.at) | `date.nager.at/api/v3/publicholidays/{year}/CL` — bundled fallback JSON (auto-updated via `update-holidays-db.mjs`) |
 | Article proxy | [cheerio](https://cheerio.js.org) scraping | URL enviada por el cliente |
 | RED routes DB | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` (build-time via `update-stops-db.mjs`) |

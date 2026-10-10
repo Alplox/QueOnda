@@ -62,7 +62,7 @@ Native elements first, visible `focus-visible` rings (`outline-2 outline-offset-
 - `GET /api/sports` — sports RSS (OPML sports category + keyword-matched) (server 30 min)
 - `GET /api/futbol` — standings+maches via ESPN client-side; RSS articles via server (server 10 min articles)
 - `GET /api/emergency` — sismos: Gael Cloud → Boostr → USGS (|mag≥5.0) (server 5 min); `senapred[]` = official Telegram SAE alerts (parsed, client-side coord enrichment from Boostr if server-side unreachable)
-- `GET /api/power` — POST proxy to SEC clientes sin suministro; comunas via `comunas-coords.ts`; hourly series (server 15 min)
+- `GET /api/power` — POST proxy to SEC clientes sin suministro (single source, no fallback chain); comunas via `comunas-coords.ts`; hourly series (server 15 min). On SEC failure it serves the durable `power:lastgood` snapshot (6 h) with `stale: true`; the terminal 502 `SEC no disponible` is `no-store` so a blip is never edge-cached
 - `GET /api/holidays` — nager.at (server 30 min; bundled fallback `holidays.json` from `update-holidays-db`)
 - `GET /api/radio-stations` — radio-browser.info → json-teles → FALLBACK_RADIOS (server 1 h; IDB 24 h)
 - `GET /api/article?url=` — cheerio content proxy (server 60 min per URL)

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCached, setCache, getStaleCached } from '../../lib/cache';
+import { getCached, setCache, setLastGood, getStaleCached } from '../../lib/cache';
 import { fetchAllSports, deduplicateArticles, pMap, BROWSER_UA } from '../../lib/rss';
 import { fetchChannels } from '../../lib/channels';
 import { XMLParser } from 'fast-xml-parser';
@@ -117,14 +117,18 @@ export const GET: APIRoute = async ({ request }) => {
         const [series, nacional] = await Promise.all([postSec('Get'), postSec('GetClientesNacional')]);
         const last = (series as any[])[series.length - 1];
         if (last) {
-          const regiones = await postSec('GetPorFecha', { anho: last.anho, mes: last.mes, dia: last.dia, hora: last.hora });
           const byRegion = new Map<string, number>();
           const comunas: any[] = [];
-          for (const r of regiones as any[]) {
-            byRegion.set(r.NOMBRE_REGION, (byRegion.get(r.NOMBRE_REGION) ?? 0) + r.CLIENTES_AFECTADOS);
-            const coords = comunaCoords(r.NOMBRE_COMUNA);
-            if (coords) comunas.push({ region: r.NOMBRE_REGION, comuna: r.NOMBRE_COMUNA, affected: r.CLIENTES_AFECTADOS, lat: coords[0], lon: coords[1] });
-          }
+          // Same degradation as /api/power: the regional breakdown must not take
+          // the national figure down with it.
+          try {
+            const regiones = await postSec('GetPorFecha', { anho: last.anho, mes: last.mes, dia: last.dia, hora: last.hora });
+            for (const r of regiones as any[]) {
+              byRegion.set(r.NOMBRE_REGION, (byRegion.get(r.NOMBRE_REGION) ?? 0) + r.CLIENTES_AFECTADOS);
+              const coords = comunaCoords(r.NOMBRE_COMUNA);
+              if (coords) comunas.push({ region: r.NOMBRE_REGION, comuna: r.NOMBRE_COMUNA, affected: r.CLIENTES_AFECTADOS, lat: coords[0], lon: coords[1] });
+            }
+          } catch { /* degrade: national + series are still current */ }
           const total = (nacional as any[])[0]?.CLIENTES ?? 0;
           const affected = last.clientes_afectados;
           const data = {
@@ -139,6 +143,9 @@ export const GET: APIRoute = async ({ request }) => {
             series: (series as any[]).map((p: any) => ({ t: toMs(p), v: p.clientes_afectados })),
           };
           await setCache('power', data, 15 * 60 * 1000);
+          // Keep the durable snapshot warm too — it is what /api/power serves
+          // while SEC is unreachable beyond the 15 min TTL.
+          await setLastGood('power', data, 6 * 60 * 60 * 1000);
           warmed.push('power');
           log.push(`power: ${affected} afectados, ${comunas.length} comunas`);
         } else { throw new Error('SEC empty series'); }
