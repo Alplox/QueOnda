@@ -126,6 +126,7 @@ src/
     regions.ts                # Canonical region slugs N→S + labels + SEC name normalizer (SlotCard, AllSourcesPage, PowerOutageWidget)
     auto-refresh.ts           # Module singleton that auto-refreshes the emergency section every 5 min + on tab re-focus (60s throttle; always on, no toggle)
     sections.ts               # Section ID/label constants for nav
+    sources.ts                # Feed/outlet helpers: foldAccents, mainFeedTier, isBetterMainFeed, outletKey, groupByOutlet, orderByOutlet, resolveOutlet (SlotCard + ClientNewsFeed)
     storage.ts                # localStorage JSON get/set helpers
     url.ts                    # extractHost() URL helper
     url-validator.ts          # SSRF protection / public HTTP(S) URL validation (IPv4/IPv6, local suffixes, credentials)
@@ -242,9 +243,13 @@ All routes return JSON. CORS is not needed (same-origin).
 - **Phase 2 (on mount):** `POST /api/news/batch` fetches all 6 selected sources in parallel (uses defaults from localStorage or fallback list)
 - **No Phase 3** — clustering and trending are computed **client-side** from the 6 active slots' articles
 - Each slot has a dropdown to change its source (from the full inventory). Sources already in use are disabled in other slots' dropdowns
+- The dropdown has a **"Solo principales por sitio"** toggle (`localStorage['news-main-only']`, shared across slots) that keeps only one feed per outlet, collapsing section feeds (`<Medio> - Deportes`, `- San Felipe`, …) into the flagship feed. Best pick per outlet (grouped by the `source` base name) is ranked by `mainFeedTier` (bare outlet name → generic name like "Noticias"/"Últimas"/"Portada" → anything else), then by fewest URL path segments, then shortest URL. The currently selected source is always kept in the list. The dropdown portal cap is 384px so the extra row doesn't squeeze the list/footer
+- The dropdown lists one **outlet per group** (`orderByOutlet` in `src/lib/sources.ts`): the inventory is a concatenation of `news` then `regional` blocks and a few feeds carry a per-feed category differing from their outlet's, which used to scatter an outlet's feeds ~1400 rows apart (132 of 403 outlets were split). Every feed of an outlet stays together, flagship feed first, then A-Z
+- The dropdown has an **A-Z / Z-A** order (`localStorage['news-sort']`, default `az`, shared across slots). Z-A is the exact reverse of A-Z. Fijados stay in slot order above the sorted list
+- Dropdown search is accent-insensitive (`foldAccents`), so "discusion" matches "La Discusión"
 - Slots persist to `localStorage['news-slots']` (array of 6 sourceKeys). Pinned sources persist to `localStorage['news-pins']` (`Record<number, string>` — slot index → sourceKey)
 - Pinning a source to a slot (⭐ pin icon in header or dropdown) ensures it always loads in that slot on page reload, overriding `news-slots`. Sources can only be pinned to one slot at a time. On reload: pinned sources take priority → saved keys → inventory defaults.
-- Default 6 sources: first 6 from inventory (from news/regional categories of awesome-chilean-rss database)
+- Default 6 sources (`DEFAULT_SLOTS` in ClientNewsFeed): fixed outlets **Ciper Chile · Contrapoder Chile · ADN Radio · BioBioChile · La Tercera - Nacional · FastCheckCL**, matched by exact `sourceKey` with an alias fallback via `resolveOutlet()` if a key is renamed upstream. A default that fails to load is replaced by the auto-skip system
 - Trending tags are computed reactively from the 6 active sources' articles whenever a slot changes
 - Tags in trending section are clickable — clicking a tag sets `?tag=` on the URL and scrolls to news section, filtering both source cards and clusters by that keyword
 - Clicking "Limpiar" clears the filter

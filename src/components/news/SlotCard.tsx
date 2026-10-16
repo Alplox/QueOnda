@@ -6,6 +6,12 @@ import { FaviconImg } from './FaviconImg';
 import { play } from '@/lib/sound';
 import { extractHost } from '@/lib/url';
 import { REGION_LABELS, REGION_SLUGS_NS } from '@/lib/regions';
+import { loadJSON, saveJSON } from '@/lib/storage';
+import { foldAccents, isBetterMainFeed, orderByOutlet, outletKey } from '@/lib/sources';
+
+const MAIN_ONLY_KEY = 'news-main-only';
+const SORT_KEY = 'news-sort';
+type SortDir = 'az' | 'za';
 
 interface SkipProgress {
   newSourceName: string;
@@ -14,6 +20,8 @@ interface SkipProgress {
   reason: string;
 }
 
+// Section feeds of an outlet are named "<Medio> - <Sección>"; the feed helpers
+// that tell them apart live in src/lib/sources.ts.
 interface Props {
   slotIndex: number;
   selectedSource: SourceFeed | null;
@@ -60,6 +68,8 @@ export const SlotCard = memo(function SlotCard({
   const [readerArticle, setReaderArticle] = useState<Article | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
+  const [mainOnly, setMainOnly] = useState(false);
+  const [sortDir, setSortDir] = useState<SortDir>('az');
   const [showGradient, setShowGradient] = useState(false);
   const [portalPos, setPortalPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
   const [portalOrigin, setPortalOrigin] = useState<string>('top');
@@ -73,6 +83,7 @@ export const SlotCard = memo(function SlotCard({
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const gap = 8;
+    const MAX_H = 384;
 
     const spaceBelow = vh - rect.bottom;
     const spaceAbove = rect.top;
@@ -82,10 +93,10 @@ export const SlotCard = memo(function SlotCard({
     let maxHeight: number;
     if (preferBelow) {
       top = rect.bottom;
-      maxHeight = Math.min(288, vh - top - gap);
+      maxHeight = Math.min(MAX_H, vh - top - gap);
     } else {
       top = Math.max(gap, rect.top);
-      maxHeight = Math.min(288, top - gap);
+      maxHeight = Math.min(MAX_H, top - gap);
       top = top - maxHeight;
     }
 
@@ -121,6 +132,8 @@ export const SlotCard = memo(function SlotCard({
     setDropdownOpen(true);
     setSearchQuery('');
     setRegionFilter(null);
+    setMainOnly(loadJSON<boolean>(MAIN_ONLY_KEY, false));
+    setSortDir(loadJSON<SortDir>(SORT_KEY, 'az'));
   }
 
   function closeDropdown() {
@@ -185,8 +198,20 @@ export const SlotCard = memo(function SlotCard({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [dropdownOpen]);
 
+  // One "principal" feed per outlet (grouped by the base name derived from feed names)
+  const mainSourceKeys = useMemo(() => {
+    const best = new Map<string, SourceFeed>();
+    for (const s of allSources) {
+      const groupKey = outletKey(s);
+      const current = best.get(groupKey);
+      if (!current || isBetterMainFeed(s, current)) best.set(groupKey, s);
+    }
+    return new Set([...best.values()].map(s => s.sourceKey));
+  }, [allSources]);
+
   const availableSources = allSources.filter(s => {
     if (selectedSource && s.sourceKey === selectedSource.sourceKey) return true;
+    if (mainOnly && !mainSourceKeys.has(s.sourceKey)) return false;
     return !usedSourceKeys.has(s.sourceKey);
   });
 
@@ -203,10 +228,10 @@ export const SlotCard = memo(function SlotCard({
     : availableSources;
 
   const filteredSources = searchQuery
-    ? regionFilteredSources.filter(s =>
-        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.source.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? regionFilteredSources.filter(s => {
+        const q = foldAccents(searchQuery);
+        return foldAccents(s.name).includes(q) || foldAccents(s.source).includes(q);
+      })
     : regionFilteredSources;
 
   const nextAvailable = useMemo(() => {
@@ -233,6 +258,19 @@ export const SlotCard = memo(function SlotCard({
   function handleRetry() {
     play('interaction.subtle');
     onRetry(slotIndex);
+  }
+
+  function handleToggleMainOnly(next: boolean) {
+    play('interaction.toggle');
+    setMainOnly(next);
+    saveJSON(MAIN_ONLY_KEY, next);
+  }
+
+  function handleSortChange(next: SortDir) {
+    if (next === sortDir) return;
+    play('interaction.tap');
+    setSortDir(next);
+    saveJSON(SORT_KEY, next);
   }
 
   if (!selectedSource) {
@@ -262,6 +300,10 @@ export const SlotCard = memo(function SlotCard({
             regionFilter={regionFilter}
             onRegionFilterChange={setRegionFilter}
             availableRegions={availableRegions}
+            mainOnly={mainOnly}
+            onToggleMainOnly={handleToggleMainOnly}
+            sortDir={sortDir}
+            onSortChange={handleSortChange}
             filteredSources={filteredSources}
             selectedSource={selectedSource}
             onSelect={handleSelect}
@@ -497,6 +539,10 @@ export const SlotCard = memo(function SlotCard({
           regionFilter={regionFilter}
           onRegionFilterChange={setRegionFilter}
           availableRegions={availableRegions}
+          mainOnly={mainOnly}
+          onToggleMainOnly={handleToggleMainOnly}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
           filteredSources={filteredSources}
           selectedSource={selectedSource}
           onSelect={handleSelect}
@@ -531,6 +577,10 @@ interface DropdownProps {
   regionFilter: string | null;
   onRegionFilterChange: (r: string | null) => void;
   availableRegions: string[];
+  mainOnly: boolean;
+  onToggleMainOnly: (next: boolean) => void;
+  sortDir: SortDir;
+  onSortChange: (next: SortDir) => void;
   filteredSources: SourceFeed[];
   selectedSource: SourceFeed | null;
   onSelect: (source: SourceFeed) => void;
@@ -545,6 +595,8 @@ interface DropdownProps {
 const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function SourceDropdown({
   searchRef, searchQuery, onSearchChange,
   regionFilter, onRegionFilterChange, availableRegions,
+  mainOnly, onToggleMainOnly,
+  sortDir, onSortChange,
   filteredSources,
   selectedSource, onSelect, onClear,
   allPinnedSources, currentSlotIndex, onTogglePin,
@@ -569,8 +621,8 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
         rest.push(s);
       }
     }
-    return { pinned, rest };
-  }, [filteredSources, slotIndexesBySource]);
+    return { pinned, rest: orderByOutlet(rest, sortDir) };
+  }, [filteredSources, slotIndexesBySource, sortDir]);
 
   return (
     <div ref={ref} style={style} className={`bg-base-300 border border-base-300 rounded-xl shadow-xl overflow-hidden ${closing ? 'animate-[fadeSlideOut_0.12s_ease-in_forwards]' : 'animate-[fadeSlideIn_0.15s_ease-out]'}`}>
@@ -583,17 +635,56 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
           placeholder="Buscar fuente..."
           className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
         />
-        <select
-          value={regionFilter ?? ''}
-          onChange={e => onRegionFilterChange(e.target.value || null)}
-          aria-label="Filtrar por región"
-          className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2 py-1.5 text-base-content focus:outline-none focus:border-primary transition-colors"
-        >
-          <option value="">Todas las regiones</option>
-          {availableRegions.map(r => (
-            <option key={r} value={r}>{REGION_LABELS[r] || r}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-1.5">
+          <select
+            value={regionFilter ?? ''}
+            onChange={e => onRegionFilterChange(e.target.value || null)}
+            aria-label="Filtrar por región"
+            className="flex-1 min-w-0 text-xs bg-base-200 border border-base-300 rounded-lg px-2 py-1.5 text-base-content focus:outline-none focus:border-primary transition-colors"
+          >
+            <option value="">Todas las regiones</option>
+            {availableRegions.map(r => (
+              <option key={r} value={r}>{REGION_LABELS[r] || r}</option>
+            ))}
+          </select>
+          <div role="group" aria-label="Orden de fuentes" className="flex items-center gap-1 shrink-0">
+            {([['az', 'A-Z', 'Ordenar de A a Z por medio'], ['za', 'Z-A', 'Ordenar de Z a A por medio']] as const).map(([dir, label, hint]) => (
+              <button
+                key={dir}
+                type="button"
+                onClick={() => onSortChange(dir)}
+                aria-pressed={sortDir === dir}
+                title={hint}
+                className={`text-[10px] font-medium px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  sortDir === dir
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-base-content/60 hover:text-base-content hover:bg-base-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onToggleMainOnly(!mainOnly)}
+            aria-pressed={mainOnly}
+            title="Muestra solo el feed principal de cada medio y oculta sus secciones (deportes, regiones, etc.)"
+            className={`flex-1 min-w-0 flex items-center gap-1.5 text-[10px] px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
+              mainOnly
+                ? 'bg-primary/15 text-primary font-medium'
+                : 'text-base-content/60 hover:text-base-content hover:bg-base-200'
+            }`}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+              {mainOnly ? <path d="M20 6L9 17l-5-5" /> : <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></>}
+            </svg>
+            <span className="truncate">Solo principales por sitio</span>
+          </button>
+          <span className="shrink-0 text-[10px] text-base-content/50 tabular-nums">{filteredSources.length}</span>
+        </div>
       </div>
       <div className="overflow-y-auto max-h-52">
         {sorted.pinned.length > 0 && (
@@ -677,6 +768,11 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
         {filteredSources.length === 0 && (
           <div className="px-3 py-4 text-xs text-base-content/50 text-center">
             {searchQuery ? 'Sin resultados' : 'No hay fuentes disponibles'}
+            {mainOnly && (
+              <p className="mt-1 text-[10px]">
+                Prueba desactivando &ldquo;Solo principales por sitio&rdquo;.
+              </p>
+            )}
           </div>
         )}
       </div>

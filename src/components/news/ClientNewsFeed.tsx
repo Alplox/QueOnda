@@ -4,6 +4,7 @@ import { NewsFeed } from './NewsFeed';
 import type { clusterArticles, extractTrendingFromArticles } from '../../lib/clustering';
 import { idbGet, idbSet, cacheGet, cacheSet } from '../../lib/idb-cache';
 import { loadJSON, saveJSON } from '../../lib/storage';
+import { resolveOutlet } from '../../lib/sources';
 
 interface SlotData {
   source: SourceFeed | null;
@@ -30,6 +31,21 @@ const STORAGE_KEY_PINS = 'news-pins';
 const SKIP_GRACE_SECONDS = 5;
 const CACHE_TTL = 15 * 60 * 1000; // 15 min, matching server cache
 const CACHE_BATCH_TTL = 10 * 60 * 1000;
+
+/**
+ * Default slots: fixed outlets, in order. Each one is matched by its exact
+ * source key first and falls back to the outlet alias if the key moved
+ * upstream. A slot that still ends up empty takes the first unused source, and
+ * the auto-skip system replaces any default that fails to load.
+ */
+const DEFAULT_SLOTS: Array<{ key: string; alias: string }> = [
+  { key: 'ciper-chile', alias: 'ciper' },
+  { key: 'contrapoder-chile', alias: 'contrapoder' },
+  { key: 'adn-radio', alias: 'adn' },
+  { key: 'biobiochile', alias: 'biobio' },
+  { key: 'la-tercera-nacional', alias: 'la tercera' },
+  { key: 'fastcheckcl', alias: 'fastcheckcl' },
+];
 
 function batchCacheKey(sources: SourceFeed[]): string {
   return 'news-batch:' + sources.map(s => s.sourceKey).sort().join(',');
@@ -62,13 +78,19 @@ function restoreSlotState(sources: SourceFeed[]): { slots: SlotData[]; pins: Rec
     return { source, articles: [], loading: true, error: null };
   });
 
+  const defaults: SourceFeed[] = [];
+  for (const { key, alias } of DEFAULT_SLOTS) {
+    const source = sources.find(s => s.sourceKey === key) ?? resolveOutlet(sources, alias);
+    if (source) defaults.push(source);
+  }
+
   for (let i = 0; i < initial.length; i++) {
     if (initial[i].source) continue;
     const seen = new Set(initial.map(s => s.source?.sourceKey).filter(Boolean));
-    const unused = sources.find(s => !seen.has(s.sourceKey));
-    if (unused) {
-      seen.add(unused.sourceKey);
-      initial[i].source = unused;
+    const next = defaults.find(s => !seen.has(s.sourceKey)) ?? sources.find(s => !seen.has(s.sourceKey));
+    if (next) {
+      seen.add(next.sourceKey);
+      initial[i].source = next;
     }
   }
   for (const slot of initial) {
