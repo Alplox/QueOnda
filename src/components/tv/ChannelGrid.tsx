@@ -9,12 +9,16 @@ interface Props {
   onSelect: (channel: Channel) => void;
   onToggleFavorite: (id: string) => void;
   onDragChannelStart?: (channel: Channel, e: React.PointerEvent) => void;
+  /** Rows of channels to show (1–5). Values above 1 wrap into a horizontally scrolling grid. */
+  rows?: number;
 }
 
-export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onToggleFavorite, onDragChannelStart }: Props) {
+export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onToggleFavorite, onDragChannelStart, rows = 1 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const rowCount = Math.max(1, Math.min(5, Math.round(rows)));
+  const multiRow = rowCount > 1;
 
   const checkScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -29,10 +33,14 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
     checkScroll();
     el.addEventListener('scroll', checkScroll, { passive: true });
     return () => el.removeEventListener('scroll', checkScroll);
-  }, [checkScroll, channels]);
+  }, [checkScroll, channels, rowCount]);
 
   const scrollBy = useCallback((dir: number) => {
-    scrollRef.current?.scrollBy({ left: dir * 280, behavior: 'smooth' });
+    const el = scrollRef.current;
+    if (!el) return;
+    // Step a near-full viewport so long lists stay quick to traverse
+    const amount = Math.max(240, Math.round(el.clientWidth * 0.85));
+    el.scrollBy({ left: dir * amount, behavior: 'smooth' });
   }, []);
 
   if (channels.length === 0) {
@@ -63,8 +71,12 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
       <div ref={scrollRef}
         className="overflow-x-auto"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        {/* Inner padded wrapper — pushes content away from clip edges */}
-        <div className="flex gap-2 py-1.5 px-1.5">
+        {/* Inner padded wrapper — pushes content away from clip edges.
+            1 row = flex row; >1 rows = column-flow grid so items fill down then wrap right. */}
+        <div
+          className={multiRow ? 'grid grid-flow-col gap-2 py-1.5 px-1.5' : 'flex gap-2 py-1.5 px-1.5'}
+          style={multiRow ? { gridTemplateRows: `repeat(${rowCount}, auto)` } : undefined}
+        >
           {channels.map((ch, index) => {
             const isSelected = selectedIds.includes(ch.id);
             const isFav = favorites.has(ch.id);

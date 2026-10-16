@@ -220,6 +220,7 @@ All routes return JSON. CORS is not needed (same-origin).
 - Auto-PiP: `IntersectionObserver` detects section scroll-out-of-view, switches mode directly (no animation)
 - Search input + favorites toggle (localStorage-persisted, heart icon per channel)
 - Channel grid: logo, name, category filter, horizontal scroll with arrow buttons
+- Channel grid density: 1–5 rows (persisted in `localStorage['tv-grid-rows']`); >1 row renders a `grid-auto-flow: column` grid so cards fill down then wrap right while still scrolling horizontally. Sort order A-Z / Z-A toggles (`localStorage['tv-sort']`, `Intl.Collator('es')`), both applied in `ClientTV`'s `filtered` memo and passed down as `rows`/`channels`
 - Signal selector in both modes (HD/WEB/YT/Twitch toggles)
 - Inline mode: custom UI controls (play/pause, progress bar, volume, fullscreen, PiP trigger, auto-hide on idle)
 - PiP mode: compact controls (play/pause, mute, expand, close), draggable via title bar (pointer events with `setPointerCapture`), centered signal selector

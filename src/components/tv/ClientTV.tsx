@@ -38,6 +38,12 @@ export function ClientTV() {
   const [player, setPlayer] = useState<{ channel: Channel; signalIndex: number; mode: 'inline' | 'pip' } | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [gridRows, setGridRows] = useState<number>(() => {
+    try { const v = parseInt(localStorage.getItem('tv-grid-rows') || '', 10); return v >= 1 && v <= 5 ? v : 1; } catch { return 1; }
+  });
+  const [sortOrder, setSortOrder] = useState<'default' | 'az' | 'za'>(() => {
+    try { const v = localStorage.getItem('tv-sort'); return v === 'az' || v === 'za' ? v : 'default'; } catch { return 'default'; }
+  });
   const [autoPipEnabled, setAutoPipEnabled] = useState(() => {
     try { return localStorage.getItem('tv-auto-pip') !== 'false'; } catch { return true; }
   });
@@ -244,8 +250,12 @@ export function ClientTV() {
       const q = search.toLowerCase().trim();
       list = list.filter((ch) => ch.name.toLowerCase().includes(q));
     }
+    if (sortOrder !== 'default') {
+      const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+      list = [...list].sort((a, b) => sortOrder === 'az' ? collator.compare(a.name, b.name) : collator.compare(b.name, a.name));
+    }
     return list;
-  }, [channels, selectedCat, favorites, showFavorites, search]);
+  }, [channels, selectedCat, favorites, showFavorites, search, sortOrder]);
 
   // Auto-PiP observer
   useEffect(() => {
@@ -282,6 +292,10 @@ export function ClientTV() {
   useEffect(() => { localStorage.setItem('tv-view-mode', viewMode); }, [viewMode]);
   useEffect(() => { localStorage.setItem('tv-multiview-layout', multiviewLayout); }, [multiviewLayout]);
   useEffect(() => { localStorage.setItem('tv-multiview-slots', JSON.stringify(multiviewSlots)); }, [multiviewSlots]);
+
+  // Persist channel grid preferences
+  useEffect(() => { localStorage.setItem('tv-grid-rows', String(gridRows)); }, [gridRows]);
+  useEffect(() => { localStorage.setItem('tv-sort', sortOrder); }, [sortOrder]);
 
   // Truncate slots when layout shrinks
   useEffect(() => {
@@ -628,6 +642,40 @@ export function ClientTV() {
             )}
           </div>
 
+          {/* Grid controls: rows + sort */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-0.5" role="group" aria-label="Cantidad de filas de canales">
+              <span className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Filas</span>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} onClick={() => { play('interaction.tap'); setGridRows(n); }}
+                  aria-pressed={gridRows === n}
+                  aria-label={`Mostrar ${n} ${n === 1 ? 'fila' : 'filas'}`}
+                  className={`min-w-[24px] h-6 px-1.5 text-[10px] tabular-nums rounded-md transition-colors cursor-pointer ${
+                    gridRows === n ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
+                  }`}>
+                  {n}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-0.5" role="group" aria-label="Orden de canales">
+              <span className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Orden</span>
+              <button onClick={() => { play('interaction.tap'); setSortOrder((prev) => prev === 'az' ? 'default' : 'az'); }}
+                aria-pressed={sortOrder === 'az'} title="Ordenar de A a Z"
+                className={`min-w-[32px] h-6 px-1.5 text-[10px] rounded-md transition-colors cursor-pointer ${
+                  sortOrder === 'az' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
+                }`}>
+                A-Z
+              </button>
+              <button onClick={() => { play('interaction.tap'); setSortOrder((prev) => prev === 'za' ? 'default' : 'za'); }}
+                aria-pressed={sortOrder === 'za'} title="Ordenar de Z a A"
+                className={`min-w-[32px] h-6 px-1.5 text-[10px] rounded-md transition-colors cursor-pointer ${
+                  sortOrder === 'za' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
+                }`}>
+                Z-A
+              </button>
+            </div>
+          </div>
+
           {/* Row label + count */}
           <div className="flex items-center justify-between px-0.5">
             <p className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider">
@@ -646,6 +694,7 @@ export function ClientTV() {
           <div key={`${selectedCat}-${showFavorites}-${search}`} className="transition-opacity duration-200">
             <ChannelGrid
               channels={filtered}
+              rows={gridRows}
               selectedIds={viewMode === 'multiview' ? multiviewSlots.map(s => s.channel.id) : (player ? [player.channel.id] : [])}
               favorites={favorites}
               onSelect={handleSelect}
