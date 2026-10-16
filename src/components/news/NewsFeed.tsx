@@ -355,42 +355,44 @@ export function NewsFeed({
         )}
       </div>
 
-      {visibleClusters.length > 0 && (
+      {(visibleClusters.length > 0 || (clusters.length > 0 && filteredClusters.length === 0 && activeTag)) && (
         <div className="transition-all duration-300 animate-[fadeSlideIn_0.4s_ease-out]">
           <h3 className="text-xs text-base-content/60 uppercase tracking-wider font-semibold mb-3">
             Agrupadas por tema
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {visibleClusters.map((cluster, index) => (
-              <div key={index} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${index * 60}ms` }}>
-                <NewsClusterCard cluster={cluster} openDirect={openDirect} />
+          {visibleClusters.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {visibleClusters.map((cluster, index) => (
+                  <div key={index} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${index * 60}ms` }}>
+                    <NewsClusterCard cluster={cluster} openDirect={openDirect} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="flex justify-center gap-3 mt-4">
-            {hasMoreClusters && (
-              <button
-                onClick={() => setClusterLimit(c => c + 3)}
-                className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
-              >
-                Cargar más temas
-              </button>
-            )}
-            {clusterLimit > 3 && (
-              <button
-                onClick={() => setClusterLimit(3)}
-                className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
-              >
-                Colapsar todo
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {clusters.length > 0 && filteredClusters.length === 0 && activeTag && (
-        <div className="text-center py-12 text-base-content/50 text-sm">
-          Sin resultados para "{activeTag}"
+              <div className="flex justify-center gap-3 mt-4">
+                {hasMoreClusters && (
+                  <button
+                    onClick={() => setClusterLimit(c => c + 3)}
+                    className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
+                  >
+                    Cargar más temas
+                  </button>
+                )}
+                {clusterLimit > 3 && (
+                  <button
+                    onClick={() => setClusterLimit(3)}
+                    className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
+                  >
+                    Colapsar todo
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12 text-base-content/50 text-sm rounded-xl border border-dashed border-base-300">
+              Sin temas que coincidan con "{activeTag}"
+            </div>
+          )}
         </div>
       )}
 
