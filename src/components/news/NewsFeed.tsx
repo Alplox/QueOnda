@@ -4,6 +4,7 @@ import { NewsClusterCard } from './NewsClusterCard';
 import { TrendingTags } from '../widgets/TrendingTags';
 import { SlotCard } from './SlotCard';
 import { play } from '@/lib/sound';
+import { foldAccents } from '@/lib/sources';
 
 interface SlotData {
   source: SourceFeed | null;
@@ -158,12 +159,14 @@ export function NewsFeed({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const filteredClusters = useMemo(() => activeTag
-    ? clusters.filter(c =>
-        c.keywords.some(k => k.toLowerCase().includes(activeTag.toLowerCase())) ||
-        c.articles.some(a => a.title.toLowerCase().includes(activeTag.toLowerCase()))
-      )
-    : clusters, [clusters, activeTag]);
+  const filteredClusters = useMemo(() => {
+    if (!activeTag) return clusters;
+    const q = foldAccents(activeTag);
+    return clusters.filter(c =>
+      c.keywords.some(k => foldAccents(k).includes(q)) ||
+      c.articles.some(a => foldAccents(a.title).includes(q))
+    );
+  }, [clusters, activeTag]);
 
   const visibleClusters = filteredClusters.slice(0, clusterLimit);
   const hasMoreClusters = clusterLimit < filteredClusters.length;
@@ -181,18 +184,18 @@ export function NewsFeed({
       let filtered = slot.articles;
 
       if (activeTag) {
-        const lower = activeTag.toLowerCase();
+        const q = foldAccents(activeTag);
         filtered = filtered.filter(a =>
-          a.title.toLowerCase().includes(lower) ||
-          (a.description && a.description.toLowerCase().includes(lower))
+          foldAccents(a.title).includes(q) ||
+          (a.description && foldAccents(a.description).includes(q))
         );
       }
 
       if (debouncedSearch) {
-        const lower = debouncedSearch.toLowerCase();
+        const q = foldAccents(debouncedSearch);
         filtered = filtered.filter(a =>
-          a.title.toLowerCase().includes(lower) ||
-          (a.description && a.description.toLowerCase().includes(lower))
+          foldAccents(a.title).includes(q) ||
+          (a.description && foldAccents(a.description).includes(q))
         );
       }
 

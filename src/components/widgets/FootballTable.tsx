@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ArticleReader } from '../news/ArticleReader';
 import { play } from '@/lib/sound';
 import { idbGet, idbSet } from '@/lib/idb-cache';
@@ -44,9 +44,6 @@ interface Article {
   description: string;
   source: string;
 }
-
-const INITIAL_COUNT = 6;
-const LOAD_MORE = 6;
 
 const STALE_STANDINGS = 6 * 60 * 60 * 1000;
 const WARN_STANDINGS = 3 * 60 * 60 * 1000;
@@ -198,13 +195,11 @@ export function FootballTable() {
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('standings');
-  const [limit, setLimit] = useState(INITIAL_COUNT);
   const [readerUrl, setReaderUrl] = useState<string | null>(null);
   const [standingsFetchedAt, setStandingsFetchedAt] = useState<number | null>(null);
   const [matchesFetchedAt, setMatchesFetchedAt] = useState<number | null>(null);
   const [articlesFetchedAt, setArticlesFetchedAt] = useState<number | null>(null);
   const [calendarCache, setCalendarCache] = useState<string[]>([]);
-  const loadMoreRef = useRef<HTMLButtonElement>(null);
   // force re-render cada minuto para que "hace X min" no quede congelado
   const [, setTick] = useState(0);
   useEffect(() => { const id = setInterval(() => setTick(t => t + 1), 60_000); return () => clearInterval(id); }, []);
@@ -319,15 +314,6 @@ export function FootballTable() {
     const id = setInterval(() => { void refreshMatches(); }, interval);
     return () => clearInterval(id);
   }, [matches, refreshMatches]);
-
-  const visibleArticles = articles.slice(0, limit) || [];
-  const hasMore = limit < articles.length;
-
-  useEffect(() => {
-    if (limit > INITIAL_COUNT && loadMoreRef.current) {
-      loadMoreRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [limit]);
 
   const liveMatches = matches.filter(m => m.status === 'IN_PLAY' || m.status === 'PAUSED');
   const finishedMatches = matches.filter(m => m.status === 'FINISHED').reverse();
@@ -658,10 +644,9 @@ export function FootballTable() {
             No hay noticias deportivas disponibles
           </div>
         ) : (
-          <>
-          <div className="divide-y divide-base-300">
-            {visibleArticles.map((article, i) => (
-              <div key={i} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${i * 50}ms` }}>
+          <div className="divide-y divide-base-300 max-h-[440px] overflow-y-auto overscroll-contain">
+            {articles.map((article, i) => (
+              <div key={i} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
               <div className="flex items-center gap-1 group hover:bg-base-300 transition-colors">
                 <button
                   onClick={() => { play('interaction.tap'); window.open(article.link, '_blank', 'noopener,noreferrer'); }}
@@ -692,34 +677,6 @@ export function FootballTable() {
               </div>
             ))}
           </div>
-          <div className="p-3 flex justify-center gap-2 border-t border-base-300">
-            {hasMore && (
-              <button
-                ref={loadMoreRef}
-                onClick={() => setLimit(l => l + LOAD_MORE)}
-                className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-300 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all active:scale-[0.96] cursor-pointer scroll-mt-16"
-              >
-                Cargar más noticias ({articles.length - limit} restantes)
-              </button>
-            )}
-            {limit > INITIAL_COUNT && (
-              <>
-              <button
-                onClick={() => setLimit(l => Math.max(INITIAL_COUNT, l - LOAD_MORE))}
-                className="px-4 py-1.5 text-xs font-medium text-base-content/60 bg-base-300 border border-base-300 rounded-lg hover:text-base-content hover:border-primary/50 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all active:scale-[0.96] cursor-pointer"
-              >
-                Mostrar menos
-              </button>
-              <button
-                onClick={() => setLimit(INITIAL_COUNT)}
-                className="px-4 py-1.5 text-xs font-medium text-base-content/60 bg-base-300 border border-base-300 rounded-lg hover:text-base-content hover:border-primary/50 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all active:scale-[0.96] cursor-pointer"
-              >
-                Colapsar todo
-              </button>
-              </>
-            )}
-          </div>
-          </>
         )}
         </>
       )}

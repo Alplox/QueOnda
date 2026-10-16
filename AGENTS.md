@@ -87,7 +87,7 @@ src/
       TransportWidget.tsx      # Metro grid + estaciones + llegada de buses (client:idle)
       AirQualityWidget.tsx     # Calidad del aire SINCA: peor estación + conteos por banda + filtro región + filas (client:idle; IDB cache: air-quality 30min)
       AirQualityMap.tsx        # Leaflet + OpenFreeMap map de estaciones por estado ICAP (colores oficiales SINCA, filtros región/comuna)
-      FootballTable.tsx        # Chilean football standings + matches + news feed (client:idle; IDB cache: football-standings 6h, football-matches 1h, football-articles 30min; progressive per-tab rendering)
+      FootballTable.tsx        # Chilean football standings + matches + news feed (client:idle; IDB cache: football-standings 6h, football-matches 1h, football-articles 30min; progressive per-tab rendering). La pestaña Noticias renderiza las 25 noticias de /api/sports de una en un contenedor `max-h-[440px] overflow-y-auto overscroll-contain` — sin paginación ni "cargar más": el alto del bloque queda fijo y no empuja las secciones de abajo
       JobList.tsx              # Job listings placeholder (client:idle)
       ClientJobList.tsx        # Client job listings widget (client:idle)
       EmergencyWidget.tsx      # Sismos recientes widget (client:load)
