@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo, type UIEvent } from 'react';
 import { play } from '@/lib/sound';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { idbGet, idbSet } from '@/lib/idb-cache';
@@ -25,6 +25,11 @@ const PER_CHANNEL_KEY = 'youtube-per-channel';
 const PER_CHANNEL_OPTIONS = [1, 2, 3, 6, 10];
 const IDB_KEY = 'youtube-trends';
 const IDB_TTL = 30 * 60 * 1000; // 30 min
+
+// Tarjetas renderizadas por lote dentro de la ventana de scroll. El bloque mantiene
+// alto fijo y el DOM acotado (~200 videos posibles con "10 por canal"), en vez de
+// crecer sin límite con "Mostrar más".
+const VIEW_BATCH = 15;
 
 function YouTubeSkeleton() {
   const [count, setCount] = useState(10);
@@ -91,17 +96,20 @@ function VideoCard({ video, isCompact }: { video: Video; isCompact?: boolean }) 
   );
 }
 
-function MobileCarousel({ videos }: { videos: Video[] }) {
+function MobileCarousel({ videos, onNearEnd }: { videos: Video[]; onNearEnd?: () => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   const checkScroll = useCallback(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    // En ≥sm el carrusel está oculto (display:none): sin layout no hay scroll que
+    // medir (clientWidth/scrollWidth son 0 y el test de "cerca del final" daría true).
+    if (!el || el.clientWidth === 0) return;
     setCanScrollLeft(el.scrollLeft > 4);
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  }, []);
+    if (onNearEnd && el.scrollLeft + el.clientWidth >= el.scrollWidth - 400) onNearEnd();
+  }, [onNearEnd]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -153,7 +161,7 @@ export function YouTubeTrends() {
   const [channels, setChannels] = useState<ChannelStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [perChannel, setPerChannel] = useState(() => loadJSON<number>(PER_CHANNEL_KEY, 1));
-  const [gridLimit, setGridLimit] = useState(10);
+  const [visibleCount, setVisibleCount] = useState(VIEW_BATCH);
   const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -276,6 +284,25 @@ export function YouTubeTrends() {
     return [...perChannelMap.values()].flat();
   }, [videos, selectedIds, perChannel]);
 
+  // Cambiar de canales / de "N por canal" reinicia la ventana de scroll.
+  useEffect(() => {
+    setVisibleCount(VIEW_BATCH);
+  }, [perChannel, selectedIds]);
+
+  const loadMore = useCallback(() => {
+    setVisibleCount(c => (c >= displayVideos.length ? c : Math.min(c + VIEW_BATCH, displayVideos.length)));
+  }, [displayVideos.length]);
+
+  const handleGridScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 280) loadMore();
+  }, [loadMore]);
+
+  const visibleVideos = useMemo(
+    () => displayVideos.slice(0, visibleCount),
+    [displayVideos, visibleCount],
+  );
+
   const toggleChannel = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev ?? channels.map((c) => c.id));
@@ -346,7 +373,6 @@ export function YouTubeTrends() {
     );
   }
 
-  const hasMore = gridLimit < displayVideos.length;
   const activeCount = selectedIds ? selectedIds.size : channels.length;
   const errorCount = channels.filter((c) => c.status === 'error').length;
   const emptyCount = channels.filter((c) => c.status === 'empty').length;
@@ -357,11 +383,11 @@ export function YouTubeTrends() {
         <span className="text-xs text-base-content/70">
           {selectedIds && selectedIds.size === 1 ? (
             <>
-              Mostrando {Math.min(gridLimit, displayVideos.length)} de {displayVideos.length} video{displayVideos.length !== 1 ? 's' : ''} ·<span className="text-primary"> últimos 10</span>
+              Mostrando {visibleVideos.length} de {displayVideos.length} video{displayVideos.length !== 1 ? 's' : ''} ·<span className="text-primary"> últimos 10</span>
             </>
           ) : (
             <>
-              Mostrando {Math.min(gridLimit, displayVideos.length)} de {activeCount} canal{activeCount !== 1 ? 'es' : ''}
+              Mostrando {visibleVideos.length} de {displayVideos.length} video{displayVideos.length !== 1 ? 's' : ''} · {activeCount} canal{activeCount !== 1 ? 'es' : ''}
             </>
           )}
           {errorCount > 0 && <span className="text-warning"> · {errorCount} con error{emptyCount > 0 && <> · {emptyCount} sin videos hoy</>}</span>}
@@ -498,36 +524,18 @@ export function YouTubeTrends() {
         </div>
       ) : (
         <>
-          <MobileCarousel videos={displayVideos.slice(0, gridLimit)} />
-          <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {displayVideos.slice(0, gridLimit).map((video) => (
-              <VideoCard key={`${video.channelId}-${video.videoId}`} video={video} />
-            ))}
+          <MobileCarousel videos={visibleVideos} onNearEnd={loadMore} />
+          <div
+            className="hidden sm:block max-h-[460px] overflow-y-auto overscroll-contain"
+            onScroll={handleGridScroll}
+          >
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {visibleVideos.map((video) => (
+                <VideoCard key={`${video.channelId}-${video.videoId}`} video={video} />
+              ))}
+            </div>
           </div>
         </>
-      )}
-
-      {displayVideos.length > 0 && (
-        <div className="hidden sm:flex items-center justify-center gap-3 mt-4">
-          {hasMore && (
-            <button onClick={() => setGridLimit(s => Math.min(s + 6, displayVideos.length))}
-              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer">
-              Mostrar más ({displayVideos.length - gridLimit})
-            </button>
-          )}
-          {gridLimit > 10 && (
-            <button onClick={() => setGridLimit(s => Math.max(s - 6, 10))}
-              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.96] cursor-pointer">
-              Mostrar menos
-            </button>
-          )}
-          {gridLimit > 10 && (
-            <button onClick={() => setGridLimit(10)}
-              className="px-4 py-1.5 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-all duration-200 active:scale-[0.96] cursor-pointer">
-              Ocultar todo
-            </button>
-          )}
-        </div>
       )}
 
       <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
