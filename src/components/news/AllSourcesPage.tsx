@@ -5,7 +5,7 @@ import { ArticleReader } from './ArticleReader';
 import { extractHost } from '../../lib/url';
 import { loadJSON, saveJSON } from '../../lib/storage';
 import { REGION_LABELS, REGION_SLUGS_NS } from '@/lib/regions';
-import { foldAccents } from '@/lib/sources';
+import { foldAccents, isBetterMainFeed, nameCollator, orderByOutlet, outletKey } from '@/lib/sources';
 import { play } from '@/lib/sound';
 import { navigate } from 'astro:transitions/client';
 import { ChileMap } from './ChileMap';
@@ -14,9 +14,60 @@ import { FaviconImg } from './FaviconImg';
 const CACHE_TTL = 30 * 60 * 1000;
 const CHUNK_SIZE = 40;
 const STORAGE_SELECTION = 'all-sources-selection';
+// Mismas claves que el selector de fuentes de las tarjetas de noticias: la
+// preferencia (un feed por sitio, orden A-Z/Z-A) es una sola en todo el sitio.
+const MAIN_ONLY_KEY = 'news-main-only';
+const SORT_KEY = 'news-sort';
 const BATCH_CACHE_TTL_HINT = 'Feeds duplicados se muestran una sola vez. Ejemplo: "Noticiero" y "Noticiero - Politica" se cargan como una sola fuente.';
 
 type PageStatus = 'loading' | 'selecting' | 'fetching' | 'results';
+type SortDir = 'az' | 'za';
+
+/** Orden A-Z / Z-A por medio (mismo control que el selector de las tarjetas). */
+function SortToggle({ sortDir, onChange }: { sortDir: SortDir; onChange: (next: SortDir) => void }) {
+  return (
+    <div role="group" aria-label="Orden de fuentes" className="flex items-center gap-1 shrink-0">
+      {([['az', 'A-Z', 'Ordenar de A a Z por medio'], ['za', 'Z-A', 'Ordenar de Z a A por medio']] as const).map(([dir, label, hint]) => (
+        <button
+          key={dir}
+          type="button"
+          onClick={() => onChange(dir)}
+          aria-pressed={sortDir === dir}
+          title={hint}
+          className={`px-2.5 py-1.5 text-[11px] font-medium rounded-lg transition-colors cursor-pointer ${
+            sortDir === dir
+              ? 'bg-primary/15 text-primary'
+              : 'bg-base-content/10 text-base-content/70 hover:text-base-content'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Un solo feed por sitio (el principal de cada medio). */
+function MainOnlyToggle({ mainOnly, onToggle }: { mainOnly: boolean; onToggle: (next: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(!mainOnly)}
+      aria-pressed={mainOnly}
+      title="Muestra solo el feed principal de cada medio y oculta sus secciones (deportes, regiones, etc.)"
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-lg transition-colors cursor-pointer ${
+        mainOnly
+          ? 'bg-primary/15 text-primary'
+          : 'bg-base-content/10 text-base-content/70 hover:text-base-content'
+      }`}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+        {mainOnly ? <path d="M20 6L9 17l-5-5" /> : <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></>}
+      </svg>
+      <span className="truncate">Solo principales por sitio</span>
+    </button>
+  );
+}
 
 function SourceCheckbox({ source, checked, onChange }: {
   source: SourceFeed;
@@ -63,8 +114,16 @@ export function AllSourcesPage() {
   const [failedPanelExpanded, setFailedPanelExpanded] = useState(false);
   const [addSourceRegion, setAddSourceRegion] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | '3d' | 'week'>('all');
+  const [mainOnly, setMainOnly] = useState(false);
+  const [sortDir, setSortDir] = useState<SortDir>('az');
   const abortRef = useRef<AbortController | null>(null);
   const cancelledRef = useRef(false);
+
+  // Preferencias de listado: se leen después de montar (localStorage no existe en SSR).
+  useEffect(() => {
+    setMainOnly(loadJSON<boolean>(MAIN_ONLY_KEY, false));
+    setSortDir(loadJSON<SortDir>(SORT_KEY, 'az'));
+  }, []);
 
   // Load clustering module (code-split)
   useEffect(() => {
@@ -187,7 +246,7 @@ export function AllSourcesPage() {
     if (status !== 'selecting') return;
     setSelected(prev => {
       const next = new Set(prev);
-      filteredSources.forEach(s => next.add(s.sourceKey));
+      visibleSources.forEach(s => next.add(s.sourceKey));
       return next;
     });
   }
@@ -197,13 +256,26 @@ export function AllSourcesPage() {
   }
 
   function selectBySearch() {
-    const matching = filteredSources.filter(s => !selected.has(s.sourceKey));
+    const matching = visibleSources.filter(s => !selected.has(s.sourceKey));
     if (matching.length === 0) return;
     setSelected(prev => {
       const next = new Set(prev);
       matching.forEach(s => next.add(s.sourceKey));
       return next;
     });
+  }
+
+  function handleToggleMainOnly(next: boolean) {
+    play('interaction.toggle');
+    setMainOnly(next);
+    saveJSON(MAIN_ONLY_KEY, next);
+  }
+
+  function handleSortChange(next: SortDir) {
+    if (next === sortDir) return;
+    play('interaction.tap');
+    setSortDir(next);
+    saveJSON(SORT_KEY, next);
   }
 
   const filteredSources = useMemo(() => {
@@ -240,6 +312,32 @@ export function AllSourcesPage() {
     const regionSet = new Set(allSources.filter(s => s.region).map(s => s.region!));
     return REGION_SLUGS_NS.filter(r => regionSet.has(r));
   }, [allSources]);
+
+  // Un "principal" por sitio, con el mismo criterio que el selector de las tarjetas.
+  const mainSourceKeys = useMemo(() => {
+    const best = new Map<string, SourceFeed>();
+    for (const s of allSources) {
+      const groupKey = outletKey(s);
+      const current = best.get(groupKey);
+      if (!current || isBetterMainFeed(s, current)) best.set(groupKey, s);
+    }
+    return new Set([...best.values()].map(s => s.sourceKey));
+  }, [allSources]);
+
+  // Lo que se lista al elegir fuentes: filtro "principal" + A-Z por medio, con los
+  // feeds de cada medio juntos (el principal primero). "za" es el reverso exacto.
+  const visibleSources = useMemo(() => {
+    const base = mainOnly ? filteredSources.filter(s => mainSourceKeys.has(s.sourceKey)) : filteredSources;
+    return orderByOutlet(base, sortDir);
+  }, [filteredSources, mainOnly, mainSourceKeys, sortDir]);
+
+  // La grilla de resultados ya trae un card por medio — el API fusiona los feeds de
+  // un mismo medio bajo su nombre base —, así que acá solo se aplica el orden A-Z.
+  const visibleSourceResults = useMemo(() => {
+    const rows = sourceResults.filter(r => r.success);
+    rows.sort((a, b) => nameCollator.compare(a.name, b.name));
+    return sortDir === 'za' ? rows.reverse() : rows;
+  }, [sourceResults, sortDir]);
 
   function makeCacheKey(sourceKeys: string[]): string {
     return 'all-sources:' + [...sourceKeys].sort().join(',');
@@ -472,7 +570,7 @@ export function AllSourcesPage() {
   }, []);
 
   const selectedCount = selected.size;
-  const allSelected = filteredSources.length > 0 && filteredSources.every(s => selected.has(s.sourceKey));
+  const allSelected = visibleSources.length > 0 && visibleSources.every(s => selected.has(s.sourceKey));
 
   // Loading Skeleton
   if (status === 'loading') {
@@ -525,14 +623,16 @@ allSelected || selected.size > 0
             >
               {allSelected ? 'Deseleccionar todo' : selected.size > 0 ? 'Limpiar selección' : 'Seleccionar todo'}
             </button>
-            {searchQuery && filteredSources.length > 0 && (
+            {searchQuery && visibleSources.length > 0 && (
               <button
                 onClick={() => { play('interaction.tap'); selectBySearch(); }}
                 className="px-3 py-1.5 text-[11px] font-medium bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg transition-colors cursor-pointer"
               >
-                Agregar {filteredSources.length - filteredSources.filter(s => selected.has(s.sourceKey)).length} de búsqueda
+                Agregar {visibleSources.length - visibleSources.filter(s => selected.has(s.sourceKey)).length} de búsqueda
               </button>
             )}
+            <MainOnlyToggle mainOnly={mainOnly} onToggle={handleToggleMainOnly} />
+            <SortToggle sortDir={sortDir} onChange={handleSortChange} />
             <button
               onClick={() => { play('interaction.tap'); setShowMap(v => !v); }}
               className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-colors cursor-pointer ${
@@ -551,6 +651,12 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
             )}
           </div>
 
+          {mainOnly && (
+            <p className="text-[10px] text-base-content/50">
+              {visibleSources.length} de {filteredSources.length} fuentes · un feed principal por sitio
+            </p>
+          )}
+
           <div className="flex gap-4">
             {showMap && (
               <div className="w-[180px] shrink-0">
@@ -559,8 +665,8 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
             )}
             <div className={showMap ? 'flex-1 min-w-0' : 'w-full'}>
               <div className="bg-base-200 border border-base-300 rounded-xl overflow-hidden max-h-[60vh] overflow-y-auto">
-            {filteredSources.length > 0 ? (
-              filteredSources.map(source => (
+            {visibleSources.length > 0 ? (
+              visibleSources.map(source => (
                 <SourceCheckbox
                   key={source.sourceKey}
                   source={source}
@@ -751,9 +857,9 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
         )}
 
         {/* Articles by source */}
-        {sourceResults.filter(r => r.success).length > 0 && (
+        {sourceResults.some(r => r.success) && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-xs text-base-content/70 uppercase tracking-wider font-semibold">
                 Artículos por fuente
               </h3>
@@ -762,11 +868,14 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                   filtrando por «{activeTag}»
                 </span>
               )}
+              <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+                <SortToggle sortDir={sortDir} onChange={handleSortChange} />
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {sourceResults.filter(r => r.success).map((sr, i) => (
+              {visibleSourceResults.map(sr => (
                 <SourceCard
-                  key={i}
+                  key={sr.name}
                   sourceResult={sr}
                   articles={searchedBySource.get(sr.name) ?? []}
                   onOpenArticle={setReaderArticle}

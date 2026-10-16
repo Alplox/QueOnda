@@ -65,7 +65,7 @@ src/
       ArticleReader.tsx       # Modal lector de artículos vía /api/article
       FaviconImg.tsx          # Favicon image helper
       ChileMap.tsx            # Chile region map for source filtering
-      AllSourcesPage.tsx      # Full sources list page
+      AllSourcesPage.tsx      # Página /todas-las-fuentes (elegir fuentes → cargar → resultados). Al elegir lista las ~2400 fuentes con los feeds de cada medio agrupados y en A-Z por defecto, con los mismos dos filtros del selector de noticias (claves compartidas `news-main-only` y `news-sort`). En resultados ordena los cards por medio A-Z por defecto: el API ya fusiona los feeds de un mismo medio en un solo card, así que ahí no hay "un feed por sitio" que filtrar
       chile-outline.ts        # Chile SVG outline data for ChileMap
     Emoji.tsx                 # Root-level emoji rendering component
     tv/
@@ -244,7 +244,7 @@ All routes return JSON. CORS is not needed (same-origin).
 - **Phase 2 (on mount):** `POST /api/news/batch` fetches all 6 selected sources in parallel (uses defaults from localStorage or fallback list)
 - **No Phase 3** — clustering and trending are computed **client-side** from the 6 active slots' articles
 - Each slot has a dropdown to change its source (from the full inventory). Sources already in use are disabled in other slots' dropdowns
-- The dropdown has a **"Solo principales por sitio"** toggle (`localStorage['news-main-only']`, shared across slots) that keeps only one feed per outlet, collapsing section feeds (`<Medio> - Deportes`, `- San Felipe`, …) into the flagship feed. Best pick per outlet (grouped by the `source` base name) is ranked by `mainFeedTier` (bare outlet name → generic name like "Noticias"/"Últimas"/"Portada" → anything else), then by fewest URL path segments, then shortest URL. The currently selected source is always kept in the list. The dropdown portal cap is 384px so the extra row doesn't squeeze the list/footer
+- The dropdown has a **"Solo principales por sitio"** toggle (`localStorage['news-main-only']`, shared across slots and with `/todas-las-fuentes`) that keeps only one feed per outlet, collapsing section feeds (`<Medio> - Deportes`, `- San Felipe`, …) into the flagship feed. Best pick per outlet (grouped by the `source` base name) is ranked by `mainFeedTier` (bare outlet name → generic name like "Noticias"/"Últimas"/"Portada" → anything else), then by fewest URL path segments, then shortest URL. The currently selected source is always kept in the list. The dropdown portal cap is 384px so the extra row doesn't squeeze the list/footer
 - The dropdown lists one **outlet per group** (`orderByOutlet` in `src/lib/sources.ts`): the inventory is a concatenation of `news` then `regional` blocks and a few feeds carry a per-feed category differing from their outlet's, which used to scatter an outlet's feeds ~1400 rows apart (132 of 403 outlets were split). Every feed of an outlet stays together, flagship feed first, then A-Z
 - The dropdown has an **A-Z / Z-A** order (`localStorage['news-sort']`, default `az`, shared across slots). Z-A is the exact reverse of A-Z. Fijados stay in slot order above the sorted list
 - Dropdown search is accent-insensitive (`foldAccents`), so "discusion" matches "La Discusión"
