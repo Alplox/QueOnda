@@ -24,14 +24,19 @@ const STOPWORDS = new Set([
   'sera', 'sido', 'siendo', 'tener', 'hacer', 'haber', 'poder',
 ]);
 
+// Fold accents for comparison, but keep "ñ": NFD splits it into "n" + combining
+// tilde (U+0303), which a blanket combining-mark strip would flatten to plain "n".
 function stripDiacritics(text: string): string {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return text
+    .normalize('NFD')
+    .replace(/n\u0303/g, '\u00f1')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 function normalizeTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9áéíóúüñ\s]/g, '')
+  // Fold accents here (keeping "ñ") so tokens and STOPWORDS compare consistently.
+  return stripDiacritics(title.toLowerCase())
+    .replace(/[^a-z0-9ñ\s]/g, '')
     .trim();
 }
 
@@ -56,8 +61,8 @@ export function extractKeywords(title: string): string[] {
     }
   }
 
-  // ponytail: normalize diacritics once at extraction time, not per comparison
-  return [...new Set([...unigrams, ...bigrams, ...trigrams].map(stripDiacritics))];
+  // ponytail: keywords are already accent-folded in normalizeTitle (ñ kept)
+  return [...new Set([...unigrams, ...bigrams, ...trigrams])];
 }
 
 // ponytail: operates on pre-built Sets, iterates smaller for intersection

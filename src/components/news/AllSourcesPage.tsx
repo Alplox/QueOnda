@@ -5,6 +5,7 @@ import { ArticleReader } from './ArticleReader';
 import { extractHost } from '../../lib/url';
 import { loadJSON, saveJSON } from '../../lib/storage';
 import { REGION_LABELS, REGION_SLUGS_NS } from '@/lib/regions';
+import { foldAccents } from '@/lib/sources';
 import { play } from '@/lib/sound';
 import { navigate } from 'astro:transitions/client';
 import { ChileMap } from './ChileMap';
@@ -121,10 +122,10 @@ export function AllSourcesPage() {
   const filteredArticles = useMemo(() => {
     let filtered = articles;
     if (activeTag) {
-      const q = activeTag.toLowerCase();
+      const q = foldAccents(activeTag);
       filtered = filtered.filter(a =>
-        a.title.toLowerCase().includes(q) ||
-        a.description.toLowerCase().includes(q)
+        foldAccents(a.title).includes(q) ||
+        foldAccents(a.description).includes(q)
       );
     }
     if (dateCutoff > 0) {
@@ -136,10 +137,10 @@ export function AllSourcesPage() {
   // Search within filtered results
   const searchedArticles = useMemo(() => {
     if (!resultsSearch) return filteredArticles;
-    const q = resultsSearch.toLowerCase();
+    const q = foldAccents(resultsSearch);
     return filteredArticles.filter(a =>
-      a.title.toLowerCase().includes(q) ||
-      a.source.toLowerCase().includes(q)
+      foldAccents(a.title).includes(q) ||
+      foldAccents(a.source).includes(q)
     );
   }, [filteredArticles, resultsSearch]);
 
