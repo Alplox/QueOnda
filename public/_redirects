@@ -1,0 +1,3 @@
+# Alias for the common llms.txt convention (llmstxt.org).
+# The canonical file is /llm.txt (served from public/llm.txt).
+/llms.txt /llm.txt 200

@@ -3,6 +3,7 @@ import react from '@astrojs/react';
 import cloudflare from '@astrojs/cloudflare';
 import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
+  site: 'https://queonda.pages.dev',
   integrations: [
     react(),
   ],

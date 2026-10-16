@@ -451,13 +451,21 @@ El build de Astro genera `dist/server/` + `dist/client/`. El script reestructura
 
 1. `dist/server/` → `dist/_worker.js/`
 2. `entry.mjs` → `index.js` (Pages expects `_worker.js/index.js`)
-3. `client/*` → `dist/` (merge de assets estáticos, including `_headers`)
+3. `client/*` → `dist/` (merge de assets estáticos, including `_headers`) — **lista explícita `entries`**: cualquier archivo nuevo en `public/` debe agregarse ahí o no llega a `dist/`
 4. Elimina `dist/_worker.js/wrangler.json` (conflicto con ASSETS binding de Pages)
 5. Elimina `.wrangler/` (apunta al `server/` eliminado)
 
 ### Notas
 
 - `wrangler.jsonc` fue eliminado del repo — el CI de Pages lo detectaba y causaba conflictos con el build command personalizado.
+
+### SEO & descubrimiento por IA
+
+- `public/robots.txt` — permite todo y autoriza explícitamente los crawlers de IA (GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Google-Extended) + línea `Sitemap:`. Revisar que el setting "Block AI bots" del dashboard de Cloudflare no lo pise.
+- `public/sitemap.xml` — estático (2 URLs). Al añadir rutas nuevas, actualizarlo o migrar a `@astrojs/sitemap`.
+- `public/llm.txt` — contexto orientado a LLMs (antes en la raíz del repo, donde Astro **no** lo servía). `public/_redirects` expone el alias `/llms.txt` → `/llm.txt`.
+- `astro.config.mjs` tiene `site: 'https://queonda.pages.dev'`.
+- JSON-LD en `index.astro` (`WebSite` + `Organization` + `WebApplication`) y `todas-las-fuentes.astro` (`WebSite` + `Organization` + `CollectionPage`).
 
 ---
 

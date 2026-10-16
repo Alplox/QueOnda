@@ -1,0 +1,30 @@
+# robots.txt — ¿Qué Onda?
+# https://queonda.pages.dev
+
+User-agent: *
+Allow: /
+
+# AI / answer-engine crawlers — explicitly welcome.
+# Do not block these: they power ChatGPT, Perplexity, Claude and Gemini answers.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://queonda.pages.dev/sitemap.xml
