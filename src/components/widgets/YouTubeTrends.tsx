@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo, type UIEvent } from 
 import { play } from '@/lib/sound';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { idbGet, idbSet } from '@/lib/idb-cache';
+import { VideoModal } from './VideoModal';
 
 interface Video {
   title: string;
@@ -60,12 +61,21 @@ function YouTubeSkeleton() {
   );
 }
 
-function VideoCard({ video, isCompact }: { video: Video; isCompact?: boolean }) {
+function VideoCard({ video, isCompact, onPlay }: { video: Video; isCompact?: boolean; onPlay: (video: Video) => void }) {
   return (
     <a
       href={video.link}
       target="_blank"
       rel="noopener noreferrer"
+      // El clic normal abre el reproductor embebido (sin salir del dashboard). Los
+      // modificadores (Ctrl/Cmd/Shift/Alt o botón central) siguen abriendo YouTube
+      // en una pestaña nueva, igual que el clic derecho → "abrir en pestaña nueva".
+      onClick={(e) => {
+        if (!video.videoId || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        play('interaction.tap');
+        onPlay(video);
+      }}
       className={`group rounded-xl overflow-hidden bg-base-200 border border-base-300 hover:border-primary hover:shadow-lg shadow-sm transition-[border-color,box-shadow] no-underline active:scale-[0.96] ${
         isCompact ? 'w-52 shrink-0' : ''
       }`}
@@ -96,7 +106,7 @@ function VideoCard({ video, isCompact }: { video: Video; isCompact?: boolean }) 
   );
 }
 
-function MobileCarousel({ videos, onNearEnd }: { videos: Video[]; onNearEnd?: () => void }) {
+function MobileCarousel({ videos, onNearEnd, onPlay }: { videos: Video[]; onNearEnd?: () => void; onPlay: (video: Video) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -139,7 +149,7 @@ function MobileCarousel({ videos, onNearEnd }: { videos: Video[]; onNearEnd?: ()
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <div className="flex gap-3 py-1 px-1">
           {videos.map((video) => (
-            <VideoCard key={video.videoId} video={video} isCompact />
+            <VideoCard key={video.videoId} video={video} isCompact onPlay={onPlay} />
           ))}
         </div>
       </div>
@@ -169,6 +179,7 @@ export function YouTubeTrends() {
   const [retryingChannel, setRetryingChannel] = useState<string | null>(null);
   const [isRetryingAll, setIsRetryingAll] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [playing, setPlaying] = useState<Video | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
 
   const retryChannels = useCallback(async (chs: ChannelStatus[]) => {
@@ -524,14 +535,14 @@ export function YouTubeTrends() {
         </div>
       ) : (
         <>
-          <MobileCarousel videos={visibleVideos} onNearEnd={loadMore} />
+          <MobileCarousel videos={visibleVideos} onNearEnd={loadMore} onPlay={setPlaying} />
           <div
             className="hidden sm:block max-h-[460px] overflow-y-auto overscroll-contain"
             onScroll={handleGridScroll}
           >
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {visibleVideos.map((video) => (
-                <VideoCard key={`${video.channelId}-${video.videoId}`} video={video} />
+                <VideoCard key={`${video.channelId}-${video.videoId}`} video={video} onPlay={setPlaying} />
               ))}
             </div>
           </div>
@@ -542,6 +553,16 @@ export function YouTubeTrends() {
         Fuentes:{' '}
         <a href="https://github.com/Alplox/json-teles/blob/main/countries/cl.json" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
       </div>
+
+      {playing && (
+        <VideoModal
+          videoId={playing.videoId}
+          title={playing.title}
+          author={playing.author}
+          link={playing.link}
+          onClose={() => setPlaying(null)}
+        />
+      )}
     </div>
   );
 }

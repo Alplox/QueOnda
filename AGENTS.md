@@ -80,7 +80,8 @@ src/
       TrendingTags.tsx         # Tag chips
       FinanceWidget.tsx        # UF, USD, EUR, IPC, UTM (client:idle)
       ThemeSwitcher.tsx        # Theme selector dropdown (client:load)
-      YouTubeTrends.tsx        # YouTube Chile trending videos grid (client:idle; IDB cache: youtube-trends 30min). La grilla desktop va dentro de una ventana `max-h-[460px] overflow-y-auto` y renderiza por lotes (`VIEW_BATCH = 15`, +15 al acercarse al fondo); el carrusel móvil crece igual vía `onNearEnd`. Sin botones "Mostrar más/menos/Ocultar todo": el alto del bloque queda fijo (~598px) aunque haya hasta ~200 videos con "10 por canal"
+      YouTubeTrends.tsx        # YouTube Chile trending videos grid (client:idle; IDB cache: youtube-trends 30min). La grilla desktop va dentro de una ventana `max-h-[460px] overflow-y-auto` y renderiza por lotes (`VIEW_BATCH = 15`, +15 al acercarse al fondo); el carrusel móvil crece igual vía `onNearEnd`. Sin botones "Mostrar más/menos/Ocultar todo": el alto del bloque queda fijo (~598px) aunque haya hasta ~200 videos con "10 por canal". El clic normal en una tarjeta abre `VideoModal` (player embebido, sin salir del dashboard); Ctrl/Cmd/Shift/Alt o botón central siguen abriendo YouTube en pestaña nueva
+      VideoModal.tsx           # Reproductor YouTube embebido (portal + role=dialog, foco al abrir, trap de Tab, Escape, click en backdrop, foco restaurado). Mismo contrato de modal que ArticleReader; el iframe se monta solo mientras está abierto
       SpotifyChart.tsx         # Spotify Top 50 Chile iframe embed (client:idle)
       GoogleTrendsWidget.tsx   # Google Trends Chile list (client:idle)
       WeatherWidget.tsx        # Multi-city weather cards (client:idle)
