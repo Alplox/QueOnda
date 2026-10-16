@@ -1,5 +1,6 @@
 /**
- * Downloads Twemoji SVGs for all emojis used in FiestasCountdown card collection.
+ * Downloads Twemoji SVGs for all emojis used in FiestasCountdown (card collection,
+ * mensajes por temporada y estados).
  * Run: node scripts/download-emoji-svgs.mjs
  */
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -19,6 +20,8 @@ const EMOJIS = [
   '🧊', '🍷', '🎉',
   // Festivities
   '🎄', '💕', '🎃',
+  // FiestasCountdown seasonal messages (recuperación / Halloween / Navidad)
+  '🧛', '💀', '🍬', '🕸️', '🍰', '🎅', '🎁', '🎆',
   // ClientTV + ClientJobList
   '📁', '🔗', '📝', '📋',
   // TYPE_ICON

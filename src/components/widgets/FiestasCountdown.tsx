@@ -11,14 +11,35 @@ interface TimeLeft {
   seconds: number;
 }
 
-function compute(): { timeLeft: TimeLeft | null; phase: 'before' | 'celebration' | 'after' } {
+// Temporada narrativa del widget (hora local): el 18 manda, pero el resto del
+// año se cuenta con sus propias fechas sin soltar la referencia a septiembre.
+type Season = 'pre18' | 'celebration' | 'recovery' | 'halloween' | 'christmas';
+
+const RECOVERY_DAYS = 14; // dos semanas de recuperación tras el 18
+
+function computeSeason(now: Date): Season {
+  const year = now.getFullYear();
+  const sep18 = new Date(year, 8, 18);
+  const sep21 = new Date(year, 8, 21);
+  const recoveryEnd = new Date(year, 8, 18 + RECOVERY_DAYS + 1); // 18 sep + 2 semanas → 3 oct
+  const nov1 = new Date(year, 10, 1);
+
+  if (now >= sep18 && now < sep21) return 'celebration';
+  if (now >= sep21 && now < recoveryEnd) return 'recovery';
+  if (now >= recoveryEnd && now < nov1) return 'halloween'; // oct: la noche de brujas
+  if (now >= nov1) return 'christmas'; // nov–dic: pascua y fin de año
+  return 'pre18'; // 1 ene → 17 sep: cuenta regresiva clásica
+}
+
+function compute(): { timeLeft: TimeLeft | null; phase: 'before' | 'celebration' | 'after'; season: Season } {
   const now = new Date();
   const year = now.getFullYear();
   const sep18 = new Date(year, 8, 18);
   const sep20 = new Date(year, 8, 20, 23, 59, 59);
+  const season = computeSeason(now);
 
   if (now >= sep18 && now <= sep20) {
-    return { timeLeft: null, phase: 'celebration' };
+    return { timeLeft: null, phase: 'celebration', season };
   }
 
   const target = now < sep18 ? sep18 : new Date(year + 1, 8, 18);
@@ -31,6 +52,7 @@ function compute(): { timeLeft: TimeLeft | null; phase: 'before' | 'celebration'
       seconds: Math.floor((diff % 60000) / 1000),
     },
     phase: now < sep18 ? 'before' : 'after',
+    season,
   };
 }
 
@@ -375,6 +397,55 @@ const PREP_STATUS: { threshold: number; emoji: string; text: string; color: stri
   { threshold: 1, emoji: '🇨🇱', text: '¡Mañana comienza la fiesta!', color: 'text-primary' },
 ];
 
+// Mensajes de las otras fechas. Se intercalan con los del 18 para que septiembre
+// no desaparezca del relato en los meses intermedios.
+const RECOVERY_MESSAGES = [
+  { text: 'Recuperándose del 18', emoji: '😴' },
+  { text: 'Guardando el volantín hasta el próximo año', emoji: '🪁' },
+  { text: 'Sobreviviendo al terremoto (el de beber)', emoji: '🍹' },
+  { text: 'Contando las empanadas que sobraron', emoji: '🥟' },
+];
+
+const HALLOWEEN_MESSAGES = [
+  { text: 'Disfraces: ¿de huaso o de vampiro?', emoji: '🧛' },
+  { text: 'Calabazas anaranjadas, igual que septiembre', emoji: '🎃' },
+  { text: 'Esqueletos bailando cueca', emoji: '💀' },
+  { text: 'Dulces o empanadas', emoji: '🍬' },
+  { text: 'Noche de brujas con volantín incluido', emoji: '🕸️' },
+];
+
+const CHRISTMAS_MESSAGES = [
+  { text: 'Pan de Pascua y cola de mono', emoji: '🍰' },
+  { text: 'El Viejito Pascuero ya sabe qué pedir: septiembre', emoji: '🎅' },
+  { text: 'Luces de colores con empanadas de fondo', emoji: '🎄' },
+  { text: 'Amigo secreto: que te toque el volantín', emoji: '🎁' },
+  { text: 'Fuegos artificiales, aunque los del 18 son otros', emoji: '🎆' },
+];
+
+function interleave<A, B>(occasion: A[], classics: B[]): (A | B)[] {
+  const out: (A | B)[] = [];
+  for (let i = 0; i < Math.max(occasion.length, classics.length); i++) {
+    if (i < occasion.length) out.push(occasion[i]);
+    if (i < classics.length) out.push(classics[i]);
+  }
+  return out;
+}
+
+const SEASON_MESSAGES: Record<Season, { text: string; emoji: string }[]> = {
+  pre18: MESSAGES,
+  celebration: CELEBRATION_MESSAGES,
+  recovery: RECOVERY_MESSAGES,
+  halloween: interleave(HALLOWEEN_MESSAGES, MESSAGES),
+  christmas: interleave(CHRISTMAS_MESSAGES, MESSAGES),
+};
+
+const SEASON_STATUS: Record<Exclude<Season, 'pre18'>, { emoji: string; text: string; color: string }> = {
+  celebration: { emoji: '🎉', text: '¡Estamos celebrando!', color: 'text-primary' },
+  recovery: { emoji: '😴', text: 'Recuperándose del 18...', color: 'text-base-content/50' },
+  halloween: { emoji: '🎃', text: 'Halloween a la vista, el 18 sigue en la memoria', color: 'text-base-content/60' },
+  christmas: { emoji: '🎄', text: 'Navidad encima, septiembre en el horizonte', color: 'text-base-content/60' },
+};
+
 function getProgress(): number {
   const now = new Date();
   const year = now.getFullYear();
@@ -511,7 +582,7 @@ export function Garland({ className = '', enhanced = false }: { className?: stri
 }
 
 export function FiestasCountdown() {
-  const [data, setData] = useState<{ timeLeft: TimeLeft | null; phase: 'before' | 'celebration' | 'after' } | null>(null);
+  const [data, setData] = useState<{ timeLeft: TimeLeft | null; phase: 'before' | 'celebration' | 'after'; season: Season } | null>(null);
   const [cardIndex, setCardIndex] = useState(0);
   const [secTick, setSecTick] = useState(0);
   const [msgIndex, setMsgIndex] = useState(0);
@@ -539,7 +610,7 @@ export function FiestasCountdown() {
     return () => clearInterval(id);
   }, []);
 
-  const { timeLeft, phase } = data ?? { timeLeft: null, phase: 'before' as const };
+  const { timeLeft, phase, season } = data ?? { timeLeft: null, phase: 'before' as const, season: 'pre18' as const };
   const currentCard = EMOJI_COLLECTION[cardIndex];
 
   const rollDice = () => {
@@ -561,17 +632,14 @@ export function FiestasCountdown() {
   };
   const enhanced = !!timeLeft && timeLeft.days < 7 && phase === 'before';
 
-  const displayMessage = phase === 'celebration'
-    ? CELEBRATION_MESSAGES[msgIndex % CELEBRATION_MESSAGES.length]
-    : MESSAGES[msgIndex % MESSAGES.length];
+  const seasonMessages = SEASON_MESSAGES[season];
+  const displayMessage = seasonMessages[msgIndex % seasonMessages.length];
 
   const colorClass = timeLeft ? getColorClasses(timeLeft.days) : 'text-base-content';
 
-  const prepStatus = phase === 'before' && timeLeft
-    ? PREP_STATUS.find(p => timeLeft.days >= p.threshold) ?? PREP_STATUS[PREP_STATUS.length - 1]
-    : phase === 'celebration'
-      ? { emoji: '🎉', text: '¡Estamos celebrando!', color: 'text-primary' }
-      : { emoji: '😴', text: 'Recuperándose del 18...', color: 'text-base-content/50' };
+  const prepStatus = season === 'pre18'
+    ? (timeLeft ? PREP_STATUS.find(p => timeLeft.days >= p.threshold) ?? PREP_STATUS[PREP_STATUS.length - 1] : PREP_STATUS[PREP_STATUS.length - 1])
+    : SEASON_STATUS[season];
 
   const celebrationStyle = phase === 'celebration'
     ? { animation: 'fadeSlideIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards', transform: 'scale(0.92)', opacity: 0 }
@@ -630,6 +698,9 @@ export function FiestasCountdown() {
                 {String(timeLeft.seconds).padStart(2, '0')}s
               </span>
             </div>
+            {phase === 'after' && (
+              <div className="text-xs text-base-content/70 mt-2">para el 18 de septiembre del próximo año</div>
+            )}
           </div>
         ) : timeLeft ? (
           <div className="text-center">

@@ -98,7 +98,7 @@ src/
       PowerOutageMap.tsx       # Leaflet + OpenFreeMap comuna dot map (theme-aware styles, rank-band circles, filtros región/comuna, foco por región vía pin con flyToBounds)
       PowerEvolutionChart.tsx  # Chart.js evolución horaria de clientes sin suministro (24h/48h/72h/7d)
       HolidaysWidget.tsx       # Chilean holidays calendar (client:idle)
-      FiestasCountdown.tsx     # Fiestas Patrias countdown (client:idle)
+      FiestasCountdown.tsx     # Fiestas Patrias countdown (client:idle). Temporadas en computeSeason(): pre18 (1 ene–17 sep), celebration (18–20 sep), recovery (2 semanas → hasta el 3 oct), halloween (oct), christmas (nov–dic). Mensajes por temporada en SEASON_MESSAGES — Halloween/Navidad se intercalan con los del 18 vía interleave(); la línea de estado sale de SEASON_STATUS
       EmojiCard.tsx           # Card component for FiestasCountdown (client:idle)
       RouteMap.tsx             # Transit route map component (Leaflet + OpenFreeMap, client:idle)
       openfreemap-layer.ts     # Shared lazy MapLibre/OpenFreeMap basemap + theme switching for Leaflet maps
@@ -143,7 +143,7 @@ src/
     update-feeds-db.mjs      # Fetches awesome-chilean-rss DB and regenerates src/lib/feeds-database.json
     update-stops-db.mjs      # Downloads DTPM GTFS and regenerates src/lib/stops-database.json
     update-holidays-db.mjs   # Fetches nager.at API and regenerates src/lib/holidays.json
-    download-emoji-svgs.mjs  # Downloads Twemoji SVGs for FiestasCountdown card collection
+    download-emoji-svgs.mjs  # Downloads Twemoji SVGs for FiestasCountdown (card collection + mensajes por temporada). Ojo: reescribe todos los SVG sin width/height, conviene revisar el diff tras correrlo
   styles/
     global.css               # Tailwind + DaisyUI base styles + scrollbar
 ```
