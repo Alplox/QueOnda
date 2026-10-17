@@ -104,7 +104,14 @@ async function fetchOpenMeteoDirect(cities: { name: string; lat: number; lon: nu
 }
 
 async function fetchServerWeather(qs: string): Promise<Record<string, CityWeatherData> | null> {
-  try { const r = await fetch(`/api/weather?${qs}`); const d = await r.json(); return d.weather || null; } catch { return null; }
+  try {
+    // no-store: this is the fallback path (the direct Open-Meteo call already
+    // failed), so it must reflect current upstream state instead of replaying a
+    // cached failure — otherwise "Reintentar" cannot recover.
+    const r = await fetch(`/api/weather?${qs}`, { cache: 'no-store' });
+    const d = await r.json();
+    return d.weather || null;
+  } catch { return null; }
 }
 
 function WeatherIcon({ code }: { code: number }) {

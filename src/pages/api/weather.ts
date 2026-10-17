@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { dedupeFetch, edgeCacheHeaders } from '../../lib/cache';
+import { dedupeFetch, edgeCacheHeaders, noStoreHeaders } from '../../lib/cache';
 import { checkRateLimit } from '../../lib/rate-limit';
 
 const DEFAULT_CITIES = [
@@ -38,33 +38,40 @@ async function fetchOpenMeteo(
   const lats = cities.map(c => c.lat.toFixed(2)).join(',');
   const lons = cities.map(c => c.lon.toFixed(2)).join(',');
 
-  const res = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}` +
-    `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
-    `&timezone=America/Santiago`,
-    { signal: AbortSignal.timeout(8000) }
-  );
+  // Must never throw: a timeout/network error has to fall through to the
+  // Gael/Boostr fallbacks, not abort the whole chain. (The caller only runs
+  // those when this returns null.)
+  try {
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}` +
+      `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
+      `&timezone=America/Santiago`,
+      { signal: AbortSignal.timeout(8000) }
+    );
 
-  if (!res.ok) return null;
+    if (!res.ok) return null;
 
-  const data = await res.json();
-  const results = Array.isArray(data) ? data : [data];
-  const weatherMap: Record<string, any> = {};
+    const data = await res.json();
+    const results = Array.isArray(data) ? data : [data];
+    const weatherMap: Record<string, any> = {};
 
-  results.forEach((r: any, i: number) => {
-    const city = cities[i];
-    if (!city || !r.current) return;
-    weatherMap[city.name] = {
-      city: city.name,
-      temp: Math.round(r.current.temperature_2m),
-      feelsLike: Math.round(r.current.apparent_temperature),
-      humidity: r.current.relative_humidity_2m,
-      weatherCode: r.current.weather_code,
-      wind: r.current.wind_speed_10m,
-    };
-  });
+    results.forEach((r: any, i: number) => {
+      const city = cities[i];
+      if (!city || !r.current) return;
+      weatherMap[city.name] = {
+        city: city.name,
+        temp: Math.round(r.current.temperature_2m),
+        feelsLike: Math.round(r.current.apparent_temperature),
+        humidity: r.current.relative_humidity_2m,
+        weatherCode: r.current.weather_code,
+        wind: r.current.wind_speed_10m,
+      };
+    });
 
-  return Object.keys(weatherMap).length > 0 ? weatherMap : null;
+    return Object.keys(weatherMap).length > 0 ? weatherMap : null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchGaelCloud(cityName: string): Promise<any | null> {
@@ -226,6 +233,14 @@ export const GET: APIRoute = async ({ url, request }) => {
       return null;
     }
   });
+
+  // `weather: null` means every upstream failed. Never edge-cache (or let the
+  // browser cache) that state: a 10-minute TTL would keep serving the outage
+  // from the CDN/browser long after the source recovered, so "Reintentar" could
+  // not recover until it expired. Same reasoning as noStoreHeaders() elsewhere.
+  if (!weather) {
+    return new Response(JSON.stringify({ weather: null }), { headers: noStoreHeaders() });
+  }
 
   return new Response(JSON.stringify({ weather }), {
     headers: edgeCacheHeaders(600),
