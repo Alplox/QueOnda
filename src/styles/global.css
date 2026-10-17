@@ -26,6 +26,106 @@ h1, h2, h3, h4 {
   font-family: Figtree, 'Figtree Fallback', system-ui, sans-serif;
 }
 
+/* Hero: card ⇄ compact island. Static end-states toggled by [data-collapsed] on .hero-stage;
+   `.hero-ready` (set by index.astro after the initial state) gates the transitions
+   so a persisted collapsed state produces no boot animation.
+   NB: not `.hero` / `.hero-overlay` — those are daisyUI components (grid + grid-area on
+   every child), which would re-anchor the hero image and darken its scrim. */
+.hero-card {
+  /* Clip lives on the card (not the wrapper): its box is the pill's reference box.
+     -4rem clears the card's own shadow; both states are inset() so it interpolates. */
+  clip-path: inset(-4rem round 1rem);
+}
+
+.hero-island {
+  /* Opacity-only on purpose: a transform on the island would make its measured box
+     state-dependent (and any inline override start a transition), which is exactly
+     the box the collapse has to land on. */
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hero-ready .hero-card-wrap {
+  transition: transform var(--duration-base) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-ready .hero-card {
+  transition:
+    clip-path var(--duration-base) cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius var(--duration-base) ease-out;
+}
+
+.hero-ready .hero-island {
+  transition:
+    opacity var(--duration-base) ease-out,
+    background-color var(--duration-fast) ease-out;
+}
+
+.hero-ready .hero-toggle-slash {
+  transition: opacity var(--duration-base) ease-out;
+}
+
+/* The island's text only materializes as the card's remnant lands on it (no double pill
+   travelling), but it clears immediately on the way back so the growing card uncovers it. */
+.hero-stage.hero-ready[data-collapsed='true'] .hero-island {
+  transition:
+    opacity var(--duration-fast) ease-out var(--duration-fast),
+    background-color var(--duration-fast) ease-out;
+}
+
+.hero-ready .hero-scrim,
+.hero-ready .hero-fade {
+  transition: opacity var(--duration-slow) ease-out;
+}
+
+/* Bottom corners only join the top ones (rounded-t-2xl on the section) while the photo is fully
+   exposed: with the card up, the bottom fade lands on base-100 — the same as the body — so the
+   expanded hero stays flush to the page and its edge is invisible. */
+.hero-stage.hero-ready {
+  transition:
+    border-bottom-left-radius var(--duration-slow) ease-out,
+    border-bottom-right-radius var(--duration-slow) ease-out;
+}
+
+.hero-stage[data-collapsed='true'] {
+  border-bottom-left-radius: 1rem; /* Tailwind rounded-2xl */
+  border-bottom-right-radius: 1rem;
+}
+
+.hero-stage[data-collapsed='true'] .hero-card-wrap {
+  /* --hero-tx/--hero-ty are measured so the remnant lands exactly on the island */
+  transform: translate(var(--hero-tx, 0px), var(--hero-ty, 0px));
+}
+
+.hero-stage[data-collapsed='true'] .hero-card {
+  /* Ends as the island's own pill: same rect (bottom-left anchored, island-sized) and
+     same radius. clip — not opacity — keeps the <h1> in the accessibility tree. */
+  clip-path: inset(
+    calc(100% - var(--hero-isl-h, 2.375rem))
+    calc(100% - var(--hero-isl-w, 6.625rem))
+    0 0
+    round var(--hero-isl-r, 1.1875rem)
+  );
+  border-radius: var(--hero-isl-r, 1.1875rem);
+}
+
+.hero-stage[data-collapsed='true'] .hero-island {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hero-stage[data-collapsed='true'] .hero-scrim {
+  opacity: 0.4;
+}
+
+.hero-stage[data-collapsed='true'] .hero-fade {
+  opacity: 0.55;
+}
+
+.hero-stage[data-collapsed='true'] .hero-toggle-slash {
+  opacity: 0;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }

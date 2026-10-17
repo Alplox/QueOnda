@@ -314,6 +314,19 @@ Accessibility is treated as part of the component craft, not a compliance pass. 
 - DaisyUI v5 configured via `@plugin "daisyui"` with inline theme list in global.css
 - Custom CSS (scrollbar, keyframes) in global.css uses `var(--color-*)` DaisyUI variables
 
+### Hero (portada)
+
+- Fondo rotativo diario desde `src/lib/backgrounds.ts` (`getTodayBg()`, con `focalPoint` por foto) + scrim suave `from-base-100/25 via-base-100/30 to-base-100/70`
+- **Ojo con los nombres**: la sección usa `.hero-stage` y el scrim `.hero-scrim` a propósito. `.hero` y `.hero-overlay` son componentes de daisyUI (`display:grid` + `grid-row/column-start` en todos los hijos → re-ancla el `absolute inset-0` de la imagen al content box y le mete un relleno `neutral 50%` detrás del degradado)
+- Botón de esquina (`.hero-toggle`, ojo/ojo-tachado) colapsa el card a una **isla compacta abajo-izquierda** para dejar ver la foto completa; el estado persiste en `localStorage['hero-collapsed']`. La isla (`.hero-island`) es un `<button>` que también restaura al hacer click, `inert` mientras está oculta
+- El cierre **aterriza sobre la isla**: `measure()` en `index.astro` mide la caja de layout del card y la de la isla y publica `--hero-tx/--hero-ty` (translate hasta la esquina de la isla) + `--hero-isl-w/-h/-r`; el `clip-path` del card termina como `inset(calc(100% - var(--hero-isl-h)) calc(100% - var(--hero-isl-w)) 0 0 round <radio>)` = exactamente la misma píldora, con `border-radius` igual al de la isla
+- El estado colapsado oculta el card con `clip-path` (**no** `opacity`) para que el `<h1>` siga en el árbol accesible (el clip vive en `.hero-card`, no en el wrapper, porque su border box es la caja de referencia de la píldora; el inset expandido es negativo, `-4rem`, para no cortar la sombra y para que `clip-path` interpole en vez de saltar); el scrim y el fade inferior bajan de opacidad para mostrar más imagen
+- La sección sólo lleva `rounded-t-2xl`: con el card arriba el fade inferior termina en base-100 (igual que el `body`), así que las esquinas de abajo no se ven. El estado colapsado redondea las inferiores a `1rem` (`border-bottom-*-radius`, animadas con `--duration-slow` junto al fade) para que la foto a la vista quede como card completa
+- La isla aparece **sólo con opacidad** (nada de `transform`): una transform la haría depender del estado y cualquier override inline arrancaría su propia transición, ensuciando justo la caja que el cierre tiene que igualar. Su fade-in va retrasado (`--duration-fast` de delay) para que el texto se materialice cuando el remanente ya aterrizó, y sin delay al expandir
+- `measure()` lee el translate aplicado desde la matriz computada del wrapper (`DOMMatrixReadOnly`, con fallback si `transform: none`) en vez de limpiar el `transform` inline: así medir a mitad de animación (al terminar de cargar las fuentes, o un `resize` durante la transición) sigue siendo exacto y no reinicia ni salta nada. Se re-mide tras `document.fonts.ready` porque la tipografía cambia las cajas
+- Las transiciones sólo se activan tras `.hero-ready` (que añade el script inline de `index.astro` tras aplicar el estado inicial), así un estado persistido no anima en la carga
+- El toggle es un `<script is:inline>` (sin isla React) con guard `data-bound` y re-inicialización en `astro:page-load`
+
 ### Source attribution convention
 
 Every widget/section must include a right-aligned source attribution at the bottom using the pattern:

@@ -113,7 +113,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
 
     <main id="main" class="max-w-7xl mx-auto px-4 py-6 pb-56 space-y-8 md:space-y-12">
       <!-- Hero -->
-      <section class="relative overflow-hidden text-center py-32 md:py-40 rounded-t-2xl">
+      <section class="hero-stage relative overflow-hidden text-center py-32 md:py-40 rounded-t-2xl" data-collapsed="false">
         <div class="absolute inset-0 animate-[heroBgIn_0.8s_ease-out] will-animate">
           <img
             src={todayBg.url}
@@ -123,11 +123,24 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
             loading="eager"
             fetchpriority="high"
           />
-          <div class="absolute inset-0 bg-gradient-to-b from-base-100/30 via-base-100/50 to-base-100/80" />
+          <div class="hero-scrim absolute inset-0 bg-gradient-to-b from-base-100/25 via-base-100/30 to-base-100/70" />
         </div>
-        <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-base-100 to-transparent" />
-        <div class="relative z-10 max-w-2xl mx-auto px-4">
-          <div class={`overflow-hidden backdrop-blur-sm bg-base-100/40 rounded-2xl p-8 md:p-12 shadow-xl border border-base-300/20 ${festivity?.theme ?? ''}`}>
+        <div class="hero-fade absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-base-100 to-transparent" />
+        <button
+          type="button"
+          class="hero-toggle absolute top-4 right-4 z-20 grid place-items-center w-9 h-9 rounded-full backdrop-blur-sm bg-base-100/40 hover:bg-base-100/70 border border-base-300/20 text-base-content/80 hover:text-base-content transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          aria-expanded="true"
+          aria-label="Ocultar portada para ver la foto"
+          data-collapsed="false"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1 12s4-7.5 11-7.5S23 12 23 12s-4 7.5-11 7.5S1 12 1 12Z" />
+            <circle cx="12" cy="12" r="3.2" />
+            <line class="hero-toggle-slash" x1="2.2" y1="2.2" x2="21.8" y2="21.8" />
+          </svg>
+        </button>
+        <div class="hero-card-wrap relative z-10 max-w-2xl mx-auto px-4">
+          <div class={`hero-card overflow-hidden backdrop-blur-sm bg-base-100/50 rounded-2xl p-8 md:p-12 shadow-xl border border-base-300/20 ${festivity?.theme ?? ''}`}>
             <div class="flex justify-center mb-5 animate-[fadeSlideIn_0.5s_ease-out_0.3s_both] will-animate">
               <div class="bg-base-100/80 backdrop-blur-sm text-base-content text-sm font-semibold px-4 py-1.5 rounded-xl whitespace-nowrap">
                 {festivity?.flagSvg ? <img src={festivity.flagSvg} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : festivity?.emoji ? <img src={emojiToPath(festivity.emoji)} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : ''}{greeting}
@@ -152,7 +165,97 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
             <a href={todayBg.photoUrl} target="_blank" rel="noopener noreferrer" class="hover:text-base-content underline underline-offset-2 transition-colors">{todayBg.author}</a>
           </span>
         </div>
+        <button
+          type="button"
+          class="hero-island absolute left-4 bottom-3 z-10 flex items-center rounded-full backdrop-blur-sm bg-base-100/60 hover:bg-base-100/80 border border-base-300/20 px-4 py-2 shadow-lg text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          aria-label="Mostrar portada"
+          inert
+        >
+          <span class="text-sm font-extrabold tracking-tighter whitespace-nowrap">
+            <span class="text-primary">¿</span>Qué Onda<span class="text-primary">?</span>
+          </span>
+        </button>
       </section>
+
+      <script is:inline>
+        (function () {
+          function initHero() {
+            var hero = document.querySelector('.hero-stage');
+            if (!hero) return;
+            var btn = hero.querySelector('.hero-toggle');
+            var island = hero.querySelector('.hero-island');
+            var wrap = hero.querySelector('.hero-card-wrap');
+            var card = hero.querySelector('.hero-card');
+            if (!btn || !island || !wrap || !card || btn.dataset.bound === '1') return;
+            btn.dataset.bound = '1';
+
+            var KEY = 'hero-collapsed';
+
+            // Geometry for the collapse: how far the card's bottom-left corner must travel
+            // to land on the island, and the island's box so the clip ends as its pill.
+            // Both boxes are state-independent (the island enters by opacity alone), and the
+            // wrapper's transform is read back from the live matrix — so this stays exact even
+            // when called mid-transition (fonts finishing, a resize during the animation).
+            function measure() {
+              var t = getComputedStyle(wrap).transform;
+              var m = null;
+              if (t && t !== 'none') {
+                try { m = new DOMMatrixReadOnly(t); } catch (e) { m = null; }
+              }
+              var dx = m ? m.m41 : 0;
+              var dy = m ? m.m42 : 0;
+
+              var c = card.getBoundingClientRect();
+              var i = island.getBoundingClientRect();
+
+              hero.style.setProperty('--hero-tx', (i.left - (c.left - dx)) + 'px');
+              hero.style.setProperty('--hero-ty', (i.bottom - (c.bottom - dy)) + 'px');
+              hero.style.setProperty('--hero-isl-w', i.width + 'px');
+              hero.style.setProperty('--hero-isl-h', i.height + 'px');
+              hero.style.setProperty('--hero-isl-r', (i.height / 2) + 'px');
+            }
+
+            function set(collapsed) {
+              hero.dataset.collapsed = collapsed ? 'true' : 'false';
+              btn.dataset.collapsed = collapsed ? 'true' : 'false';
+              btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+              btn.setAttribute('aria-label', collapsed ? 'Mostrar portada' : 'Ocultar portada para ver la foto');
+              island.inert = !collapsed;
+            }
+
+            var stored = '0';
+            try { stored = localStorage.getItem(KEY) || '0'; } catch (e) {}
+            measure();
+            set(stored === '1');
+
+            // Reading a layout property forces a style flush, so the "before-change" style already
+            // carries the measured vars and the applied state. Adding `.hero-ready` after that only
+            // introduces the transition properties — no value changes, so a persisted collapsed
+            // state paints at rest instead of animating on boot.
+            void hero.offsetHeight;
+            hero.classList.add('hero-ready');
+
+            // Web fonts change the card/island boxes — re-measure once they are in
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+
+            function toggle() {
+              var next = hero.dataset.collapsed !== 'true';
+              // The vars only matter while collapsed, and the geometry is the expanded card's,
+              // so only the way in needs a (re)measure — the way out just reuses them.
+              if (next) measure();
+              set(next);
+              try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
+            }
+
+            btn.addEventListener('click', toggle);
+            island.addEventListener('click', toggle);
+            window.addEventListener('resize', measure);
+          }
+
+          initHero();
+          document.addEventListener('astro:page-load', initHero);
+        })();
+      </script>
 
       <!-- Emergencia -->
       <SectionShareHandler client:idle />
