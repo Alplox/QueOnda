@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { NewsCluster } from '../../types';
 import { ArticleReader } from './ArticleReader';
+import { play } from '@/lib/sound';
 
 interface Props {
   cluster: NewsCluster;
@@ -73,14 +74,23 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
           </div>
 
           <div className="flex items-start gap-1 group">
-            <button
-              onClick={() => handleClick(mainArticle)}
+            <a
+              href={mainArticle.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                play('interaction.tap');
+                if (!openDirect) {
+                  e.preventDefault();
+                  setReaderArticle(mainArticle);
+                }
+              }}
               className="flex-1 text-left cursor-pointer"
             >
               <h3 className="text-lg font-bold text-balance text-base-content leading-tight tracking-tight transition-colors line-clamp-3" style={{ fontFamily: 'inherit' }}>
                 {mainArticle.title}
               </h3>
-            </button>
+            </a>
             <button
               onClick={(e) => { e.stopPropagation(); setReaderArticle(mainArticle); }}
               className="shrink-0 p-1 mt-0.5 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-all cursor-pointer"
@@ -135,14 +145,23 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
                               key={i}
                               className="flex items-center gap-1 group/article"
                             >
-                              <button
-                                onClick={() => handleClick(article)}
+                              <a
+                                href={article.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                  play('interaction.tap');
+                                  if (!openDirect) {
+                                    e.preventDefault();
+                                    setReaderArticle(article);
+                                  }
+                                }}
                                 className="flex-1 text-left min-w-0 py-1 px-2 rounded-md hover:bg-base-300 transition-colors cursor-pointer"
                               >
                                 <p className="text-xs text-base-content/80 leading-snug line-clamp-2">
                                   {article.title}
                                 </p>
-                              </button>
+                              </a>
                               <button
                                 onClick={(e) => { e.stopPropagation(); setReaderArticle(article); }}
                                 className="shrink-0 p-1 rounded-md opacity-0 group-hover/article:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-all cursor-pointer"

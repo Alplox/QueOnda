@@ -1111,14 +1111,17 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
                   key={i}
                   className="flex items-center gap-1 group hover:bg-base-300 transition-colors"
                 >
-                  <button
-                    onClick={() => { play('interaction.tap'); window.open(a.link, '_blank', 'noopener,noreferrer'); }}
+                  <a
+                    href={a.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => play('interaction.tap')}
                     className="flex-1 text-left min-w-0 px-3 py-2 cursor-pointer"
                   >
                     <p className="text-xs text-base-content leading-snug line-clamp-2">
                       {a.title}
                     </p>
-                  </button>
+                  </a>
                   <button
                     onClick={(e) => { play('interaction.tap'); e.stopPropagation(); onOpenArticle(a); }}
                     className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content/80 transition-all cursor-pointer"

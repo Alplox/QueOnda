@@ -138,7 +138,7 @@ export function GoogleTrendsWidget() {
     <div>
       <div className="space-y-1">
       {trends.map((trend, i) => (
-        <div key={i} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${i * 50}ms` }}>
+        <div key={i} className="relative has-[details[open]]:z-20 opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${i * 50}ms` }}>
         <div
           className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] transition-colors"
         >
@@ -158,20 +158,53 @@ export function GoogleTrendsWidget() {
             {trend.snippet && (
               <p className="text-[11px] text-base-content/70 line-clamp-1 mt-0.5" title={trend.snippet}>{trend.snippet}</p>
             )}
-            <div className="flex items-center gap-1 mt-1.5">
-              {SEARCH_ENGINES.map((se) => (
-                <a
-                  key={se.key}
-                  href={se.url + encodeURIComponent(trend.title)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Buscar "${trend.title}" en ${se.name}`}
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-base-content/50 hover:text-base-content bg-base-content/[0.03] hover:bg-base-300 border border-base-content/[0.06] hover:border-base-content/20 transition-colors"
-                  onClick={(e) => { play('interaction.tap'); e.stopPropagation(); }}
+            <div className="mt-1.5">
+              <details className="relative md:hidden">
+                <summary
+                  onClick={() => play('interaction.tap')}
+                  className="flex min-h-11 w-fit cursor-pointer select-none items-center gap-2 rounded-lg border border-base-300 bg-base-200 px-3 text-xs font-medium text-base-content hover:bg-base-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
-                  <span className="w-3.5 h-3.5" aria-hidden="true">{se.icon}</span>
-                </a>
-              ))}
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m16 16 4 4" />
+                  </svg>
+                  Buscar
+                </summary>
+                <div className="absolute left-0 top-full z-20 mt-1 grid max-h-64 min-w-64 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-2 shadow-xl">
+                  {SEARCH_ENGINES.map((se) => (
+                    <a
+                      key={se.key}
+                      href={se.url + encodeURIComponent(trend.title)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        play('interaction.tap');
+                        e.stopPropagation();
+                        e.currentTarget.closest('details')?.removeAttribute('open');
+                      }}
+                      className="flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs text-base-content/80 hover:bg-base-200 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <span className="h-4 w-4 shrink-0 text-base-content/70" aria-hidden="true">{se.icon}</span>
+                      <span className="truncate">{se.name}</span>
+                    </a>
+                  ))}
+                </div>
+              </details>
+              <div className="hidden flex-wrap gap-1 md:flex">
+                {SEARCH_ENGINES.map((se) => (
+                  <a
+                    key={se.key}
+                    href={se.url + encodeURIComponent(trend.title)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Buscar "${trend.title}" en ${se.name}`}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-base-content/[0.06] bg-base-content/[0.03] text-base-content/50 transition-colors hover:border-base-content/20 hover:bg-base-300 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    onClick={(e) => { play('interaction.tap'); e.stopPropagation(); }}
+                  >
+                    <span className="h-4 w-4" aria-hidden="true">{se.icon}</span>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
           {trend.traffic && (

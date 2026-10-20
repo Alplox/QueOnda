@@ -447,14 +447,17 @@ export const SlotCard = memo(function SlotCard({
                     className="flex items-center gap-1 group hover:bg-base-300 transition-colors animate-[fadeSlideIn_0.3s_ease-out_both]"
                     style={{ animationDelay: `${i * 40}ms` }}
                   >
-                    <button
-                      onClick={() => { play('interaction.tap'); window.open(article.link, '_blank', 'noopener,noreferrer'); }}
+                    <a
+                      href={article.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => play('interaction.tap')}
                       className="flex-1 text-left min-w-0 px-3 py-2 cursor-pointer"
                     >
                       <p className="text-xs text-base-content leading-snug line-clamp-2">
                         {article.title}
                       </p>
-                    </button>
+                    </a>
                     <button
                       onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderArticle(article); }}
                       className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content/80 transition-all cursor-pointer"
