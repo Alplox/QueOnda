@@ -379,7 +379,7 @@ export function PowerOutageWidget() {
   const nextHour = new Date(data.updatedAt + 3600000).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className={`mt-4 rounded-xl p-4 border shadow-sm animate-[fadeInUp_0.3s_ease-out] ${isStale ? 'border-warning/40 bg-warning/10' : isWarn ? 'border-warning/25 bg-warning/5' : 'border-base-300 bg-base-200'}`}>
+    <div className={`mt-4 rounded-xl p-4 border shadow-sm ${isStale ? 'border-warning/40 bg-warning/10' : isWarn ? 'border-warning/25 bg-warning/5' : 'border-base-300 bg-base-200'}`}>
       <div className="flex items-start justify-between gap-2">
         <p className="em-subhead !mb-0 !pb-1">
           <span><span className="mr-1.5" role="img" aria-label="rayo">⚡</span>Clientes sin suministro eléctrico</span>
@@ -619,7 +619,7 @@ export function PowerOutageWidget() {
               <div
                 key={key}
                 className={`grid ${rowGrid} items-center gap-x-2 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 animate-[fadeInUp_0.3s_ease-out_both]`}
-                style={style}
+              style={{ animationDelay: `${Math.min(i * 40, 400)}ms` }}
               >
                 <span className="truncate text-base-content/80">{name}</span>
                 {barTrack}
