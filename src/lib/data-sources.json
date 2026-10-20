@@ -1,0 +1,492 @@
+{
+  "groups": [
+    {
+      "title": "Clima (/api/weather)",
+      "strategy": "Fallback secuencial",
+      "items": [
+        {
+          "name": "Open-Meteo",
+          "url": "https://open-meteo.com",
+          "role": "primary",
+          "note": "api.open-meteo.com/v1/forecast, todas las ciudades en una llamada, timeout 8s"
+        },
+        {
+          "name": "Gael Cloud",
+          "url": "https://api.gael.cloud",
+          "role": "fallback",
+          "note": "api.gael.cloud/general/public/clima/{ICAO}, timeout 8s"
+        },
+        {
+          "name": "Boostr",
+          "url": "https://docs.boostr.cl",
+          "role": "fallback",
+          "note": "api.boostr.cl/weather/{ICAO}.json, timeout 5s"
+        },
+        {
+          "name": "Caché stale",
+          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/cache.ts",
+          "role": "final",
+          "note": "datos previos vía KV; si todo falla, { weather: null }"
+        }
+      ]
+    },
+    {
+      "title": "Sismos / Emergencias (/api/emergency)",
+      "strategy": "Fallback secuencial (magnitud mínima 5.0; pasa al siguiente si items.length === 0)",
+      "items": [
+        {
+          "name": "Gael Cloud",
+          "url": "https://api.gael.cloud",
+          "role": "primary",
+          "note": "api.gael.cloud/general/public/sismos, timeout 10s"
+        },
+        {
+          "name": "Boostr",
+          "url": "https://docs.boostr.cl",
+          "role": "fallback",
+          "note": "api.boostr.cl/earthquakes/recent.json, timeout 10s"
+        },
+        {
+          "name": "USGS",
+          "url": "https://earthquake.usgs.gov",
+          "role": "fallback",
+          "note": "earthquake.usgs.gov/.../2.5_day.geojson, filtrado a Chile/Sudamérica, timeout 10s"
+        }
+      ]
+    },
+    {
+      "title": "Alertas SENAPRED (canal independiente)",
+      "strategy": "Única fuente",
+      "items": [
+        {
+          "name": "Telegram SenapredChile",
+          "url": "https://t.me/s/SenapredChile",
+          "role": "single",
+          "note": "scraping de t.me/s/SenapredChile (BROWSER_UA); parsea .js-widget_message (data-post, <time datetime>, .js-message_text); severidad por keyword (desborde/aluvión/evacuar→critical, crecida/incendio/SAE/alerta→high, preventivo/monitoreo→moderate, else low)"
+        }
+      ]
+    },
+    {
+      "title": "Finanzas (/api/finance)",
+      "strategy": "Merge: itera todas las fuentes y llena indicadores faltantes; se detiene si ya tiene los 5",
+      "items": [
+        {
+          "name": "mindicador.cl",
+          "url": "https://mindicador.cl",
+          "role": "primary",
+          "note": "mindicador.cl/api, UF, USD, EUR, IPC, UTM, timeout 8s"
+        },
+        {
+          "name": "Boostr",
+          "url": "https://docs.boostr.cl",
+          "role": "fallback",
+          "note": "api.boostr.cl/economy/indicators.json, timeout 8s"
+        },
+        {
+          "name": "Findic",
+          "url": "https://findic.cl",
+          "role": "fallback",
+          "note": "findic.cl/api/, timeout 8s"
+        },
+        {
+          "name": "SII RSS",
+          "url": "https://zeus.sii.cl",
+          "role": "fallback",
+          "note": "zeus.sii.cl/admin/rss/sii_ind_rss.xml, timeout 8s"
+        },
+        {
+          "name": "DolarAPI",
+          "url": "https://cl.dolarapi.com",
+          "role": "fallback",
+          "note": "cl.dolarapi.com/v1/cotizaciones, timeout 8s"
+        },
+        {
+          "name": "Caché stale",
+          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/cache.ts",
+          "role": "final",
+          "note": "→ 502 si todo falla"
+        }
+      ]
+    },
+    {
+      "title": "Radios (/api/radio-stations)",
+      "strategy": "Fallback secuencial",
+      "items": [
+        {
+          "name": "radio-browser.info",
+          "url": "https://api.radio-browser.info",
+          "role": "primary",
+          "note": "de1.api.radio-browser.info, timeout 15s"
+        },
+        {
+          "name": "json-teles",
+          "url": "https://github.com/Alplox/json-teles",
+          "role": "fallback",
+          "note": "raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json, filtro category=music"
+        },
+        {
+          "name": "FALLBACK_RADIOS",
+          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/radios.ts",
+          "role": "final",
+          "note": "hardcoded: Cooperativa, Duna, ADN"
+        },
+        {
+          "name": "CD disc images",
+          "url": "https://pngimg.com",
+          "role": "single",
+          "note": "PNGImg CC BY-NC 4.0; elegidos al azar por estación en BoomboxDisplay",
+          "links": [
+            {
+              "label": "cd_dvd_PNG9081",
+              "url": "https://pngimg.com/image/9081"
+            },
+            {
+              "label": "cd_dvd_PNG9079",
+              "url": "https://pngimg.com/image/9079"
+            },
+            {
+              "label": "cd_dvd_PNG9075",
+              "url": "https://pngimg.com/image/9075"
+            },
+            {
+              "label": "cd_dvd_PNG9080",
+              "url": "https://pngimg.com/image/9080"
+            },
+            {
+              "label": "cd_dvd_PNG9065",
+              "url": "https://pngimg.com/image/9065"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Calidad del aire (/api/air-quality)",
+      "strategy": "Fallback secuencial (Boostr y Gael Cloud no exponen calidad del aire)",
+      "items": [
+        {
+          "name": "SINCA · MMA",
+          "url": "https://sinca.mma.gob.cl",
+          "role": "primary",
+          "note": "sinca.mma.gob.cl/index.php/json/listadomapa2k19/, ~118 estaciones, timeout 12s"
+        },
+        {
+          "name": "Open-Meteo Air Quality",
+          "url": "https://open-meteo.com",
+          "role": "fallback",
+          "note": "air-quality-api.open-meteo.com, modelo CAMS, 18 ciudades, timeout 10s"
+        },
+        {
+          "name": "Caché stale",
+          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/cache.ts",
+          "role": "final",
+          "note": "CDN edge 30 min stale-while-revalidate"
+        }
+      ]
+    },
+    {
+      "title": "Fútbol (/api/futbol)",
+      "strategy": "Paths paralelos",
+      "items": [
+        {
+          "name": "ESPN Deportes API",
+          "url": "https://site.web.api.espn.com",
+          "role": "primary",
+          "note": "standings + scoreboard chi.1, timeout 8s; sin fallback → standings/matches vacíos"
+        },
+        {
+          "name": "Sports RSS",
+          "url": "https://github.com/Alplox/awesome-chilean-rss",
+          "role": "single",
+          "note": "siempre se carga, independiente de ESPN"
+        }
+      ]
+    },
+    {
+      "title": "Transporte (/api/transport)",
+      "strategy": "Fuentes individuales",
+      "items": [
+        {
+          "name": "Metro.cl",
+          "url": "https://www.metro.cl",
+          "role": "single",
+          "note": "scraping estado-red, timeout 8s, sin fallback"
+        },
+        {
+          "name": "RED (red.cl)",
+          "url": "https://www.red.cl",
+          "role": "single",
+          "note": "predictorPlus, timeout 5s"
+        },
+        {
+          "name": "DTPM GTFS",
+          "url": "https://www.dtpm.cl",
+          "role": "single",
+          "note": "base de paraderos por recorrido (build-time)"
+        }
+      ]
+    },
+    {
+      "title": "Feeds RSS",
+      "strategy": "Local-first",
+      "items": [
+        {
+          "name": "feeds-database.json (local)",
+          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/feeds-database.json",
+          "role": "primary",
+          "note": "build-time, instantáneo, siempre disponible"
+        },
+        {
+          "name": "GitHub raw",
+          "url": "https://raw.githubusercontent.com/alplox/awesome-chilean-rss",
+          "role": "fallback",
+          "note": "fire-and-forget, timeout 15s"
+        },
+        {
+          "name": "jsDelivr CDN",
+          "url": "https://cdn.jsdelivr.net",
+          "role": "fallback",
+          "note": "fire-and-forget, timeout 15s"
+        }
+      ]
+    },
+    {
+      "title": "Cortes de luz (/api/power)",
+      "strategy": "Única fuente + snapshot durable",
+      "items": [
+        {
+          "name": "SEC (apps.sec.cl)",
+          "url": "https://www.sec.cl",
+          "role": "single",
+          "note": "POST ClientesAfectados/{Get,GetClientesNacional,GetPorFecha,GetClientesRegional}; sin alternativa pública"
+        },
+        {
+          "name": "power:lastgood",
+          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/cache.ts",
+          "role": "final",
+          "note": "snapshot durable 6h vía setLastGood; si la SEC cae sirve este con stale:true"
+        }
+      ]
+    },
+    {
+      "title": "TV, YouTube, Trends, Spotify, Jobs, Holidays",
+      "strategy": "Única fuente (sin fallback)",
+      "items": [
+        {
+          "name": "json-teles",
+          "url": "https://github.com/Alplox/json-teles",
+          "role": "single",
+          "note": "canales de TV chilenos"
+        },
+        {
+          "name": "iptv-org",
+          "url": "https://github.com/iptv-org/iptv",
+          "role": "single",
+          "note": "canales CL (m3u)"
+        },
+        {
+          "name": "mi-iptv",
+          "url": "https://github.com/fparrav/mi-iptv",
+          "role": "single",
+          "note": "playlist m3u (fallback jsDelivr)"
+        },
+        {
+          "name": "YouTube RSS",
+          "url": "https://www.youtube.com",
+          "role": "single",
+          "note": "feeds/videos.xml por channel_id"
+        },
+        {
+          "name": "Google Trends RSS",
+          "url": "https://trends.google.com",
+          "role": "single",
+          "note": "trending/rss?geo=CL"
+        },
+        {
+          "name": "Spotify Embed",
+          "url": "https://open.spotify.com",
+          "role": "single",
+          "note": "Top 50 Chile (iframe)"
+        },
+        {
+          "name": "Nager.Date",
+          "url": "https://date.nager.at",
+          "role": "single",
+          "note": "feriados de Chile (con fallback JSON bundled)"
+        },
+        {
+          "name": "Jobs (Getonbrd, Workanywhere, Remotive)",
+          "url": "https://github.com/Alplox/QueOnda/tree/main/src/lib/jobs/sources",
+          "role": "single",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "title": "Mapas y basemaps",
+      "strategy": "Única fuente",
+      "items": [
+        {
+          "name": "OpenFreeMap",
+          "url": "https://openfreemap.org",
+          "role": "single",
+          "note": "tiles.openfreemap.org/styles/{positron,dark}, sin API key"
+        },
+        {
+          "name": "MapLibre GL",
+          "url": "https://maplibre.org",
+          "role": "single",
+          "note": "render del basemap"
+        }
+      ]
+    },
+    {
+      "title": "Otras fuentes (única, sin cadena de respaldo)",
+      "strategy": "Fuente única",
+      "items": [
+        {
+          "name": "Article proxy (cheerio)",
+          "url": "https://cheerio.js.org",
+          "role": "single",
+          "note": "scraping del URL enviado por el cliente; validación SSRF + sanitización HTML"
+        },
+        {
+          "name": "RED routes DB",
+          "url": "https://www.dtpm.cl",
+          "role": "single",
+          "note": "DTPM GTFS, build-time vía update-stops-db.mjs"
+        },
+        {
+          "name": "Weather widget geolocation",
+          "url": "https://open-meteo.com",
+          "role": "single",
+          "note": "Open-Meteo Geocoding (reverse + search)"
+        },
+        {
+          "name": "Weather widget forecast",
+          "url": "https://www.meteochile.gob.cl",
+          "role": "single",
+          "note": "DMC pronostico.js, 5 días para ~60 ciudades"
+        },
+        {
+          "name": "Map basemaps",
+          "url": "https://openfreemap.org",
+          "role": "single",
+          "note": "OpenFreeMap + MapLibre GL, sin API key"
+        }
+      ]
+    },
+    {
+      "title": "Imágenes y assets",
+      "strategy": "Recursos estáticos",
+      "items": [
+        {
+          "name": "Foto de portada del footer",
+          "url": "https://unsplash.com/es/fotos/manada-de-caballos-en-arbustos-y-pastos-a-traves-de-la-montana-Zf2mL1gtaVg",
+          "role": "single",
+          "note": "modernwolo en Unsplash — Licencia Unsplash"
+        },
+        {
+          "name": "Imágenes de portada (hero)",
+          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/backgrounds.ts",
+          "role": "single",
+          "note": "rotación diaria por día del año (getTodayBg); Pexels + Unsplash, licencia gratuita",
+          "links": [
+            {
+              "label": "Thiago Matos",
+              "url": "https://www.pexels.com/es-es/foto/impresionante-paisaje-urbano-de-santiago-con-la-cordillera-de-los-andes-30342880/"
+            },
+            {
+              "label": "Luis G",
+              "url": "https://www.pexels.com/es-es/foto/ciudad-paisaje-montanas-panorama-urbano-17461141/"
+            },
+            {
+              "label": "Santi Echaire",
+              "url": "https://www.pexels.com/es-es/foto/vista-panoramica-de-santiago-frente-a-la-cordillera-de-los-andes-33606801/"
+            },
+            {
+              "label": "Santi Echaire",
+              "url": "https://www.pexels.com/es-es/foto/paisaje-urbano-con-la-cordillera-de-los-andes-nevada-al-fondo-33610547/"
+            },
+            {
+              "label": "Santi Echaire",
+              "url": "https://www.pexels.com/es-es/foto/majestuoso-volcan-nevado-con-vistas-a-un-pintoresco-lago-37228063/"
+            },
+            {
+              "label": "Cláudio Castro",
+              "url": "https://www.pexels.com/es-es/foto/bandera-chilena-sobre-cielo-azul-simbolo-de-orgullo-nacional-36585246/"
+            },
+            {
+              "label": "Willian Justen de Vasconcellos",
+              "url": "https://www.pexels.com/es-es/foto/ciudad-punto-de-referencia-edificio-rascacielos-19821196/"
+            },
+            {
+              "label": "Michel Jose",
+              "url": "https://www.pexels.com/es-es/foto/naturaleza-cielo-punto-de-referencia-arquitectura-27873926/"
+            },
+            {
+              "label": "Michel Jose",
+              "url": "https://www.pexels.com/es-es/foto/27873929/"
+            },
+            {
+              "label": "Eduardo Rivas",
+              "url": "https://www.pexels.com/es-es/foto/mar-agua-oceano-barca-4665517/"
+            },
+            {
+              "label": "Matheus Pedrosa",
+              "url": "https://www.pexels.com/es-es/foto/ciudad-panorama-urbano-skyline-viaje-27115881/"
+            },
+            {
+              "label": "Cláudio Castro",
+              "url": "https://www.pexels.com/es-es/foto/torre-del-reloj-y-rascacielos-modernos-en-santiago-36585242/"
+            },
+            {
+              "label": "Athenea Codjambassis Rossitto",
+              "url": "https://www.pexels.com/es-es/foto/nieve-nevar-paisaje-naturaleza-25525995/"
+            },
+            {
+              "label": "Fermin Rodriguez Penelas",
+              "url": "https://www.pexels.com/es-es/foto/naturaleza-animal-prado-en-pie-13198296/"
+            },
+            {
+              "label": "Vivi Pascar",
+              "url": "https://www.pexels.com/es-es/foto/vista-panoramica-del-volcan-licancabur-en-el-desierto-de-atacama-28602851/"
+            },
+            {
+              "label": "Saif",
+              "url": "https://www.pexels.com/es-es/foto/paisaje-arena-nubes-desierto-20853000/"
+            },
+            {
+              "label": "William Warby",
+              "url": "https://www.pexels.com/es-es/foto/paisaje-naturaleza-bosque-colina-21533327/"
+            },
+            {
+              "label": "Belen Capello",
+              "url": "https://www.pexels.com/es-es/foto/cielo-azul-al-aire-libre-escenico-pintoresco-7543964/"
+            },
+            {
+              "label": "Chris Flxxx",
+              "url": "https://www.pexels.com/es-es/foto/majestuoso-paisaje-montanoso-en-torres-del-paine-31822186/"
+            },
+            {
+              "label": "Xiang Qi",
+              "url": "https://www.pexels.com/es-es/foto/35957531/"
+            },
+            {
+              "label": "Alex Quezada",
+              "url": "https://www.pexels.com/es-es/foto/34639207/"
+            },
+            {
+              "label": "Getty Images",
+              "url": "https://unsplash.com/es/fotos/a-puerto-natales-chile-sur-chile-maravilla-del-mundo-torres-del-paine-AQOBZfOLPXQ"
+            },
+            {
+              "label": "Kimberly Alves",
+              "url": "https://www.pexels.com/es-es/foto/36721823/"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

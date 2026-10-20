@@ -191,21 +191,46 @@ export function BottomNav() {
   );
 
   useEffect(() => {
-    const sections = document.querySelectorAll('section[id]');
-    if (!sections.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const intersecting = entries.filter((e) => e.isIntersecting);
-        if (intersecting.length > 0) {
-          setActiveSection(intersecting[0].target.id);
+    let raf = 0;
+    const update = () => {
+      const sectionList = Array.from(
+        document.querySelectorAll('section[id]'),
+      ) as HTMLElement[];
+      if (!sectionList.length) return;
+      const offset = 120;
+      let active = sectionList[0].id;
+      for (const s of sectionList) {
+        if (s.getBoundingClientRect().top <= offset) {
+          active = s.id;
+        } else {
+          break;
         }
-      },
-      { rootMargin: '-80px 0px -65% 0px', threshold: 0 },
-    );
-
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
+      }
+      const scrollBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 80;
+      if (scrollBottom) active = sectionList[sectionList.length - 1].id;
+      setActiveSection(active);
+    };
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        update();
+      });
+    };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', update);
+    const ro = new ResizeObserver(update);
+    const main = document.querySelector('main');
+    if (main) ro.observe(main);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', update);
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, []);
 
   // Lift clear of the sticky radio player when it slides in (same pattern as BackToTop)

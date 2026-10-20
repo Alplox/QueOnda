@@ -5,7 +5,7 @@ Chilean news aggregator + live TV/radio streaming in a single-page, ad-free dash
 ## Stack
 
 - Astro 7 (SSR) + React 19 + TypeScript + Tailwind CSS 4 + DaisyUI v5
-- Font: `Figtree` (body/headings) + `DM Serif Display` (hero), loaded non-blocking via Google Fonts `<link>`.
+- Font: `Figtree` (body) + `Lora` (headings), loaded non-blocking via Google Fonts `<link>`.
 - Icons: inline SVGs (no icon library). No animation library — CSS transitions + `active:scale` only.
 - Sound: Web Audio API singleton (`src/lib/sound.ts`) — triangle wave + bandpass noise, lazy AudioContext.
 - Deploy: Cloudflare Pages Functions (SSR), `nodejs_compat`, `@astrojs/cloudflare` v14+ `mode: 'directory'` + `scripts/post-build-pages.mjs` post-build hook.

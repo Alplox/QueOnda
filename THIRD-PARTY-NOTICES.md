@@ -152,7 +152,7 @@ Se ejecutan en el Worker de Cloudflare o en build-time:
 ### Google Fonts — SIL Open Font License 1.1
 
 - **Figtree** — https://github.com/erikdkennedy/figtree
-- **DM Serif Display** — https://fonts.google.com/specimen/DM+Serif+Display
+- **Lora** — https://fonts.google.com/specimen/Lora
 
 Servidas desde Google Fonts CDN (no redistribuidas). OFL-1.1:
 https://openfontlicense.org/

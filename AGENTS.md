@@ -15,6 +15,7 @@ pnpm preview                    # Preview the production build
 pnpm run update-feeds           # Regenerate src/lib/feeds-database.json from remote DB
 pnpm run update-stops           # Regenerate src/lib/stops-database.json from DTPM GTFS
 pnpm run update-holidays        # Regenerate src/lib/holidays.json from nager.at API
+pnpm run sync-credits            # Regenerate AGENTS.md "Data Sources & Fallback Chains" section from src/lib/data-sources.json
 ```
 
 ## Directory Structure
@@ -95,7 +96,7 @@ src/
       EmergencyMap.tsx         # Leaflet + OpenFreeMap map of sismos by magnitude (toggle inside EmergencyWidget)
       EmergencyTicker.tsx      # Sticky collapsible alert ticker bar under navbar (client:load)
       EmergencyAlertBar.tsx    # Auto-scrolling alert ticker bar
-      PowerOutageWidget.tsx    # SEC clientes sin suministro + mapa Leaflet/OpenFreeMap por comuna + gráfico evolución (client:load)
+      PowerOutageWidget.tsx    # SEC clientes sin suministro + mapa Leaflet/OpenFreeMap por comuna + gráfico evolución (client:load). Listado tipo tabla con cabecera («Sin luz · Clientes · %»), filas cebra, columnas numéricas de ancho fijo alineadas a la derecha (la base de clientes de la región va después de «Sin luz», no como subtítulo del nombre; el ancho fijo es lo que mantiene el riel de la barra y los números en la misma x en todas las filas) y pin de mapa siempre visible (nunca oculto tras hover). En móvil el nombre ocupa la primera línea de la fila y los números bajan a la segunda, así no se trunca ningún nombre. La barra mide lo que ordena la lista: «Más afectados» (default) y «Norte → sur» ⇒ clientes contra la región más afectada; «Mayor %» ⇒ afectados ÷ clientes de ESA región (nunca contra otra región). En modo % aparece el grupo «Escala» (`localStorage['power-scale']`): «Zoom» (default, tope redondo ≥ la peor proporción: 0,5 %, 1 %, 2 %… según el día) y «Real» (100 % del track = 100 % de los clientes de la región). Pestaña Comunas: barra por volumen contra la comuna más afectada, porque la SEC no publica base de clientes por comuna
       PowerOutageMap.tsx       # Leaflet + OpenFreeMap comuna dot map (theme-aware styles, rank-band circles, filtros región/comuna, foco por región vía pin con flyToBounds)
       PowerEvolutionChart.tsx  # Chart.js evolución horaria de clientes sin suministro (24h/48h/72h/7d)
       HolidaysWidget.tsx       # Chilean holidays calendar (client:idle)
@@ -106,6 +107,7 @@ src/
       ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
   lib/
     cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch. Exports edgeCacheHeaders(ttlSeconds) for CDN-level edge caching with stale-while-revalidate, noStoreHeaders() for never-cached error responses, and setLastGood(key, data, ttlMs)/getStaleCached() for the durable "last known good" snapshot used by routes with no fallback chain (power)
+    data-sources.json        # @canonical lista de fuentes de datos, cadenas de fallback y licencias. Renderizada en /creditos y en la sección "Data Sources & Fallback Chains" de este archivo (regenerar con `pnpm run sync-credits`)
     channels.ts              # Channel fetch + cache logic
     feeds-database.json      # @generated local fallback of ~2056 active/verified RSS feeds (regenerate via `pnpm run update-feeds`)
     stops-database.json      # @generated RED bus routes + stops from DTPM GTFS (regenerate via `pnpm run update-stops`)
@@ -117,6 +119,7 @@ src/
     air-quality.ts           # Tipos AirStation/AirRow + AIR_STATUS (paleta oficial SINCA) + umbrales ICAP MP2.5 + airSeverity() sort
     transport.ts             # City configs, stop predictions, Metro API, POPULAR_STOPS list
     comunas-coords.ts        # Comuna → [lat, lon] table (monitor-sinluz + supplements) + comunaCoords() matcher
+    power.ts                 # Snapshot SEC compartido por /api/power y /api/cron: serie horaria + desglose regional + base de clientes por región (GetClientesRegional, cache 7 días con fallback compilado) → `pct` por región
     ua.ts                    # BROWSER_UA constant (shared by rss.ts + radios.ts, client-safe)
     backgrounds.ts            # Hero background images data
     emoji.ts                  # Emoji-to-SVG-path helper + text splitter
@@ -170,8 +173,8 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/air-quality`               | 30 min | `{ source, stations }` — SINCA estaciones (PM2.5/PM10 + estado ICAP) o fallback Open-Meteo ciudades |
 | `GET /api/sports`                     | 30 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
 | `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
-| `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain (coords attached from Boostr); senapred: 🚨 SAE alerts via Telegram. If Boostr is unreachable from the Worker, EmergencyWidget re-enriches `lat/lon` client-side from Boostr (API is CORS-open) so sismo pins always render |
-| `GET /api/power` (+ `?fresh=1` bypass con rate-limit 1/2min por IP) | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria). **Única fuente, sin cadena de fallback**: si la SEC falla sirve el snapshot durable `power:lastgood` (6 h) con `stale: true`; solo si tampoco existe devuelve 502 `SEC no disponible`, y ese error va con `no-store` (nunca se cachea en el edge) |
+| `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain (coords attached from Boostr); senapred: 🚨 SAE alerts via Telegram (rendered separately from the sismos chain — Telegram is the official live SAE feed; the CREF events page requires AWS AppSync Cognito/SigV4, fragile to reimplement). If Boostr is unreachable from the Worker, EmergencyWidget re-enriches `lat/lon` client-side from Boostr (API is CORS-open) so sismo pins always render |
+| `GET /api/power` (+ `?fresh=1` bypass con rate-limit 1/2min por IP) | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria). Cada región trae `{ region, affected, total, pct }`: `total` = clientes de esa región (`GetClientesRegional`, cacheado 7 días + tabla compilada de respaldo) y `pct` = % de su base sin suministro. Payload construido por `src/lib/power.ts`, compartido con `/api/cron`. **Única fuente, sin cadena de fallback**: si la SEC falla sirve el snapshot durable `power:lastgood` (6 h) con `stale: true`; solo si tampoco existe devuelve 502 `SEC no disponible`, y ese error va con `no-store` (nunca se cachea en el edge) |
 | `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
 | `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
 | `GET /api/radio-stations`             | 1 hour | `{ stations }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits)                              |
@@ -237,6 +240,7 @@ All routes return JSON. CORS is not needed (same-origin).
 - Boombox layout: player panel (left) + station list (right) on desktop, stacked on mobile
 - HLS audio uses hidden `<video>` + hls.js; direct audio streams use `<audio>` element
 - Stations fetched via `/api/radio-stations` server endpoint (avoids CORS + subrequest limits), with IDB cache (24h TTL)
+- CD disc images (radio player animation): `public/cd-disc-1.webp`–`cd-disc-5.webp`. Randomly picked per station in `BoomboxDisplay`.
 
 ### News system — 6 slots with dropdown
 
@@ -282,6 +286,7 @@ Accessibility is treated as part of the component craft, not a compliance pass. 
 - **Skip link.** `index.astro` has a visually-hidden "Ir al contenido" link (`href="#main"`) shown on focus; `<main>` carries `id="main"`.
 - **Auto-updating content.** Regions that update in the background (emergency) share new items via `aria-live="polite"` and explicitly silence per-second timers/countdowns (`aria-live="off"`).
 - **Hit areas.** Icon/touch targets are ≥ 24px (ideally 28–32px); interactive cards expose clear `focus-visible` affordances.
+- **No controls behind hover.** Every button is visible at rest and reachable without a pointer: hover may change color/background/scale, never `opacity: 0`, `visibility`, `display` or `pointer-events`. Revealing a button on hover hides it from mobile and first-time users, who never learn it exists.
 - **Content visibility.** No content is initially `opacity: 0` gated on JS to become visible — headings render visible by default; animations are additive, never the only reveal mechanism.
 - **Reduced motion.** Center-stage animated surfaces (marquee alert bar, pulsing indicators) respect `prefers-reduced-motion` and pause while hovered/focused.
 
@@ -307,7 +312,7 @@ Accessibility is treated as part of the component craft, not a compliance pass. 
 
 ### Styling
 
-- Font: Figtree (headings + body) + DM Serif Display (hero) via Google Fonts `<link>` in `index.astro`
+- Font: Figtree (body) + Lora (headings) via Google Fonts `<link>` in `index.astro` (DM Serif Display replaced by Lora for a more classic editorial tone)
 - No animation library — all interactions use CSS transitions + `active:scale` for tactile feedback
 - Icons: inline SVG components (no icon library dependency)
 - Tailwind v4 configured in `src/styles/global.css` (`@import "tailwindcss"`) — no `tailwind.config.*` file
@@ -351,82 +356,11 @@ Every widget/section must include a right-aligned source attribution at the bott
 
 ## Data Sources & Fallback Chains
 
-Cada endpoint tiene una estrategia de respaldo. A continuación se detalla el orden exacto de cada cadena.
+> Fuente canónica: `src/lib/data-sources.json` (renderizada en `/creditos`).
+> Esta sección es solo una referencia — no duplica el contenido del JSON.
+> Para consultar la lista completa de fuentes, cadenas de fallback y licencias, leer directamente `src/lib/data-sources.json` (JSON estructurado por grupos).
+> Regenerar `/creditos` y la tabla del `README.md` con `pnpm run sync-credits` si se edita el JSON.
 
-### Weather (`/api/weather`) — fallback secuencial
-1. **[Open-Meteo](https://open-meteo.com)** (primario) — `api.open-meteo.com/v1/forecast` — timeout 8s, todas las ciudades en una llamada
-2. **[Gael Cloud](https://api.gael.cloud)** (secundario) — `api.gael.cloud/general/public/clima/{ICAO}` — timeout 8s, una ciudad por llamada
-3. **[Boostr](https://docs.boostr.cl)** (terciario) — `api.boostr.cl/weather/{ICAO}.json` — timeout 5s, una ciudad por llamada
-4. **Stale cache** (final) — datos previos vía KV → si todo falla, `{ weather: null }`
-
-### Emergency / Sismos (`/api/emergency`) — fallback secuencial
-1. **[Gael Cloud](https://api.gael.cloud)** (primario) — `api.gael.cloud/general/public/sismos` — timeout 10s
-2. **[Boostr](https://docs.boostr.cl)** (secundario) — `api.boostr.cl/earthquakes/recent.json` — timeout 10s
-3. **[USGS](https://earthquake.usgs.gov)** (terciario) — `earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson` — timeout 10s, filtrado a Chile/South America
-4. Criterio: pasa al siguiente si `items.length === 0`, magnitud mínima 5.0
-
-#### SENAPRED SAE alerts (official Telegram, independent channel)
-- Fetch `t.me/s/SenapredChile` (BROWSER_UA) → parse each `.js-widget_message` wrapper for `data-post`, `<time datetime>`, and `.js-message_text`
-- Severity by keyword: desborde/aluvión/evacuar → critical, crecida/incendio/SAE/alerta → high, preventivo/monitoreo → moderate, else low
-- Returns as `senapred[]` beside `items[]` in `/api/emergency` (separate from earthquake fallback chain)
-- EmergencyWidget renders them as a "🚨 Alertas SENAPRED" block. Why Telegram: it's the official live SAE feed (gets CREF on the events page requires AWS AppSync Cognito/SigV4 — brittle to reimplement)
-
-### Finance (`/api/finance`) — merge (no reemplaza)
-Itera todas las fuentes y llena indicadores faltantes. Se detiene temprano si ya tiene los 5.
-1. **[mindicador.cl](https://mindicador.cl)** — `mindicador.cl/api` — timeout 8s — UF, USD, EUR, IPC, UTM
-2. **[Boostr](https://docs.boostr.cl)** — `api.boostr.cl/economy/indicators.json` — timeout 8s
-3. **[Findic](https://findic.cl)** — `findic.cl/api/` — timeout 8s
-4. **[SII RSS](https://zeus.sii.cl)** — `zeus.sii.cl/admin/rss/sii_ind_rss.xml` — timeout 8s
-5. **[DolarAPI](https://cl.dolarapi.com)** — `cl.dolarapi.com/v1/cotizaciones` — timeout 8s
-→ Stale cache → 502 error
-
-### Radio stations (`/api/radio-stations`) — fallback secuencial
-1. **[radio-browser.info](https://api.radio-browser.info)** (primario) — `de1.api.radio-browser.info/json/stations/search?limit=500&countrycode=CL&lastcheckok=1&hidebroken=true&order=clickcount&reverse=true` — timeout 15s
-2. **[json-teles](https://github.com/Alplox/json-teles)** (secundario) — `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` → filtrado a `category === 'music'`
-3. **`FALLBACK_RADIOS`** (terciario, hardcoded) — Cooperativa, Duna, ADN
-
-#### CD disc images (radio player animation)
-- `public/cd-disc-1.webp`–`cd-disc-5.webp` — PNGImg (CC BY-NC 4.0)
-  - [cd_dvd_PNG9081](https://pngimg.com/image/9081), [cd_dvd_PNG9079](https://pngimg.com/image/9079), [cd_dvd_PNG9075](https://pngimg.com/image/9075), [cd_dvd_PNG9080](https://pngimg.com/image/9080), [cd_dvd_PNG9065](https://pngimg.com/image/9065)
-- Randomly picked per station in `BoomboxDisplay` component
-
-### Air quality (`/api/air-quality`) — fallback secuencial
-1. **[SINCA · MMA](https://sinca.mma.gob.cl)** (primario) — `sinca.mma.gob.cl/index.php/json/listadomapa2k19/` — timeout 12s, ~118 estaciones con lat/lon + PM2.5/PM10 (más O3/SO2/NO2 disponibles) con estado ICAP ya calculado por SINCA (`tableRow`: value/status/statuscode/color/icap). Pasa al fallback si 0 estaciones con datos vigentes
-2. **[Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api)** (secundario) — `air-quality-api.open-meteo.com/v1/air-quality` — timeout 10s, modelo CAMS, una llamada multi-coordenada para 18 ciudades de referencia (respuesta: un solo objeto con valores separados por espacios, NO un array) — status derivado con umbrales ICAP MP2.5 DS 59/2023 (bueno ≤50 · regular ≤80 · alerta ≤110 · pre-emergencia ≤140 · emergencia >140; verificado contra los valores icap del propio SINCA). Estaciones SINCA sin PM2.5 usan su fila PM10 y el widget las etiqueta "MP10"
-3. **Stale cache** — CDN edge cache 30 min con stale-while-revalidate cubre caídas de ambas
-- Boostr y Gael Cloud no exponen calidad del aire (verificado); WAQI/IQAir/PurpleAir requieren API key
-
-### Football / Fútbol (`/api/futbol`) — paths paralelos
-- **Standings + Matches**: [ESPN Deportes API](https://github.com/pseudo-r/Public-ESPN-API) — `site.web.api.espn.com/apis/v2/sports/soccer/chi.1/standings` + `site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard` — timeout 8s. Sin fallback: si ESPN falla → `standings: [], matches: [], source: 'rss'`
-- **Artículos**: RSS sports feeds (desde `awesome-chilean-rss` DB, categoría sports) — siempre se carga, independiente de ESPN
-
-### Transport (`/api/transport`) — fuentes individuales
-- **Metro status**: [Metro.cl](https://www.metro.cl) (scraping) — `metro.cl/el-viaje/estado-red` — timeout 8s — sin fallback
-- **RED bus predictions**: [red.cl](https://www.red.cl) — `red.cl/planifica-tu-viaje/cuando-llega/` (token) → `red.cl/predictorPlus/prediccion` — timeout 5s cada una
-- **Metro stations**: [xor.cl](https://api.xor.cl) — `api.xor.cl/red/metro-network` — usada en `src/lib/transport.ts`, no llamada por API route actualmente
-
-### Feeds DB (RSS, `src/lib/rss.ts`) — local-first
-1. **Local JSON** (`feeds-database.json`, build-time) — instantáneo, siempre disponible
-2. **[GitHub raw](https://raw.githubusercontent.com/alplox/awesome-chilean-rss)** (fire-and-forget) — timeout 15s
-3. **[jsDelivr CDN](https://cdn.jsdelivr.net)** (fire-and-forget fallback) — timeout 15s
-4. El fetch remoto es asíncrono: `loadFeedsDatabase()` devuelve el JSON local inmediatamente, luego actualiza cache en background
-
-### Other sources (single source, sin fallback)
-| Sección | Fuente | URL |
-|---------|--------|-----|
-| TV | [json-teles](https://github.com/Alplox/json-teles) + [iptv-org](https://github.com/iptv-org/iptv) + [mi-iptv](https://github.com/fparrav/mi-iptv) | `raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json` → jsDelivr CDN fallback; `iptv-org.github.io/iptv/countries/cl.m3u`; `raw.githubusercontent.com/fparrav/mi-iptv/main/output/playlist.m3u` → jsDelivr fallback (el Pages `fparrav.github.io/mi-iptv/playlist.m3u` da 404) |
-| YouTube | YouTube RSS (canales chilenos) | `www.youtube.com/feeds/videos.xml?channel_id={id}` (canales desde json-teles) |
-| Google Trends | [Google Trends RSS](https://trends.google.com) | `trends.google.com/trending/rss?geo=CL` |
-| Spotify | [Spotify Embed](https://open.spotify.com) | `open.spotify.com/embed/playlist/37i9dQZEVXbL0GavIqMTeb` (Top 50 Chile) |
-| Sports RSS | awesome-chilean-rss DB (categoría `sports`) | múltiples fuentes RSS deportivas chilenas |
-| Air quality | [SINCA · MMA](https://sinca.mma.gob.cl) | `sinca.mma.gob.cl/index.php/json/listadomapa2k19/` — fallback Open-Meteo Air Quality (CAMS) |
-| Power outages | [SEC](https://www.sec.cl) (clientes sin suministro) | `apps.sec.cl/INTONLINEv1/ClientesAfectados/{Get, GetClientesNacional, GetPorFecha}` (POST, body `{}` / `{anho, mes, dia, hora}`) — **única fuente, sin alternativa pública**. La resiliencia no viene de otra API sino del snapshot durable `power:lastgood` (6 h vía `setLastGood`): si la SEC cae, `/api/power` sirve ese snapshot con `stale: true`. La UI oficial que consume el mismo API es `apps.sec.cl/INTONLINEv1/index.aspx` (ver `scripts/actions-page.js`) |
-| Holidays | [Nager.Date](https://date.nager.at) | `date.nager.at/api/v3/publicholidays/{year}/CL` — bundled fallback JSON (auto-updated via `update-holidays-db.mjs`) |
-| Article proxy | [cheerio](https://cheerio.js.org) scraping | URL enviada por el cliente |
-| RED routes DB | [DTPM GTFS](https://www.dtpm.cl) | `dtpm.cl/descargas/gtfs/` (build-time via `update-stops-db.mjs`) |
-| Weather widget geolocation | [Open-Meteo Geocoding](https://open-meteo.com) | `geocoding-api.open-meteo.com/v1/reverse` + `v1/search` |
-| Weather widget forecast | [DMC MeteoChile](https://www.meteochile.gob.cl) | `archivos.meteochile.gob.cl/portaldmc/meteochile/js/pronostico.js` — 5-day forecast for ~60 Chilean cities |
-| Map basemaps | [OpenFreeMap](https://openfreemap.org/) + [MapLibre GL](https://maplibre.org/) | `tiles.openfreemap.org/styles/{positron,dark}` — open source, sin API key; datos OpenMapTiles/OpenStreetMap |
 
 ## Sound System (Web Audio API)
 
@@ -489,4 +423,4 @@ El build de Astro genera `dist/server/` + `dist/client/`. El script reestructura
 
 ---
 
-> **Keep updated.** When you add a new route, component, or data source, update the corresponding section above. If the architecture changes significantly, rewrite the relevant section.
+> **Keep updated.** When you add a new route, component, or data source, update the corresponding section above. If the architecture changes significantly, rewrite the relevant section. When you add/change a data source or fallback chain, edit `src/lib/data-sources.json` (single source of truth) and run `pnpm run sync-credits` to regenerate the "Data Sources & Fallback Chains" section and keep `/creditos` in sync. Do not edit that section by hand.

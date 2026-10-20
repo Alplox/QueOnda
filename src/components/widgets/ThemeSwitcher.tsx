@@ -56,7 +56,7 @@ function ThemePreview({ id }: { id: string }) {
 
 export function ThemeSwitcher() {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState('dark');
+  const [current, setCurrent] = useState('halloween');
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -5,7 +5,7 @@ export interface HeroBg {
   focalPoint?: string;
 }
 
-const backgrounds: HeroBg[] = [
+export const backgrounds: HeroBg[] = [
   {
     url: "https://images.pexels.com/photos/30342880/pexels-photo-30342880.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
     photoUrl:

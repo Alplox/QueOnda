@@ -23,6 +23,7 @@
     "update-feeds": "node scripts/update-feeds-db.mjs",
     "update-stops": "node scripts/update-stops-db.mjs",
     "update-holidays": "node scripts/update-holidays-db.mjs",
+    "sync-credits": "node scripts/sync-data-sources.mjs",
     "astro": "astro"
   },
   "dependencies": {

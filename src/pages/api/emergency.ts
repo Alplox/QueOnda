@@ -261,6 +261,10 @@ function senapredSeverity(text: string): 'low' | 'moderate' | 'high' | 'critical
   return 'low';
 }
 
+// SENAPRED alerts are scraped from Telegram's public preview (t.me/s/SenapredChile)
+// and rendered separately from the earthquake chain: Telegram is the official live
+// SAE feed. The CREF events page would require AWS AppSync Cognito/SigV4, which is
+// fragile to reimplement, so we rely on the Telegram feed instead.
 async function fetchSenapred(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
   let okFlag = false;
   const run = async (): Promise<EmergencyItem[]> => {

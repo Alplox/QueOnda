@@ -1,0 +1,219 @@
+---
+import '../styles/global.css';
+import dataSources from '../lib/data-sources.json';
+import { backgrounds } from '../lib/backgrounds';
+import { ClientRouter } from 'astro:transitions';
+
+const heroBgs = [...new Map(backgrounds.map((b) => [b.photoUrl, b])).values()];
+const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets');
+---
+<!doctype html>
+<html lang="es-CL" data-theme="halloween">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Créditos y licencias - ¿Qué Onda?</title>
+    <meta name="description" content="Créditos, fuentes de datos y licencias de los recursos de terceros usados por ¿Qué Onda?." />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="canonical" href="https://queonda.pages.dev/creditos" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&amp;display=swap"
+      media="print"
+      onload="this.setAttribute('media','all')"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&amp;display=swap" />
+    </noscript>
+    <script>
+      (function(){var s=localStorage.getItem('theme')||'halloween';document.documentElement.setAttribute('data-theme',s);document.documentElement.classList.toggle('light-theme',getComputedStyle(document.documentElement).colorScheme.includes('light'));})();
+    </script>
+    <ClientRouter />
+  </head>
+  <body class="bg-base-100 text-base-content min-h-screen">
+    <main class="max-w-3xl mx-auto px-4 py-10 md:py-14">
+      <a href="/" class="text-sm text-base-content/60 hover:text-base-content underline underline-offset-2 transition-colors">← Volver al dashboard</a>
+      <h1 class="mt-4 text-3xl font-bold tracking-tight text-balance">Créditos y licencias</h1>
+      <p class="mt-2 text-base text-base-content/70 leading-relaxed">
+        ¿Qué Onda? se construye sobre datos y recursos de terceros. Esta página los lista con su licencia y enlace original.
+        El código del proyecto se publica bajo <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">GNU AGPL-3.0</a>.
+      </p>
+
+      <section class="mt-8">
+        <h2 class="text-xl font-semibold">Iconos</h2>
+        <ul class="mt-3 space-y-2 text-base text-base-content/80">
+          <li>
+            <a href="https://simpleicons.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Simple Icons</a>
+            — CC0 1.0 Universal. Logos de marca usados para identificar el buscador al que lleva cada enlace.{' '}
+            <span class="text-base-content/60">CC0 cubre el archivo SVG, no la marca registrada: se usan sólo de forma nominativa, sin alterar el logotipo ni sugerir respaldo.</span>
+          </li>
+          <li>
+            <a href="https://twemoji.twitter.com" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Twemoji</a>
+            — CC-BY 4.0. SVG de emoji usados en la sección de Fiestas Patrias.
+          </li>
+          <li>
+            Iconos inline (SVG) del propio proyecto (sonido, navegación, controles) — parte del código, <a href="https://github.com/Alplox/QueOnda" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">AGPL-3.0</a>.
+          </li>
+        </ul>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-xl font-semibold">Mapas y basemaps</h2>
+        <ul class="mt-3 space-y-2 text-base text-base-content/80">
+          <li>
+            <a href="https://openfreemap.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">OpenFreeMap</a>
+            + <a href="https://maplibre.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">MapLibre GL</a>
+            — datos OpenMapTiles / OpenStreetMap (ODbL, requiere atribución).
+          </li>
+          <li>
+            <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Leaflet</a>
+            — BSD 2-Clause. Usado para los mapas de sismos, cortes de luz y calidad del aire.
+          </li>
+        </ul>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-xl font-semibold">Tipografía</h2>
+        <ul class="mt-3 space-y-2 text-base text-base-content/80">
+          <li>
+            <a href="https://fonts.google.com/specimen/Figtree" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Figtree</a>
+            y <a href="https://fonts.google.com/specimen/Lora" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Lora</a>
+            — SIL Open Font License 1.1, servidas por Google Fonts.
+          </li>
+        </ul>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-xl font-semibold">Imágenes</h2>
+        <p class="mt-2 text-base text-base-content/70">
+          Recursos estáticos versionados.
+        </p>
+        <div class="mt-4 space-y-5">
+          <div>
+            <h3 class="text-sm font-semibold text-base-content/90">Discos CD (PNGImg, CC-BY-NC 4.0)</h3>
+            <p class="text-sm text-base-content/50 mt-0.5">Usados de forma decorativa en el reproductor de radio.</p>
+            <ul class="mt-2 space-y-1 text-sm text-base-content/70">
+              <li><a href="https://pngimg.com/image/9081" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">cd_dvd_PNG9081</a></li>
+              <li><a href="https://pngimg.com/image/9079" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">cd_dvd_PNG9079</a></li>
+              <li><a href="https://pngimg.com/image/9075" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">cd_dvd_PNG9075</a></li>
+              <li><a href="https://pngimg.com/image/9080" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">cd_dvd_PNG9080</a></li>
+              <li><a href="https://pngimg.com/image/9065" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">cd_dvd_PNG9065</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-base-content/90">{imgGroup!.title}</h3>
+            {imgGroup!.strategy && <p class="text-sm text-base-content/50 mt-0.5">{imgGroup!.strategy}</p>}
+            <ul class="mt-2 space-y-1.5">
+              {imgGroup!.items.map((item) => (
+                <li class="flex items-start gap-2 text-base text-base-content/80">
+                  <span class="shrink-0 mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-base-200 text-base-content/60">
+                    Único
+                  </span>
+                  <span class="min-w-0">
+                    {item.url ? (
+                      <a href={item.url} target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">{item.name}</a>
+                    ) : (
+                      <span class="font-medium">{item.name}</span>
+                    )}
+                    {item.note && <span class="text-base-content/60"> — {item.note}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-base-content/90">Fondos de portada (rotan por día)</h3>
+            <p class="text-sm text-base-content/50 mt-0.5">Pexels y Unsplash.</p>
+            <ul class="mt-2 space-y-1 text-sm text-base-content/70">
+              {heroBgs.map((bg) => (
+                <li>
+                  <a href={bg.photoUrl} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">{bg.author}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-xl font-semibold">Datos y APIs</h2>
+        <p class="mt-2 text-base text-base-content/70">
+          Cada endpoint tiene una cadena de respaldo. Orden de lectura: <strong>Primario → Respaldo → Final (caché)</strong>. Cada widget indica su fuente en pantalla.
+        </p>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+          <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-primary/15 text-primary font-medium">Primario</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-base-300/60 text-base-content/70 font-medium">Respaldo</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-warning/15 text-warning font-medium">Final</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-base-200 text-base-content/60 font-medium">Único</span>
+        </div>
+        <div class="mt-4 space-y-5">
+          {dataSources.groups.filter((g) => g.title !== 'Imágenes y assets').map((group) => (
+            <div>
+              <h3 class="text-sm font-semibold text-base-content/90">{group.title}</h3>
+              {group.strategy && <p class="text-sm text-base-content/50 mt-0.5">{group.strategy}</p>}
+              <ul class="mt-2 space-y-1.5">
+                {group.items.map((item) => (
+                  <li class="flex items-start gap-2 text-base text-base-content/80">
+                    <span class={`shrink-0 mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      item.role === 'primary' ? 'bg-primary/15 text-primary' :
+                      item.role === 'fallback' ? 'bg-base-300/60 text-base-content/70' :
+                      item.role === 'final' ? 'bg-warning/15 text-warning' :
+                      item.role === 'merge' ? 'bg-info/15 text-info' :
+                      'bg-base-200 text-base-content/60'
+                    }`}>
+                      {item.role === 'primary' ? 'Primario' :
+                       item.role === 'fallback' ? 'Respaldo' :
+                       item.role === 'final' ? 'Final' :
+                       item.role === 'merge' ? 'Merge' : 'Único'}
+                    </span>
+                    <span class="min-w-0">
+                      {item.url ? (
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">{item.name}</a>
+                      ) : (
+                        <span class="font-medium">{item.name}</span>
+                      )}
+                      {item.note && <span class="text-base-content/60"> — {item.note}</span>}
+                      {Array.isArray(item.links) && item.links.length > 0 && (
+                        <span class="text-base-content/60"> - {item.links.map((l, i) => (
+                          <span>
+                            {i > 0 && ', '}
+                            <a href={l.url} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">{l.label}</a>
+                          </span>
+                        ))}</span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-xl font-semibold">Librerías</h2>
+        <p class="mt-2 text-base text-base-content/70">
+          Dependencias de ejecución y sus licencias (las de desarrollo están en <a href="https://github.com/Alplox/QueOnda/blob/main/package.json" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors"><code class="px-1.5 py-0.5 rounded bg-base-200 text-xs">package.json</code></a>).
+        </p>
+        <ul class="mt-3 space-y-1.5 text-base text-base-content/80">
+          <li><a href="https://astro.build" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Astro</a>, <a href="https://react.dev" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">React</a>, <a href="https://tailwindcss.com" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Tailwind CSS</a>, <a href="https://daisyui.com" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">DaisyUI</a>, <a href="https://cheerio.js.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">cheerio</a>, <a href="https://www.chartjs.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Chart.js</a>, <a href="https://github.com/NaturalIntelligence/fast-xml-parser" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">fast-xml-parser</a> - MIT.</li>
+          <li><a href="https://github.com/video-dev/hls.js" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">hls.js</a>, <a href="https://github.com/mozilla/readability" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">@mozilla/readability</a>, <a href="https://www.typescriptlang.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">TypeScript</a> - Apache-2.0.</li>
+          <li><a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Leaflet</a> - BSD-2-Clause; <a href="https://maplibre.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">MapLibre GL</a> - BSD-3-Clause; <a href="https://github.com/maplibre/maplibre-gl-leaflet" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">@maplibre/maplibre-gl-leaflet</a> y <a href="https://github.com/WebReflection/linkedom" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">linkedom</a> - ISC.</li>
+          <li><a href="https://github.com/and-who/react-leaflet" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">react-leaflet</a> - Hippocratic-2.1; <a href="https://github.com/AdrianGonz97/hover-tilt" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">hover-tilt</a> - MPL-2.0.</li>
+          <li><a href="https://astro.build" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">@astrojs/cloudflare</a> y <a href="https://astro.build" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">@astrojs/react</a> - MIT.</li>
+        </ul>
+      </section>
+
+      <p class="mt-10 text-sm text-base-content/50">
+        Si detectas un recurso mal atribuido o una licencia incorrecta, abre un <a href="https://github.com/Alplox/QueOnda/issues" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">issue en GitHub</a>.
+      </p>
+    </main>
+  </body>
+</html>

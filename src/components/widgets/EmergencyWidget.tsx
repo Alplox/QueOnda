@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { PowerOutageWidget } from './PowerOutageWidget';
 import { EmergencyMap } from './EmergencyMap';
@@ -114,6 +114,16 @@ const severityLabels: Record<string, string> = {
   moderate: 'Moderado',
   low: 'Leve',
 };
+
+// Canales oficiales de SENAPRED, para el estado vacío de alertas.
+const SENAPRED_LINKS = [
+  { label: 'Sitio oficial', href: 'https://www.senapred.gov.cl/eventos/' },
+  { label: 'X', href: 'https://x.com/senapred' },
+  { label: 'Facebook', href: 'https://web.facebook.com/SenapredChile/' },
+  { label: 'YouTube', href: 'https://www.youtube.com/@senapredchile' },
+  { label: 'WhatsApp', href: 'https://www.whatsapp.com/channel/0029Va4UhwYEwEjuiauxoM09' },
+  { label: 'Telegram', href: 'https://t.me/SenapredChile' },
+] as const;
 
 export function EmergencyWidget() {
   const [items, setItems] = useState<EmergencyItem[]>([]);
@@ -368,15 +378,33 @@ export function EmergencyWidget() {
           ) : alertsError ? (
             <LoadErrorBox onRetry={() => { setAlertsLoaded(false); refresh(); }} />
           ) : alerts.length === 0 ? (
-            <p className="text-xs text-base-content/60 pb-1">
-              Sin alertas SENAPRED activas dentro de las últimas 24 horas. 
-              Ver SENAPRED en: <a href="https://www.senapred.gov.cl/eventos/" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Sitio oficial</a> - 
-             <a href="https://x.com/senapred" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">X</a> - 
-             <a href="https://web.facebook.com/SenapredChile/" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Facebook</a> - 
-             <a href="https://www.youtube.com/@senapredchile" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">YouTube</a> - 
-             <a href="https://www.whatsapp.com/channel/0029Va4UhwYEwEjuiauxoM09" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">WhatsApp</a> - 
-              <a href="https://t.me/SenapredChile" target="_blank" rel="noopener noreferrer" className="underline hover:text-base-content transition-colors">Telegram</a>
-            </p>
+            <div className="pb-1">
+              <p className="text-xs text-base-content/70">
+                Sin alertas SENAPRED activas en las últimas 24 horas.
+              </p>
+              {/* Segunda línea: el bloque de canales no compite con el mensaje
+                  y puede envolver sin apretar los enlaces. */}
+              <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] text-base-content/60">
+                <span className="mr-0.5">Ver SENAPRED en:</span>
+                {SENAPRED_LINKS.map((l, i) => (
+                  // El separador viaja pegado a su enlace (nowrap): al envolver
+                  // nunca queda un «·» solo al principio de la línea.
+                  <Fragment key={l.href}>
+                    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+                      {i > 0 && <span aria-hidden="true" className="text-base-content/30">·</span>}
+                      <a
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline decoration-base-content/30 underline-offset-2 transition-colors hover:text-base-content hover:decoration-current"
+                      >
+                        {l.label}
+                      </a>
+                    </span>
+                  </Fragment>
+                ))}
+              </p>
+            </div>
           ) : (
             <ScrollRow>
               {alerts.map((a, i) => (

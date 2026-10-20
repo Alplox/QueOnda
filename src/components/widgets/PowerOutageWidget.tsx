@@ -19,6 +19,15 @@ interface SeriesPoint {
   v: number;
 }
 
+interface RegionRow {
+  region: string;
+  affected: number;
+  /** Clientes totales de la región (la SEC no lo da por comuna). */
+  total?: number;
+  /** % de los clientes de la región sin suministro. */
+  pct?: number;
+}
+
 interface PowerData {
   affected: number;
   total: number;
@@ -26,7 +35,7 @@ interface PowerData {
   updatedAt: number;
   fetchedAt?: number;
   stale?: boolean;
-  regions: Array<{ region: string; affected: number }>;
+  regions: RegionRow[];
   comunas: Comuna[];
   series: SeriesPoint[];
 }
@@ -67,6 +76,33 @@ function fmtRelative(ms: number): string {
 }
 
 const miles = (n: number) => Number(n).toLocaleString('es-CL');
+
+// La barra siempre mide AQUÍ LO QUE ORDENA LA LISTA: con «Más afectados» (o
+// «Norte → sur») mide clientes, y con «Mayor %» mide afectados ÷ los clientes
+// de ESA región —así el largo baja de mayor a menor en ambos casos y una región
+// nunca se mide contra otra.
+// En modo % existen dos escalas:
+//  - 'zoom' (por defecto): el track llega a un tope redondo ≥ la peor proporción
+//    (0,5 %, 1 %, 2 %…), porque los cortes reales son 0,0x–0,x % y con 0–100 %
+//    todas las barras quedan en 1–4 px.
+//  - 'real': 0 → 100 % de los clientes de la región, sin ampliación.
+// Comunas: la SEC no publica base de clientes por comuna, así que ahí la barra
+// mide volumen contra la comuna más afectada.
+// Piso en píxeles (no en %): 3 px para que la última fila no desaparezca sin
+// exagerar su largo real.
+const MIN_FILL_PX = 3;
+const SCALE_KEY = 'power-scale';
+type PowerScale = 'zoom' | 'real';
+// Topes "redondos": el primero ≥ la peor proporción. Evita el salto de década
+// (con topes 1/10/100 una región al 8 % dejaría el resto de las barras en 1 px)
+// y nunca usa a la región más afectada como 100 % exacto.
+const PCT_CAPS = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100];
+const pctCap = (max: number) => PCT_CAPS.find((c) => max <= c) ?? 100;
+
+function fmtPct(pct: number): string {
+  const digits = pct >= 10 ? 0 : pct >= 1 ? 1 : pct >= 0.1 ? 2 : 3;
+  return `${pct.toLocaleString('es-CL', { minimumFractionDigits: digits, maximumFractionDigits: digits })} %`;
+}
 // SSR-safe layout effect (Astro prerenders islands on the server, where
 // useLayoutEffect is a noop that warns — use useEffect there instead).
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
@@ -83,7 +119,8 @@ export function PowerOutageWidget() {
   const [mapMounted, setMapMounted] = useState(false);
   const [chartMounted, setChartMounted] = useState(false);
   const [tab, setTab] = useState<'regiones' | 'comunas'>('regiones');
-  const [regionSort, setRegionSort] = useState<'affected' | 'ns'>('affected');
+  const [regionSort, setRegionSort] = useState<'pct' | 'affected' | 'ns'>('affected');
+  const [scale, setScale] = useState<PowerScale>('zoom');
   const [comunaRegion, setComunaRegion] = useState<string | null>(null);
   const [mapFocusRegion, setMapFocusRegion] = useState<string | null>(null);
   const [forcing, setForcing] = useState(false);
@@ -95,6 +132,18 @@ export function PowerOutageWidget() {
     if (forceStatusTimer.current) window.clearTimeout(forceStatusTimer.current);
     forceStatusTimer.current = window.setTimeout(() => setForceStatus(null), 6000);
   }, []);
+
+  // Escala de las barras (Regiones): preferencia por navegador. Se lee después
+  // del mount porque el servidor no tiene localStorage (evita el desajuste de
+  // hidratación).
+  useEffect(() => {
+    try { if (localStorage.getItem(SCALE_KEY) === 'real') setScale('real'); } catch {}
+  }, []);
+  const chooseScale = (v: PowerScale) => {
+    play('interaction.tap');
+    setScale(v);
+    try { localStorage.setItem(SCALE_KEY, v); } catch {}
+  };
 
   // Keep map/chart mounted through their 300ms collapse so the exit animates like the weather map
   useEffect(() => {
@@ -260,8 +309,13 @@ export function PowerOutageWidget() {
   // and crashes React ("Rendered more hooks than during the previous render").
   const sortedRegions = useMemo(() => {
     const list = data?.regions ?? [];
-    if (regionSort !== 'ns') return list;
-    return [...list].sort((a, b) => secNsIndex(a.region) - secNsIndex(b.region));
+    if (regionSort === 'ns') return [...list].sort((a, b) => secNsIndex(a.region) - secNsIndex(b.region));
+    if (regionSort === 'pct') {
+      // Opt-in: responde "dónde está proporcionalmente peor", no "dónde hay
+      // más gente sin luz" (el largo de la barra sigue siendo volumen).
+      return [...list].sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0) || b.affected - a.affected);
+    }
+    return list;
   }, [data, regionSort]);
 
   if (loading) {
@@ -291,11 +345,27 @@ export function PowerOutageWidget() {
   }
 
   const rows = tab === 'regiones' ? sortedRegions : visibleComunas;
-  // Bar denominator: global max of the dataset, NOT rows[0] — in N→S order
+  // Regiones: el relleno es afectados ÷ su propia base (el mismo % de la
+  // columna derecha). Comunas: la SEC no publica base por comuna, así que ahí
+  // la barra sigue midiendo volumen.
+  const hasRegionPct = tab === 'regiones' && sortedRegions.some((r) => (r.total ?? 0) > 0);
+  const activeSort = hasRegionPct ? regionSort : 'affected';
+  // La barra sigue al orden: «Mayor %» ⇒ proporción sobre la base de cada
+  // región; cualquier otro orden ⇒ clientes (así el largo siempre desciende).
+  const barMetric: 'pct' | 'affected' = activeSort === 'pct' ? 'pct' : 'affected';
+  const maxRegionPct = Math.max(0, ...sortedRegions.map((r) => r.pct ?? 0));
+  const zoomCap = pctCap(maxRegionPct);
+  const scaleCap = scale === 'zoom' ? zoomCap : 100;
+  // Volume denominator: max of the visible list, NOT rows[0] — in N→S order
   // rows[0] is Arica, which would peg every bar near 100%.
-  const barMax = tab === 'regiones'
-    ? Math.max(1, ...sortedRegions.map((r) => r.affected))
-    : (rows[0]?.affected ?? 1);
+  const barMax = Math.max(1, ...rows.map((r) => r.affected));
+  const rowGrid = tab === 'comunas'
+    ? 'grid-cols-[minmax(0,1.1fr)_minmax(0,1.9fr)_3rem]'
+    // Regiones: en móvil el nombre ocupa la fila 1 completa y los números bajan
+    // a la fila 2 (así no se trunca ningún nombre). Todas las columnas tienen
+    // ancho fijo —nada de `auto`— para que el riel de la barra termine siempre en
+    // la misma x y los números de cada fila arranquen/terminen alineados.
+    : 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_3rem_1.5rem] sm:grid-cols-[8rem_minmax(0,1fr)_4rem_5.25rem_3.5rem_1.5rem]';
   const isStale = !!data.stale || (data.updatedAt != null && Date.now() - data.updatedAt > STALE_MS);
   const isWarn = !isStale && data.updatedAt != null && Date.now() - data.updatedAt > WARN_MS;
   const absTime = new Date(data.updatedAt).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -415,41 +485,87 @@ export function PowerOutageWidget() {
         )}
 
         {tab === 'regiones' && (
-          <div className="mt-2 flex items-center gap-1" role="group" aria-label="Orden de regiones">
-            <span className="text-[10px] text-base-content/50">Orden:</span>
-            {([['affected', 'Más afectados'], ['ns', 'Norte → sur']] as const).map(([v, label]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => { play('interaction.tap'); setRegionSort(v); }}
-                aria-pressed={regionSort === v}
-                className={`text-[10px] px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                  regionSort === v ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="flex flex-wrap items-center gap-0.5" role="group" aria-label="Orden de regiones">
+              <span className="mr-0.5 text-[10px] text-base-content/50">Orden:</span>
+              {([['pct', 'Mayor %'], ['affected', 'Más afectados'], ['ns', 'Norte → sur']] as const)
+                .filter(([v]) => v !== 'pct' || hasRegionPct)
+                .map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => { play('interaction.tap'); setRegionSort(v); }}
+                    aria-pressed={activeSort === v}
+                    className={`rounded-md px-2 py-1 text-[10px] transition-colors cursor-pointer ${
+                      activeSort === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/60 hover:text-base-content'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+            </div>
+            {/* La escala sólo aplica a las barras de %: con «Más afectados» la
+                barra mide clientes y no hay nada que ampliar. */}
+            {barMetric === 'pct' && (
+              <div className="flex flex-wrap items-center gap-0.5" role="group" aria-label="Escala de las barras de porcentaje">
+                <span className="mr-0.5 text-[10px] text-base-content/50">Escala:</span>
+                {([['zoom', `Zoom · 0–${zoomCap.toLocaleString('es-CL')} %`], ['real', 'Real · 0–100 %']] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => chooseScale(v)}
+                    aria-pressed={scale === v}
+                    title={v === 'zoom'
+                      ? `La barra llega a ${zoomCap.toLocaleString('es-CL')} % de los clientes de cada región: los cortes de 0,0x–0,x % se distinguen`
+                      : 'El 100 % de la barra equivale al 100 % de los clientes de esa región, sin ampliación'}
+                    className={`rounded-md px-2 py-1 text-[10px] transition-colors cursor-pointer ${
+                      scale === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/60 hover:text-base-content'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        <div ref={listRef} className={tab === 'comunas' ? 'mt-2 space-y-1.5 max-h-72 overflow-y-auto pr-1' : 'mt-2 space-y-1.5'}>
+        <div ref={listRef} className={tab === 'comunas' ? 'mt-2 max-h-72 overflow-y-auto pr-1' : 'mt-2'}>
+          <div
+            className={`${tab === 'regiones' ? 'hidden sm:grid' : 'grid'} ${rowGrid} items-center gap-x-2 px-1.5 pb-1 text-[9px] uppercase tracking-wider text-base-content/40`}
+            aria-hidden="true"
+          >
+            <span>{tab === 'regiones' ? 'Región' : 'Comuna'}</span>
+            <span />
+            <span className="text-right">Sin luz</span>
+            {tab === 'regiones' && <span className="text-right">Clientes</span>}
+            {tab === 'regiones' && <span className="text-right">%</span>}
+            {tab === 'regiones' && <span />}
+          </div>
           {rows.map((r, i) => {
-            const name = tab === 'regiones' ? (r as { region: string }).region : (r as Comuna).comuna;
+            const name = tab === 'regiones' ? (r as RegionRow).region : (r as Comuna).comuna;
             const key = tab === 'regiones' ? name : `${(r as Comuna).region} — ${(r as Comuna).comuna}`;
-            const bar = (
-              <>
-                <span className="text-base-content/80 w-28 shrink-0 truncate">
-                  {name}
-                </span>
-                <div className="flex-1 h-1.5 rounded-full bg-base-300 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${Math.max(3, (r.affected / barMax) * 100)}%` }}
-                  />
-                </div>
-                <span className="text-base-content/70 tabular-nums shrink-0">{miles(r.affected)}</span>
-              </>
+            const regionTotal = tab === 'regiones' ? ((r as RegionRow).total ?? 0) : 0;
+            const regionPct = tab === 'regiones'
+              ? ((r as RegionRow).pct ?? (regionTotal > 0 ? (r.affected * 100) / regionTotal : 0))
+              : 0;
+            const hasBase = tab === 'regiones' && hasRegionPct && regionTotal > 0;
+            // Modo %: proporción sobre la base de cada región, contra el tope de
+            // la escala elegida. Modo clientes: proporción contra la fila más
+            // afectada (el largo coincide con el orden por defecto).
+            const width = barMetric === 'pct'
+              ? (hasBase ? (regionPct / scaleCap) * 100 : 0)
+              : (r.affected / barMax) * 100;
+            // Severidad: el % sube de color sólo cuando el corte pesa sobre la
+            // región; en un día normal queda como dato secundario.
+            const pctTone = regionPct >= 2 ? 'text-error' : regionPct >= 0.5 ? 'text-warning' : 'text-base-content/60';
+            const barTrack = (
+              <div className="relative h-1.5 overflow-hidden rounded-full bg-base-300/80" aria-hidden="true">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                  style={{ width: `${width}%`, minWidth: MIN_FILL_PX }}
+                />
+              </div>
             );
             // Cap stagger delay: 248 comunas × 40ms would freeze the tail for ~10s
             const style = { animationDelay: `${Math.min(i * 40, 400)}ms` };
@@ -457,24 +573,41 @@ export function PowerOutageWidget() {
               <div
                 key={key}
                 data-row={key}
-                className="flex items-center gap-1"
+                className={`group relative grid ${rowGrid} items-center gap-x-2 gap-y-1 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 transition-colors hover:bg-base-300/60`}
               >
                 <button
                   type="button"
-                  onClick={() => { play('interaction.tap'); setComunaRegion((r as { region: string }).region); setTab('comunas'); }}
-                  title={`Ver comunas de ${name}`}
-                  aria-label={`Ver comunas de ${name}`}
-                  className="flex items-center gap-2 flex-1 min-w-0 text-xs text-left cursor-pointer rounded-md px-1 -mx-1 py-0.5 hover:bg-base-300/50 active:scale-[0.99] transition-all"
-                >
-                  {bar}
-                </button>
+                  onClick={() => { play('interaction.tap'); setComunaRegion((r as RegionRow).region); setTab('comunas'); }}
+                  title={hasBase
+                    ? `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro, ${fmtPct(regionPct)} de ${miles(regionTotal)} clientes`
+                    : `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro`}
+                  aria-label={hasBase
+                    ? `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro, ${fmtPct(regionPct)} de ${miles(regionTotal)} clientes`
+                    : `Ver comunas de ${name}`}
+                  className="absolute inset-0 rounded-md cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+                />
+                <span className="pointer-events-none col-span-4 row-start-1 min-w-0 truncate text-base-content/80 group-hover:text-base-content sm:col-span-1 sm:row-start-auto">
+                  {name}
+                </span>
+                <div className="pointer-events-none col-start-1 row-start-2 sm:col-start-auto sm:row-start-auto">{barTrack}</div>
+                <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[11px] font-medium tabular-nums text-base-content/80 sm:row-start-auto">
+                  {miles(r.affected)}
+                </span>
+                {/* Base de clientes: en su propia columna, después de «Sin luz»,
+                    para contrastar los valores en vertical. */}
+                <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[10px] tabular-nums text-base-content/60 sm:row-start-auto">
+                  <span className="text-base-content/40 sm:hidden">de </span>{hasBase ? miles(regionTotal) : 's/d'}
+                </span>
+                <span className={`pointer-events-none row-start-2 whitespace-nowrap text-right text-[10px] tabular-nums sm:row-start-auto ${hasBase ? pctTone : 'text-base-content/40'}`}>
+                  {hasBase ? fmtPct(regionPct) : 's/d'}
+                </span>
                 <button
                   type="button"
-                  onClick={() => openRegionMap((r as { region: string }).region)}
+                  onClick={() => openRegionMap((r as RegionRow).region)}
                   title={`Ver mapa de ${name}`}
                   aria-label={`Ver mapa de ${name}`}
-                  aria-expanded={showMap && mapFocusRegion === (r as { region: string }).region}
-                  className="shrink-0 p-1.5 rounded-md text-base-content/50 hover:text-primary hover:bg-primary/10 active:scale-95 transition-all cursor-pointer"
+                  aria-expanded={showMap && mapFocusRegion === (r as RegionRow).region}
+                  className="relative z-10 col-start-5 row-start-1 justify-self-end shrink-0 rounded-md p-1.5 text-base-content/45 transition-colors hover:bg-primary/10 hover:text-primary active:scale-95 cursor-pointer sm:col-start-auto sm:row-start-auto"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11z" />
@@ -483,9 +616,14 @@ export function PowerOutageWidget() {
                 </button>
               </div>
             ) : (
-              <div key={key} className="flex items-center gap-2 text-xs animate-[fadeInUp_0.3s_ease-out_both]"
-                style={style}>
-                {bar}
+              <div
+                key={key}
+                className={`grid ${rowGrid} items-center gap-x-2 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 animate-[fadeInUp_0.3s_ease-out_both]`}
+                style={style}
+              >
+                <span className="truncate text-base-content/80">{name}</span>
+                {barTrack}
+                <span className="text-right tabular-nums text-base-content/70">{miles(r.affected)}</span>
               </div>
             );
           })}
@@ -493,6 +631,11 @@ export function PowerOutageWidget() {
             <p className="text-[11px] text-base-content/60 py-2">Sin comunas con cortes registrados en esta región.</p>
           )}
         </div>
+        {tab === 'comunas' && (
+          <p className="mt-1.5 text-[9px] leading-snug text-base-content/60">
+            La SEC no publica clientes por comuna: la barra compara con la comuna más afectada.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">

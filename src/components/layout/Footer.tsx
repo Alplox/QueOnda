@@ -59,6 +59,7 @@ export function Footer() {
             {/* Col 2: Links */}
             <div className="flex flex-col gap-2 text-sm">
               <a href="/todas-las-fuentes" onClick={() => play('interaction.tap')} className="text-base-content/70 hover:text-base-content transition-colors underline underline-offset-2">Todas las fuentes</a>
+              <a href="/creditos" onClick={() => play('interaction.tap')} className="text-base-content/70 hover:text-base-content transition-colors underline underline-offset-2">Créditos y licencias</a>
               <a href="https://github.com/Alplox/QueOnda" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="text-base-content/70 hover:text-base-content transition-colors underline underline-offset-2">Desarrollado por Alplox</a>
             </div>
 

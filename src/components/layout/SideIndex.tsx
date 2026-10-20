@@ -25,21 +25,51 @@ export function SideIndex() {
   }, []);
 
   useEffect(() => {
-    const sections = document.querySelectorAll('section[id]');
-    if (!sections.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const intersecting = entries.filter((e) => e.isIntersecting);
-        if (intersecting.length > 0) {
-          setActiveSection(intersecting[0].target.id);
+    let raf = 0;
+    const update = () => {
+      const sectionList = Array.from(
+        document.querySelectorAll('section[id]'),
+      ) as HTMLElement[];
+      if (!sectionList.length) return;
+      const offset = 120;
+      let active = sectionList[0].id;
+      for (const s of sectionList) {
+        if (s.getBoundingClientRect().top <= offset) {
+          active = s.id;
+        } else {
+          break;
         }
-      },
-      { rootMargin: '-80px 0px -65% 0px', threshold: 0 },
-    );
+      }
+      // When scrolled to the bottom, the trailing sections sit below the
+      // threshold band, so force the last one active to keep tracking.
+      const scrollBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 80;
+      if (scrollBottom) active = sectionList[sectionList.length - 1].id;
+      setActiveSection(active);
+    };
 
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        update();
+      });
+    };
+
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', update);
+    // Re-measure after lazy sections hydrate and change document height.
+    const ro = new ResizeObserver(update);
+    const main = document.querySelector('main');
+    if (main) ro.observe(main);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', update);
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, []);
 
   return (
