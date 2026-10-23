@@ -7,6 +7,8 @@ import { extractHost } from '@/lib/url';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 import { parseChileLocal } from '@/lib/chile-time';
+import { useErrorRetry } from '@/lib/retry';
+import { RetryHint } from '@/components/RetryHint';
 import {
   buildEmergencySummary,
   canShareFiles,
@@ -39,7 +41,10 @@ const IDB_TTL = 5 * 60 * 1000;
 async function fetchEmergency() {
   try {
     const res = await fetch('/api/emergency', { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return { items: [], senapred: [], error: true, senapredError: false };
+    // Si falla la petición no sabemos nada de NINGUNA fuente: marcar también las
+    // alertas como error, si no el bloque diría «sin alertas» cuando en realidad
+    // no se pudo consultar (una alerta real quedaría oculta).
+    if (!res.ok) return { items: [], senapred: [], error: true, senapredError: true };
     const data = await res.json();
     return {
       items: (data.items || []) as EmergencyItem[],
@@ -47,7 +52,7 @@ async function fetchEmergency() {
       error: !!data.error,
       senapredError: !!data.senapredError,
     };
-  } catch { return { items: [], senapred: [], error: true, senapredError: false }; }
+  } catch { return { items: [], senapred: [], error: true, senapredError: true }; }
 }
 
 // Client-side coordinate enrichment. /api/emergency attaches lat/lon from Boostr,
@@ -144,6 +149,7 @@ export function EmergencyWidget() {
   const [shareMsgKey, setShareMsgKey] = useState(0);
   const shareRef = useRef<HTMLDivElement>(null);
   const seenRef = useRef<{ sismos: Set<string>; alerts: Set<string> }>({ sismos: new Set(), alerts: new Set() });
+  const inflight = useRef<Promise<void> | null>(null);
 
   const hasShareData = items.length > 0 || alerts.length > 0 || (powerCount != null && powerCount > 0);
 
@@ -154,45 +160,57 @@ export function EmergencyWidget() {
   };
 
   const refresh = useCallback(async () => {
-    const { items: eqs, senapred, error, senapredError } = await fetchEmergency();
-    if (!error) {
-      // Trust a reachable server: a genuinely empty day clears to the placeholder instead of
-      // showing stale alerts forever. Only a failed fetch keeps the error state.
-      const enriched = await enrichWithBoostr(eqs);
-      setItems(enriched);
-      setAlerts(senapred);
-      if (enriched.length) idbSet(IDB_KEY, enriched, IDB_TTL);
+    // Una sola petición en vuelo: el reintento automático, el botón y el
+    // auto-refresh compartido pueden aterrizar en el mismo segundo.
+    if (inflight.current) return inflight.current;
+    const run = (async () => {
+      const { items: eqs, senapred, error, senapredError } = await fetchEmergency();
+      if (!error) {
+        // Trust a reachable server: a genuinely empty day clears to the placeholder instead of
+        // showing stale alerts forever. Only a failed fetch keeps the error state.
+        const enriched = await enrichWithBoostr(eqs);
+        setItems(enriched);
+        setAlerts(senapred);
+        if (enriched.length) idbSet(IDB_KEY, enriched, IDB_TTL);
 
-      // Announce genuinely new items to assistive tech (not the whole list)
-      const sismoIds = new Set(enriched.filter((i) => i.type === 'earthquake').map((i) => i.id));
-      const alertIds = new Set(senapred.map((i) => i.id));
-      const newSismos = enriched.filter((i) => i.type === 'earthquake' && !seenRef.current.sismos.has(i.id));
-      const newAlerts = senapred.filter((a) => !seenRef.current.alerts.has(a.id));
-      seenRef.current = { sismos: sismoIds, alerts: alertIds };
-      if (newSismos[0]) setLiveMsg(`Nuevo sismo: ${newSismos[0].mag != null ? `magnitud ${newSismos[0].mag.toFixed(1)} ` : ''}${newSismos[0].place || newSismos[0].title}`);
-      else if (newAlerts[0]) setLiveMsg(`Nueva alerta SENAPRED: ${newAlerts[0].title}`);
-    }
-    setSismosError(error);
-    setAlertsError(senapredError);
-
-    // ponytail: a failed fetch must not leave stale quakes on screen — treat any in-flight
-    // cached data as an error state. Retry via the buttons below re-runs refresh().
-    try {
-      const res = await fetch('/api/power', { signal: AbortSignal.timeout(10000) });
-      if (res.ok) {
-        const d = await res.json();
-        const stale = !!d?.stale || (d?.updatedAt != null && Date.now() - d.updatedAt > 90 * 60 * 1000);
-        setPowerCount(d?.affected != null ? d.affected : null);
-        setPowerMeta(d?.updatedAt != null ? { updatedAt: d.updatedAt, stale } : null);
-      } else {
-        // try to parse error payload that may still contain updatedAt
-        try { const d = await res.json(); setPowerMeta(d?.updatedAt ? { updatedAt: d.updatedAt, stale: true } : null); } catch {}
+        // Announce genuinely new items to assistive tech (not the whole list)
+        const sismoIds = new Set(enriched.filter((i) => i.type === 'earthquake').map((i) => i.id));
+        const alertIds = new Set(senapred.map((i) => i.id));
+        const newSismos = enriched.filter((i) => i.type === 'earthquake' && !seenRef.current.sismos.has(i.id));
+        const newAlerts = senapred.filter((a) => !seenRef.current.alerts.has(a.id));
+        seenRef.current = { sismos: sismoIds, alerts: alertIds };
+        if (newSismos[0]) setLiveMsg(`Nuevo sismo: ${newSismos[0].mag != null ? `magnitud ${newSismos[0].mag.toFixed(1)} ` : ''}${newSismos[0].place || newSismos[0].title}`);
+        else if (newAlerts[0]) setLiveMsg(`Nueva alerta SENAPRED: ${newAlerts[0].title}`);
       }
-    } catch { /* power unavailable — omit from summary */ }
+      setSismosError(error);
+      setAlertsError(senapredError);
 
-    setAlertsLoaded(true);
-    setLoading(false);
+      // ponytail: a failed fetch must not leave stale quakes on screen — treat any in-flight
+      // cached data as an error state. Retry via the buttons below re-runs refresh().
+      try {
+        const res = await fetch('/api/power', { signal: AbortSignal.timeout(10000) });
+        if (res.ok) {
+          const d = await res.json();
+          const stale = !!d?.stale || (d?.updatedAt != null && Date.now() - d.updatedAt > 90 * 60 * 1000);
+          setPowerCount(d?.affected != null ? d.affected : null);
+          setPowerMeta(d?.updatedAt != null ? { updatedAt: d.updatedAt, stale } : null);
+        } else {
+          // try to parse error payload that may still contain updatedAt
+          try { const d = await res.json(); setPowerMeta(d?.updatedAt ? { updatedAt: d.updatedAt, stale: true } : null); } catch {}
+        }
+      } catch { /* power unavailable — omit from summary */ }
+
+      setAlertsLoaded(true);
+      setLoading(false);
+    })();
+    inflight.current = run;
+    try { await run; } finally { if (inflight.current === run) inflight.current = null; }
   }, []);
+
+  // Un fallo de /api/emergency (sismos o alertas) activa el reintento con backoff
+  // y la cuenta atrás que muestran los dos bloques de error.
+  const hasError = sismosError || alertsError;
+  const { retrying, retryIn, retryNow } = useErrorRetry(hasError, refresh);
 
   useEffect(() => {
     let cancelled = false;
@@ -376,7 +394,7 @@ export function EmergencyWidget() {
               ))}
             </div>
           ) : alertsError ? (
-            <LoadErrorBox onRetry={() => { setAlertsLoaded(false); refresh(); }} />
+            <LoadErrorBox retrying={retrying} retryIn={retryIn} onRetry={retryNow} />
           ) : alerts.length === 0 ? (
             <div className="pb-1">
               <p className="text-xs text-base-content/70">
@@ -447,7 +465,7 @@ export function EmergencyWidget() {
               ))}
             </div>
           ) : sismosError ? (
-            <LoadErrorBox onRetry={() => { setLoading(true); refresh(); }} />
+            <LoadErrorBox retrying={retrying} retryIn={retryIn} onRetry={retryNow} />
           ) : items.length === 0 ? (
             <p className="text-xs text-base-content/50 pb-1">Sin sismos recientes -{' '}
               <a href="https://www.sismologia.cl/" target="_blank" rel="noopener noreferrer"
@@ -554,21 +572,35 @@ export function EmergencyWidget() {
   );
 }
 
-// Shown when the emergency sources failed to load — never claim "no hay sismo/alertas"
-function LoadErrorBox({ onRetry }: { onRetry: () => void }) {
+// Shown when the emergency sources failed to load — never claim "no hay sismo/alertas".
+// El reintento es automático (backoff 5 s → 60 s) y el botón mantiene el bloque
+// montado: nada de volver al skeleton mientras se reintenta.
+function LoadErrorBox({
+  retrying,
+  retryIn,
+  onRetry,
+}: {
+  retrying: boolean;
+  retryIn: number;
+  onRetry: () => void;
+}) {
   return (
-    <div className="flex items-center justify-between gap-3 text-xs text-base-content/70">
-      <span>No se pudieron cargar los datos de emergencia en este momento.</span>
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs text-base-content/70">
+      <div className="min-w-0">
+        <p>No se pudieron cargar los datos de emergencia en este momento.</p>
+        <p className="mt-0.5"><RetryHint retrying={retrying} retryIn={retryIn} /></p>
+      </div>
       <button
         type="button"
         onClick={onRetry}
-        className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer"
+        disabled={retrying}
+        className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 12a9 9 0 1 1-2.64-6.36" />
           <path d="M21 3v6h-6" />
         </svg>
-        Reintentar
+        {retrying ? 'Reintentando…' : 'Reintentar ahora'}
       </button>
     </div>
   );

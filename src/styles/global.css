@@ -233,6 +233,23 @@ h1, h2, h3, h4 {
   100% { opacity: 1; }
 }
 
+/* TV: aviso breve de que el bloque de video acaba de cambiar de ubicación.
+   Solo pinta un anillo que se desvanece — no toca el contenido del player. */
+@keyframes tvMediaLand {
+  0%   { outline-color: color-mix(in oklab, var(--color-primary) 65%, transparent); }
+  100% { outline-color: transparent; }
+}
+
+.tv-media-land {
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  animation: tvMediaLand 480ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-media-land { animation: none; outline-color: transparent; }
+}
+
 html {
   transition: background-color 0.2s ease-out, color 0.2s ease-out;
 }

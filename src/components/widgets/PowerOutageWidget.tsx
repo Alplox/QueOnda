@@ -5,6 +5,8 @@ import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 import { play } from '@/lib/sound';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 import { regionNsOrder, secRegionSlug } from '@/lib/regions';
+import { useErrorRetry } from '@/lib/retry';
+import { RetryHint } from '@/components/RetryHint';
 
 interface Comuna {
   region: string;
@@ -92,6 +94,10 @@ const miles = (n: number) => Number(n).toLocaleString('es-CL');
 // exagerar su largo real.
 const MIN_FILL_PX = 3;
 const SCALE_KEY = 'power-scale';
+// El desglose (pestañas Regiones/Comunas + filtros + listado) se puede colapsar
+// para dejar sólo el número general. Arranca expandido; sólo se colapsa si el
+// usuario lo pidió antes ('closed').
+const BREAKDOWN_KEY = 'power-breakdown';
 type PowerScale = 'zoom' | 'real';
 // Topes "redondos": el primero ≥ la peor proporción. Evita el salto de década
 // (con topes 1/10/100 una región al 8 % dejaría el resto de las barras en 1 px)
@@ -119,6 +125,7 @@ export function PowerOutageWidget() {
   const [mapMounted, setMapMounted] = useState(false);
   const [chartMounted, setChartMounted] = useState(false);
   const [tab, setTab] = useState<'regiones' | 'comunas'>('regiones');
+  const [showBreakdown, setShowBreakdown] = useState(true);
   const [regionSort, setRegionSort] = useState<'pct' | 'affected' | 'ns'>('affected');
   const [scale, setScale] = useState<PowerScale>('zoom');
   const [comunaRegion, setComunaRegion] = useState<string | null>(null);
@@ -137,12 +144,24 @@ export function PowerOutageWidget() {
   // del mount porque el servidor no tiene localStorage (evita el desajuste de
   // hidratación).
   useEffect(() => {
-    try { if (localStorage.getItem(SCALE_KEY) === 'real') setScale('real'); } catch {}
+    try {
+      if (localStorage.getItem(SCALE_KEY) === 'real') setScale('real');
+      if (localStorage.getItem(BREAKDOWN_KEY) === 'closed') setShowBreakdown(false);
+    } catch {}
   }, []);
   const chooseScale = (v: PowerScale) => {
     play('interaction.tap');
     setScale(v);
     try { localStorage.setItem(SCALE_KEY, v); } catch {}
+  };
+  // Colapsar el desglose (pestañas + filtros + listado) deja sólo el número
+  // general del país. Arranca expandido y la preferencia persiste por navegador.
+  const toggleBreakdown = () => {
+    play('interaction.toggle');
+    setShowBreakdown((v) => {
+      try { localStorage.setItem(BREAKDOWN_KEY, v ? 'closed' : 'open'); } catch {}
+      return !v;
+    });
   };
 
   // Keep map/chart mounted through their 300ms collapse so the exit animates like the weather map
@@ -156,6 +175,7 @@ export function PowerOutageWidget() {
   }, [showChart]);
 
   const dataRef = useRef<PowerData | null>(null);
+  const inflight = useRef<Promise<void> | null>(null);
   // Newest-wins: after a force refresh the origin cache is fresh, but the CDN
   // edge key of plain /api/power (and IDB) can still serve the older snapshot
   // on the next auto-refresh — never let an older fetchedAt overwrite newer data.
@@ -169,16 +189,27 @@ export function PowerOutageWidget() {
   }, []);
 
   const refresh = useCallback(async () => {
-    const { data: d } = await fetchPower();
-    if (d) {
-      adopt(d);
-      setError(false);
-    } else {
-      // keep stale data visible but mark error so banner/retry shows
-      setError(true);
-    }
-    setLoading(false);
+    // One in-flight request at a time: the retry timer, the manual button and the
+    // shared auto-refresh can all land in the same second.
+    if (inflight.current) return inflight.current;
+    const run = (async () => {
+      const { data: d } = await fetchPower();
+      if (d) {
+        adopt(d);
+        setError(false);
+      } else {
+        // keep stale data visible but mark error so banner/retry shows
+        setError(true);
+      }
+      setLoading(false);
+    })();
+    inflight.current = run;
+    try { await run; } finally { if (inflight.current === run) inflight.current = null; }
   }, [adopt]);
+
+  // Reintento (automático con backoff + manual) del bloque en error: mantiene el
+  // bloque en pantalla y comparte el mismo contador entre el error y la franja.
+  const { retrying, retryIn, retryNow } = useErrorRetry(error, refresh);
 
   // Pin on a region row: open the map flying to that region (sismo openMap pattern)
   const openRegionMap = useCallback((regionName: string) => {
@@ -337,7 +368,17 @@ export function PowerOutageWidget() {
       return (
         <div className="mt-4 rounded-xl p-4 border border-warning/30 bg-warning/10 shadow-sm animate-[fadeInUp_0.3s_ease-out]">
           <p className="text-xs text-base-content/80">No se pudo cargar el estado eléctrico (SEC no disponible).</p>
-          <button type="button" onClick={() => { setLoading(true); setError(false); refresh(); }} className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer">Reintentar</button>
+          <p className="mt-1">
+            <RetryHint retrying={retrying} retryIn={retryIn} />
+          </p>
+          <button
+            type="button"
+            onClick={retryNow}
+            disabled={retrying}
+            className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {retrying ? 'Reintentando…' : 'Reintentar ahora'}
+          </button>
         </div>
       );
     }
@@ -413,8 +454,23 @@ export function PowerOutageWidget() {
         </div>
       )}
 
-      {error && !isStale && (
-        <div className="mt-2 text-[11px] text-warning flex items-center gap-2">No se pudo actualizar — mostrando último dato disponible.<button type="button" onClick={() => refresh()} className="underline hover:text-base-content cursor-pointer">Reintentar</button></div>
+      {error && (
+        <div className="mt-2 rounded-lg px-3 py-2 text-[11px] bg-warning/10 border border-warning/25 text-warning flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="leading-snug">
+            {isStale
+              ? 'No se pudo actualizar — los datos siguen sin refrescarse.'
+              : 'No se pudo actualizar — mostrando último dato disponible.'}
+          </span>
+          <RetryHint retrying={retrying} retryIn={retryIn} />
+          <button
+            type="button"
+            onClick={retryNow}
+            disabled={retrying}
+            className="underline underline-offset-2 hover:text-base-content transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {retrying ? 'Reintentando…' : 'Reintentar ahora'}
+          </button>
+        </div>
       )}
 
       <div className="flex items-baseline gap-3 mt-2 animate-[heroFadeUp_0.4s_ease-out]">
@@ -425,217 +481,251 @@ export function PowerOutageWidget() {
         </span>
       </div>
 
-      <div className="mt-3 text-[11px] text-base-content/70">
-        ¿Corte de luz? Reporta:{' '}
-        <a href="https://www.sec.cl/reclamo-por-corte-de-luz/" target="_blank" rel="noopener noreferrer"
-          className="hover:text-base-content underline underline-offset-2 transition-colors">SEC</a>
-        {' · '}
-        <a href="https://sucursalvirtual.cge.cl/estas-sin-luz" target="_blank" rel="noopener noreferrer"
-          className="hover:text-base-content underline underline-offset-2 transition-colors">CGE</a>
-        {' · '}
-        <a href="https://desconexiones.gruposaesa.cl/estoy-sin-luz" target="_blank" rel="noopener noreferrer"
-          className="hover:text-base-content underline underline-offset-2 transition-colors">Grupo Saesa</a>
-        {' · '}
-        <a href="https://www.enel.cl/es/clientes/servicios-en-linea/solicitud-contacto.html" target="_blank" rel="noopener noreferrer"
-          className="hover:text-base-content underline underline-offset-2 transition-colors">Enel</a>
-        {' · '}
-        <a href="https://www.chilquinta.cl/reportar-corte" target="_blank" rel="noopener noreferrer"
-          className="hover:text-base-content underline underline-offset-2 transition-colors">Chilquinta</a>
+      {/* Zona de utilidades: separada de los datos (cifra + timestamps) por una
+          regla fina y una superficie propia, porque en este bloque convive mucho
+          texto y sin jerarquía la ayuda competía con el número principal. */}
+      <div className="mt-3 border-t border-base-300/70 pt-2">
+        <p className="rounded-lg border border-base-300 bg-base-content/[0.04] px-2.5 py-2 text-[11px] leading-snug text-base-content/70">
+          <span className="font-medium text-base-content/80">¿Corte de luz?</span>{' '}
+          Reporta:{' '}
+          <a href="https://www.sec.cl/reclamo-por-corte-de-luz/" target="_blank" rel="noopener noreferrer"
+            className="hover:text-base-content underline underline-offset-2 transition-colors">SEC</a>
+          {' · '}
+          <a href="https://sucursalvirtual.cge.cl/estas-sin-luz" target="_blank" rel="noopener noreferrer"
+            className="hover:text-base-content underline underline-offset-2 transition-colors">CGE</a>
+          {' · '}
+          <a href="https://desconexiones.gruposaesa.cl/estoy-sin-luz" target="_blank" rel="noopener noreferrer"
+            className="hover:text-base-content underline underline-offset-2 transition-colors">Grupo Saesa</a>
+          {' · '}
+          <a href="https://www.enel.cl/es/clientes/servicios-en-linea/solicitud-contacto.html" target="_blank" rel="noopener noreferrer"
+            className="hover:text-base-content underline underline-offset-2 transition-colors">Enel</a>
+          {' · '}
+          <a href="https://www.chilquinta.cl/reportar-corte" target="_blank" rel="noopener noreferrer"
+            className="hover:text-base-content underline underline-offset-2 transition-colors">Chilquinta</a>
+        </p>
       </div>
 
-      <div className="mt-3">
-        <div className="flex gap-1">
-          <button
-            onClick={() => setTab('regiones')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
-              tab === 'regiones'
-                ? 'bg-primary text-primary-content'
-                : 'bg-base-300 text-base-content/60 hover:text-base-content'
-            }`}
-          >
-            Regiones
-          </button>
-          <button
-            onClick={() => { setComunaRegion(null); setTab('comunas'); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
-              tab === 'comunas'
-                ? 'bg-primary text-primary-content'
-                : 'bg-base-300 text-base-content/60 hover:text-base-content'
-            }`}
-          >
-            Comunas ({data.comunas.length})
-          </button>
-        </div>
-
-        {tab === 'comunas' && (
-          <div className="mt-2 flex items-center gap-2">
-            <label htmlFor="power-comuna-region" className="text-[11px] text-base-content/60 shrink-0">Región:</label>
-            <select
-              id="power-comuna-region"
-              value={comunaRegion ?? ''}
-              onChange={(e) => setComunaRegion(e.target.value || null)}
-              className="text-[11px] bg-base-100 border border-base-300 rounded-md px-1.5 py-1 text-base-content outline-none focus:border-primary/40 cursor-pointer min-w-0 flex-1"
+      {/* Desglose colapsable: pestañas + filtros + listado. El control vive
+          arriba, encabezando el bloque que colapsa (no al final, donde quedaría
+          lejos de las pestañas y saltaría de sitio al abrir/cerrar). Colapsado
+          sólo queda el número general del país. */}
+      <button
+        type="button"
+        onClick={toggleBreakdown}
+        aria-expanded={showBreakdown}
+        aria-controls="power-breakdown"
+        className="mt-3 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+          aria-hidden="true"
+          className={`transition-transform duration-200 ${showBreakdown ? 'rotate-90' : ''}`}>
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+        {showBreakdown ? 'Ocultar desglose' : 'Ver desglose por región y comuna'}
+      </button>
+      <div
+        className={`grid transition-[grid-template-rows,margin] duration-300 ease-out ${
+          showBreakdown ? 'mt-2 grid-rows-[1fr]' : 'mt-0 grid-rows-[0fr]'
+        }`}
+      >
+        <div
+          id="power-breakdown"
+          inert={!showBreakdown}
+          aria-hidden={!showBreakdown}
+          className="min-h-0 overflow-hidden"
+        >
+          <div className="flex gap-1">
+            <button
+              onClick={() => setTab('regiones')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
+                tab === 'regiones'
+                  ? 'bg-primary text-primary-content'
+                  : 'bg-base-300 text-base-content/60 hover:text-base-content'
+              }`}
             >
-              <option value="">Todas ({data.comunas.length})</option>
-              {data.regions.map(r => (
-                <option key={r.region} value={r.region}>{r.region} · {miles(r.affected)}</option>
-              ))}
-            </select>
+              Regiones
+            </button>
+            <button
+              onClick={() => { setComunaRegion(null); setTab('comunas'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
+                tab === 'comunas'
+                  ? 'bg-primary text-primary-content'
+                  : 'bg-base-300 text-base-content/60 hover:text-base-content'
+              }`}
+            >
+              Comunas ({data.comunas.length})
+            </button>
           </div>
-        )}
 
-        {tab === 'regiones' && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <div className="flex flex-wrap items-center gap-0.5" role="group" aria-label="Orden de regiones">
-              <span className="mr-0.5 text-[10px] text-base-content/50">Orden:</span>
-              {([['pct', 'Mayor %'], ['affected', 'Más afectados'], ['ns', 'Norte → sur']] as const)
-                .filter(([v]) => v !== 'pct' || hasRegionPct)
-                .map(([v, label]) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => { play('interaction.tap'); setRegionSort(v); }}
-                    aria-pressed={activeSort === v}
-                    className={`rounded-md px-2 py-1 text-[10px] transition-colors cursor-pointer ${
-                      activeSort === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/60 hover:text-base-content'
-                    }`}
-                  >
-                    {label}
-                  </button>
+          {tab === 'comunas' && (
+            <div className="mt-2 flex items-center gap-2">
+              <label htmlFor="power-comuna-region" className="text-[11px] text-base-content/60 shrink-0">Región:</label>
+              <select
+                id="power-comuna-region"
+                value={comunaRegion ?? ''}
+                onChange={(e) => setComunaRegion(e.target.value || null)}
+                className="text-[11px] bg-base-100 border border-base-300 rounded-md px-1.5 py-1 text-base-content outline-none focus:border-primary/40 cursor-pointer min-w-0 flex-1"
+              >
+                <option value="">Todas ({data.comunas.length})</option>
+                {data.regions.map(r => (
+                  <option key={r.region} value={r.region}>{r.region} · {miles(r.affected)}</option>
                 ))}
+              </select>
             </div>
-            {/* La escala sólo aplica a las barras de %: con «Más afectados» la
-                barra mide clientes y no hay nada que ampliar. */}
-            {barMetric === 'pct' && (
-              <div className="flex flex-wrap items-center gap-0.5" role="group" aria-label="Escala de las barras de porcentaje">
-                <span className="mr-0.5 text-[10px] text-base-content/50">Escala:</span>
-                {([['zoom', `Zoom · 0–${zoomCap.toLocaleString('es-CL')} %`], ['real', 'Real · 0–100 %']] as const).map(([v, label]) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => chooseScale(v)}
-                    aria-pressed={scale === v}
-                    title={v === 'zoom'
-                      ? `La barra llega a ${zoomCap.toLocaleString('es-CL')} % de los clientes de cada región: los cortes de 0,0x–0,x % se distinguen`
-                      : 'El 100 % de la barra equivale al 100 % de los clientes de esa región, sin ampliación'}
-                    className={`rounded-md px-2 py-1 text-[10px] transition-colors cursor-pointer ${
-                      scale === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/60 hover:text-base-content'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+          )}
+
+          {tab === 'regiones' && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <div className="flex flex-wrap items-center gap-0.5" role="group" aria-label="Orden de regiones">
+                <span className="mr-0.5 text-[10px] text-base-content/50">Orden:</span>
+                {([['pct', 'Mayor %'], ['affected', 'Más afectados'], ['ns', 'Norte → sur']] as const)
+                  .filter(([v]) => v !== 'pct' || hasRegionPct)
+                  .map(([v, label]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => { play('interaction.tap'); setRegionSort(v); }}
+                      aria-pressed={activeSort === v}
+                      className={`rounded-md px-2 py-1 text-[10px] transition-colors cursor-pointer ${
+                        activeSort === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/60 hover:text-base-content'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
               </div>
+              {/* La escala sólo aplica a las barras de %: con «Más afectados» la
+                  barra mide clientes y no hay nada que ampliar. */}
+              {barMetric === 'pct' && (
+                <div className="flex flex-wrap items-center gap-0.5" role="group" aria-label="Escala de las barras de porcentaje">
+                  <span className="mr-0.5 text-[10px] text-base-content/50">Escala:</span>
+                  {([['zoom', `Zoom · 0–${zoomCap.toLocaleString('es-CL')} %`], ['real', 'Real · 0–100 %']] as const).map(([v, label]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => chooseScale(v)}
+                      aria-pressed={scale === v}
+                      title={v === 'zoom'
+                        ? `La barra llega a ${zoomCap.toLocaleString('es-CL')} % de los clientes de cada región: los cortes de 0,0x–0,x % se distinguen`
+                        : 'El 100 % de la barra equivale al 100 % de los clientes de esa región, sin ampliación'}
+                      className={`rounded-md px-2 py-1 text-[10px] transition-colors cursor-pointer ${
+                        scale === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/60 hover:text-base-content'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div ref={listRef} className={tab === 'comunas' ? 'mt-2 max-h-72 overflow-y-auto pr-1' : 'mt-2'}>
+            <div
+              className={`${tab === 'regiones' ? 'hidden sm:grid' : 'grid'} ${rowGrid} items-center gap-x-2 px-1.5 pb-1 text-[9px] uppercase tracking-wider text-base-content/40`}
+              aria-hidden="true"
+            >
+              <span>{tab === 'regiones' ? 'Región' : 'Comuna'}</span>
+              <span />
+              <span className="text-right">Sin luz</span>
+              {tab === 'regiones' && <span className="text-right">Clientes</span>}
+              {tab === 'regiones' && <span className="text-right">%</span>}
+              {tab === 'regiones' && <span />}
+            </div>
+            {rows.map((r, i) => {
+              const name = tab === 'regiones' ? (r as RegionRow).region : (r as Comuna).comuna;
+              const key = tab === 'regiones' ? name : `${(r as Comuna).region} — ${(r as Comuna).comuna}`;
+              const regionTotal = tab === 'regiones' ? ((r as RegionRow).total ?? 0) : 0;
+              const regionPct = tab === 'regiones'
+                ? ((r as RegionRow).pct ?? (regionTotal > 0 ? (r.affected * 100) / regionTotal : 0))
+                : 0;
+              const hasBase = tab === 'regiones' && hasRegionPct && regionTotal > 0;
+              // Modo %: proporción sobre la base de cada región, contra el tope de
+              // la escala elegida. Modo clientes: proporción contra la fila más
+              // afectada (el largo coincide con el orden por defecto).
+              const width = barMetric === 'pct'
+                ? (hasBase ? (regionPct / scaleCap) * 100 : 0)
+                : (r.affected / barMax) * 100;
+              // Severidad: el % sube de color sólo cuando el corte pesa sobre la
+              // región; en un día normal queda como dato secundario.
+              const pctTone = regionPct >= 2 ? 'text-error' : regionPct >= 0.5 ? 'text-warning' : 'text-base-content/60';
+              const barTrack = (
+                <div className="relative h-1.5 overflow-hidden rounded-full bg-base-300/80" aria-hidden="true">
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                    style={{ width: `${width}%`, minWidth: MIN_FILL_PX }}
+                  />
+                </div>
+              );
+              // Cap stagger delay: 248 comunas × 40ms would freeze the tail for ~10s
+              return tab === 'regiones' ? (
+                <div
+                  key={key}
+                  data-row={key}
+                  className={`group relative grid ${rowGrid} items-center gap-x-2 gap-y-1 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 transition-colors hover:bg-base-300/60`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { play('interaction.tap'); setComunaRegion((r as RegionRow).region); setTab('comunas'); }}
+                    title={hasBase
+                      ? `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro, ${fmtPct(regionPct)} de ${miles(regionTotal)} clientes`
+                      : `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro`}
+                    aria-label={hasBase
+                      ? `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro, ${fmtPct(regionPct)} de ${miles(regionTotal)} clientes`
+                      : `Ver comunas de ${name}`}
+                    className="absolute inset-0 rounded-md cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+                  />
+                  <span className="pointer-events-none col-span-4 row-start-1 min-w-0 truncate text-base-content/80 group-hover:text-base-content sm:col-span-1 sm:row-start-auto">
+                    {name}
+                  </span>
+                  <div className="pointer-events-none col-start-1 row-start-2 sm:col-start-auto sm:row-start-auto">{barTrack}</div>
+                  <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[11px] font-medium tabular-nums text-base-content/80 sm:row-start-auto">
+                    {miles(r.affected)}
+                  </span>
+                  {/* Base de clientes: en su propia columna, después de «Sin luz»,
+                      para contrastar los valores en vertical. */}
+                  <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[10px] tabular-nums text-base-content/60 sm:row-start-auto">
+                    <span className="text-base-content/40 sm:hidden">de </span>{hasBase ? miles(regionTotal) : 's/d'}
+                  </span>
+                  <span className={`pointer-events-none row-start-2 whitespace-nowrap text-right text-[10px] tabular-nums sm:row-start-auto ${hasBase ? pctTone : 'text-base-content/40'}`}>
+                    {hasBase ? fmtPct(regionPct) : 's/d'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openRegionMap((r as RegionRow).region)}
+                    title={`Ver mapa de ${name}`}
+                    aria-label={`Ver mapa de ${name}`}
+                    aria-expanded={showMap && mapFocusRegion === (r as RegionRow).region}
+                    className="relative z-10 col-start-5 row-start-1 justify-self-end shrink-0 rounded-md p-1.5 text-base-content/45 transition-colors hover:bg-primary/10 hover:text-primary active:scale-95 cursor-pointer sm:col-start-auto sm:row-start-auto"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11z" />
+                      <circle cx="12" cy="10" r="2.5" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div
+                  key={key}
+                  className={`grid ${rowGrid} items-center gap-x-2 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 animate-[fadeInUp_0.3s_ease-out_both]`}
+                style={{ animationDelay: `${Math.min(i * 40, 400)}ms` }}
+                >
+                  <span className="truncate text-base-content/80">{name}</span>
+                  {barTrack}
+                  <span className="text-right tabular-nums text-base-content/70">{miles(r.affected)}</span>
+                </div>
+              );
+            })}
+            {tab === 'comunas' && rows.length === 0 && (
+              <p className="text-[11px] text-base-content/60 py-2">Sin comunas con cortes registrados en esta región.</p>
             )}
           </div>
-        )}
-
-        <div ref={listRef} className={tab === 'comunas' ? 'mt-2 max-h-72 overflow-y-auto pr-1' : 'mt-2'}>
-          <div
-            className={`${tab === 'regiones' ? 'hidden sm:grid' : 'grid'} ${rowGrid} items-center gap-x-2 px-1.5 pb-1 text-[9px] uppercase tracking-wider text-base-content/40`}
-            aria-hidden="true"
-          >
-            <span>{tab === 'regiones' ? 'Región' : 'Comuna'}</span>
-            <span />
-            <span className="text-right">Sin luz</span>
-            {tab === 'regiones' && <span className="text-right">Clientes</span>}
-            {tab === 'regiones' && <span className="text-right">%</span>}
-            {tab === 'regiones' && <span />}
-          </div>
-          {rows.map((r, i) => {
-            const name = tab === 'regiones' ? (r as RegionRow).region : (r as Comuna).comuna;
-            const key = tab === 'regiones' ? name : `${(r as Comuna).region} — ${(r as Comuna).comuna}`;
-            const regionTotal = tab === 'regiones' ? ((r as RegionRow).total ?? 0) : 0;
-            const regionPct = tab === 'regiones'
-              ? ((r as RegionRow).pct ?? (regionTotal > 0 ? (r.affected * 100) / regionTotal : 0))
-              : 0;
-            const hasBase = tab === 'regiones' && hasRegionPct && regionTotal > 0;
-            // Modo %: proporción sobre la base de cada región, contra el tope de
-            // la escala elegida. Modo clientes: proporción contra la fila más
-            // afectada (el largo coincide con el orden por defecto).
-            const width = barMetric === 'pct'
-              ? (hasBase ? (regionPct / scaleCap) * 100 : 0)
-              : (r.affected / barMax) * 100;
-            // Severidad: el % sube de color sólo cuando el corte pesa sobre la
-            // región; en un día normal queda como dato secundario.
-            const pctTone = regionPct >= 2 ? 'text-error' : regionPct >= 0.5 ? 'text-warning' : 'text-base-content/60';
-            const barTrack = (
-              <div className="relative h-1.5 overflow-hidden rounded-full bg-base-300/80" aria-hidden="true">
-                <div
-                  className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-                  style={{ width: `${width}%`, minWidth: MIN_FILL_PX }}
-                />
-              </div>
-            );
-            // Cap stagger delay: 248 comunas × 40ms would freeze the tail for ~10s
-            const style = { animationDelay: `${Math.min(i * 40, 400)}ms` };
-            return tab === 'regiones' ? (
-              <div
-                key={key}
-                data-row={key}
-                className={`group relative grid ${rowGrid} items-center gap-x-2 gap-y-1 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 transition-colors hover:bg-base-300/60`}
-              >
-                <button
-                  type="button"
-                  onClick={() => { play('interaction.tap'); setComunaRegion((r as RegionRow).region); setTab('comunas'); }}
-                  title={hasBase
-                    ? `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro, ${fmtPct(regionPct)} de ${miles(regionTotal)} clientes`
-                    : `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro`}
-                  aria-label={hasBase
-                    ? `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro, ${fmtPct(regionPct)} de ${miles(regionTotal)} clientes`
-                    : `Ver comunas de ${name}`}
-                  className="absolute inset-0 rounded-md cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
-                />
-                <span className="pointer-events-none col-span-4 row-start-1 min-w-0 truncate text-base-content/80 group-hover:text-base-content sm:col-span-1 sm:row-start-auto">
-                  {name}
-                </span>
-                <div className="pointer-events-none col-start-1 row-start-2 sm:col-start-auto sm:row-start-auto">{barTrack}</div>
-                <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[11px] font-medium tabular-nums text-base-content/80 sm:row-start-auto">
-                  {miles(r.affected)}
-                </span>
-                {/* Base de clientes: en su propia columna, después de «Sin luz»,
-                    para contrastar los valores en vertical. */}
-                <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[10px] tabular-nums text-base-content/60 sm:row-start-auto">
-                  <span className="text-base-content/40 sm:hidden">de </span>{hasBase ? miles(regionTotal) : 's/d'}
-                </span>
-                <span className={`pointer-events-none row-start-2 whitespace-nowrap text-right text-[10px] tabular-nums sm:row-start-auto ${hasBase ? pctTone : 'text-base-content/40'}`}>
-                  {hasBase ? fmtPct(regionPct) : 's/d'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => openRegionMap((r as RegionRow).region)}
-                  title={`Ver mapa de ${name}`}
-                  aria-label={`Ver mapa de ${name}`}
-                  aria-expanded={showMap && mapFocusRegion === (r as RegionRow).region}
-                  className="relative z-10 col-start-5 row-start-1 justify-self-end shrink-0 rounded-md p-1.5 text-base-content/45 transition-colors hover:bg-primary/10 hover:text-primary active:scale-95 cursor-pointer sm:col-start-auto sm:row-start-auto"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11z" />
-                    <circle cx="12" cy="10" r="2.5" />
-                  </svg>
-                </button>
-              </div>
-            ) : (
-              <div
-                key={key}
-                className={`grid ${rowGrid} items-center gap-x-2 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 animate-[fadeInUp_0.3s_ease-out_both]`}
-              style={{ animationDelay: `${Math.min(i * 40, 400)}ms` }}
-              >
-                <span className="truncate text-base-content/80">{name}</span>
-                {barTrack}
-                <span className="text-right tabular-nums text-base-content/70">{miles(r.affected)}</span>
-              </div>
-            );
-          })}
-          {tab === 'comunas' && rows.length === 0 && (
-            <p className="text-[11px] text-base-content/60 py-2">Sin comunas con cortes registrados en esta región.</p>
+          {tab === 'comunas' && (
+            <p className="mt-1.5 text-[9px] leading-snug text-base-content/60">
+              La SEC no publica clientes por comuna: la barra compara con la comuna más afectada.
+            </p>
           )}
         </div>
-        {tab === 'comunas' && (
-          <p className="mt-1.5 text-[9px] leading-snug text-base-content/60">
-            La SEC no publica clientes por comuna: la barra compara con la comuna más afectada.
-          </p>
-        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">

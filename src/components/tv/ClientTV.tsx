@@ -13,6 +13,97 @@ import { idbGet, idbSet } from '@/lib/idb-cache';
 const IDB_KEY = 'tv-channels';
 const IDB_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
+/** Where the player/multiview block sits relative to the channel grid. */
+type PlayerPlacement = 'below' | 'above' | 'left' | 'right';
+
+const SIDE_PLACEMENTS: PlayerPlacement[] = ['left', 'right'];
+
+const PLACEMENT_OPTIONS: Array<{ id: PlayerPlacement; label: string; title: string; dividerBefore?: boolean; icon: React.ReactNode }> = [
+  {
+    id: 'above',
+    label: 'Reproductor arriba de los canales',
+    title: 'Reproductor arriba',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="9" rx="1.5" fill="currentColor" stroke="none" />
+        <path d="M4 16.5h16M4 20.5h10" />
+      </svg>
+    ),
+  },
+  {
+    id: 'below',
+    label: 'Reproductor debajo de los canales',
+    title: 'Reproductor debajo',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 3.5h16M4 7.5h10" />
+        <rect x="3" y="12" width="18" height="9" rx="1.5" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+  {
+    id: 'left',
+    label: 'Reproductor a la izquierda de los canales',
+    title: 'Reproductor a la izquierda (escritorio)',
+    dividerBefore: true,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="10" height="18" rx="1.5" fill="currentColor" stroke="none" />
+        <path d="M17 5h4M17 9h4M17 13h4M17 17h4" />
+      </svg>
+    ),
+  },
+  {
+    id: 'right',
+    label: 'Reproductor a la derecha de los canales',
+    title: 'Reproductor a la derecha (escritorio)',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="11" y="3" width="10" height="18" rx="1.5" fill="currentColor" stroke="none" />
+        <path d="M3 5h4M3 9h4M3 13h4M3 17h4" />
+      </svg>
+    ),
+  },
+];
+
+/** `lg` breakpoint (1024px) — the side-by-side layouts only exist on desktop. */
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  return isDesktop;
+}
+
+/** Selector de ubicación del reproductor — vive dentro del propio reproductor. */
+function PlacementPicker({ value, allowSide, onChange }: { value: PlayerPlacement; allowSide: boolean; onChange: (p: PlayerPlacement) => void }) {
+  const options = PLACEMENT_OPTIONS.filter((o) => allowSide || !SIDE_PLACEMENTS.includes(o.id));
+  return (
+    <div className="flex items-center gap-0.5" role="group" aria-label="Ubicación del reproductor">
+      {options.map((o) => (
+        <span key={o.id} className="flex items-center gap-0.5">
+          {o.dividerBefore && <span className="w-px h-3.5 bg-base-300 mx-0.5" aria-hidden="true" />}
+          <button type="button" onClick={() => { play('navigation.tab'); onChange(o.id); }}
+            aria-pressed={value === o.id}
+            aria-label={o.label}
+            title={o.title}
+            className={`w-6 h-6 flex items-center justify-center rounded transition-colors cursor-pointer ${
+              value === o.id
+                ? 'bg-primary/15 text-primary'
+                : 'text-base-content/70 hover:text-base-content hover:bg-base-300'
+            }`}>
+            {o.icon}
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function loadFavorites(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem('tv-favorites') || '[]')); } catch { return new Set(); }
 }
@@ -47,6 +138,15 @@ export function ClientTV() {
   const [autoPipEnabled, setAutoPipEnabled] = useState(() => {
     try { return localStorage.getItem('tv-auto-pip') !== 'false'; } catch { return true; }
   });
+  const [playerPlacement, setPlayerPlacement] = useState<PlayerPlacement>(() => {
+    try {
+      const v = localStorage.getItem('tv-player-placement');
+      // `side` fue el valor antiguo (solo izquierda) — se migra a `left`.
+      if (v === 'side') return 'left';
+      return v === 'above' || v === 'left' || v === 'right' ? v : 'below';
+    } catch { return 'below'; }
+  });
+  const isDesktop = useIsDesktop();
   const sectionRef = useRef<HTMLDivElement>(null);
   const sectionEverVisibleRef = useRef(false);
   const playerRef = useRef(player);
@@ -56,6 +156,11 @@ export function ClientTV() {
   const [textInput, setTextInput] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+
+  // Placeholder sin canal: completo por defecto (la primera carga), compacto si el usuario lo pide.
+  const [placeholderCompact, setPlaceholderCompact] = useState(() => {
+    try { return localStorage.getItem('tv-placeholder-compact') === 'true'; } catch { return false; }
+  });
 
   // Multiview state
   const [viewMode, setViewMode] = useState<'single' | 'multiview'>(() => {
@@ -217,8 +322,10 @@ export function ClientTV() {
     });
 
     // Phase 1: background fetch → update (server-cached endpoint)
+    // `custom` already returned above; assert the narrowed feed source for the nested function.
+    const feedSource = source as 'json-teles' | 'iptv-org' | 'mi-iptv';
     async function loadChannels() {
-      const data = await fetchChannelsApi(source);
+      const data = await fetchChannelsApi(feedSource);
       if (cancelled || !data?.channels) return;
       idbSet(idbKey, { channels: data.channels, categories: data.categories }, IDB_TTL);
       setChannels(data.channels);
@@ -287,6 +394,17 @@ export function ClientTV() {
   useEffect(() => {
     localStorage.setItem('tv-auto-pip', String(autoPipEnabled));
   }, [autoPipEnabled]);
+
+  // Persist player placement preference
+  useEffect(() => {
+    localStorage.setItem('tv-player-placement', playerPlacement);
+  }, [playerPlacement]);
+
+  // Persist placeholder density (completo por defecto)
+  useEffect(() => {
+    localStorage.setItem('tv-placeholder-compact', String(placeholderCompact));
+  }, [placeholderCompact]);
+
 
   // Persist multiview state
   useEffect(() => { localStorage.setItem('tv-view-mode', viewMode); }, [viewMode]);
@@ -475,30 +593,69 @@ export function ClientTV() {
 
   const isEmptyCustom = source === 'custom' && channels.length === 0;
 
-  return (
-    <div ref={sectionRef} id="seccion-tv" className="space-y-2">
-      {loading ? (
-        <div className="space-y-2 animate-pulse">
-          <div className="h-9 bg-base-200 rounded-lg w-full" />
-          <div className="flex gap-1.5">
-            <div className="h-6 w-16 bg-base-200 rounded-md" />
-            <div className="h-6 w-16 bg-base-200 rounded-md" />
-            <div className="h-6 w-16 bg-base-200 rounded-md" />
-          </div>
-          <div className="flex gap-2 overflow-hidden">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-200 shrink-0 w-[84px] sm:w-24">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-base-300" />
-                <div className="h-2.5 w-12 bg-base-300 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <>
-      {/* Search */}
+  // Las ubicaciones laterales solo existen en escritorio; en móvil caen a `below`
+  // (arriba/abajo siguen funcionando igual).
+  const mediaSide: 'left' | 'right' | null =
+    isDesktop && SIDE_PLACEMENTS.includes(playerPlacement) ? (playerPlacement as 'left' | 'right') : null;
+  const sideActive = mediaSide !== null;
+  const effectivePlacement: PlayerPlacement =
+    !isDesktop && SIDE_PLACEMENTS.includes(playerPlacement) ? 'below' : playerPlacement;
+
+  /* Orden visual del bloque de video. Los dos nodos se quedan montados en el mismo
+     árbol (media primero, filtros+grilla después) y sólo cambian de `order`, así el
+     <video> no se desmonta al reposicionar y el stream no se reinicia. */
+  const mediaOrder =
+    effectivePlacement === 'below' ? 'order-last'
+      : effectivePlacement === 'right' ? 'lg:order-last'
+        : 'order-first';
+
+  /* Pulso corto de "aterrizó aquí" al cambiar de ubicación — sin animar el contenido. */
+  const [placementLanded, setPlacementLanded] = useState(false);
+  const lastPlacementRef = useRef(effectivePlacement);
+  useEffect(() => {
+    if (lastPlacementRef.current === effectivePlacement) return;
+    lastPlacementRef.current = effectivePlacement;
+    setPlacementLanded(true);
+    const timer = setTimeout(() => setPlacementLanded(false), 500);
+    return () => clearTimeout(timer);
+  }, [effectivePlacement]);
+
+  const sourceRow = (
+    <div className="flex items-center gap-1 flex-wrap">
+      {(['json-teles', 'iptv-org', 'mi-iptv', 'custom'] as const).map((s) => {
+        const isActive = source === s;
+        const total = s === 'custom' ? customChannels.length : channels.length;
+        return (
+          <button key={s} onClick={() => handleSourceChange(s)}
+            aria-pressed={isActive}
+            className={`inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors cursor-pointer ${
+              isActive ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+            }`}>
+            {s === 'json-teles' ? 'json-teles' : s === 'iptv-org' ? 'iptv-org' : s === 'mi-iptv' ? 'mi-iptv' : 'Lista M3U'}
+            {/* El conteo va con la playlist activa, no como badge suelto */}
+            {isActive && total > 0 && (
+              <span className="text-[9px] font-mono tabular-nums px-1 py-0.5 rounded bg-primary/20">{total}</span>
+            )}
+          </button>
+        );
+      })}
+      {source === 'custom' && customChannels.length > 0 && (
+        <button onClick={handleClearCustom}
+          className="ml-auto text-[10px] px-2 py-1 rounded-md text-base-content/70 hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+          Quitar lista
+        </button>
+      )}
+    </div>
+  );
+
+  /* Campos de filtro. Las playlists ya no viven aquí: se movieron a la barra
+     fija de arriba. La card que envuelve esto también envuelve los canales. */
+  const filterFields = (
+    <div className="space-y-1.5">
+      {/* Búsqueda */}
       <div className="relative">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-base-content/70 pointer-events-none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-base-content/70 pointer-events-none">
           <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
         </svg>
         <input
@@ -506,38 +663,271 @@ export function ClientTV() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar canales..."
-          className="w-full bg-base-100 border border-base-300 rounded-lg pl-8 pr-3 py-2 text-xs text-base-content placeholder-base-content/50 outline-none focus:border-primary/40 transition-colors"
+          aria-label="Buscar canales"
+          className="w-full bg-base-200/60 border border-base-300 rounded-lg pl-8 pr-8 py-1.5 text-xs text-base-content placeholder-base-content/50 outline-none focus:border-primary/40 transition-colors"
         />
         {search && (
-          <button onClick={() => { play('interaction.subtle'); setSearch(''); }} aria-label="Limpiar búsqueda" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/70 hover:text-base-content/70 transition-colors cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          <button onClick={() => { play('interaction.subtle'); setSearch(''); }} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-base-content/70 hover:text-base-content transition-colors cursor-pointer">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         )}
       </div>
 
-      {/* Source selector */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {(['json-teles', 'iptv-org', 'mi-iptv', 'custom'] as const).map((s) => (
-          <button key={s} onClick={() => handleSourceChange(s)}
-            className={`text-[10px] px-2 py-1 rounded-md transition-colors cursor-pointer ${
-              source === s ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
-            }`}>
-            {s === 'json-teles' ? 'json-teles' : s === 'iptv-org' ? 'iptv-org' : s === 'mi-iptv' ? 'mi-iptv' : 'Lista M3U'}
-          </button>
-        ))}
-        {source === 'custom' && customChannels.length > 0 && (
-          <div className="flex items-center gap-1 ml-auto">
-            <button onClick={handleClearCustom}
-              className="text-[10px] px-2 py-1 rounded-md text-base-content/50 hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-              Quitar lista
+      {/* Categorías */}
+      {source !== 'custom' && (
+        <ChannelSelector
+          categories={allCats}
+          counts={counts}
+          selected={showFavorites ? '__favorites__' : selectedCat}
+          onSelect={handleSelectCategory}
+        />
+      )}
+    </div>
+  );
+
+  /* Ajustes de presentación de los canales: viven con la grilla, no con los filtros. */
+  const gridControls = (
+    <div className="flex items-center justify-end gap-2 px-0.5">
+      <span role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {filtered.length} canales
+      </span>
+      {!sideActive && (
+        <div className="flex items-center gap-0.5" role="group" aria-label="Cantidad de filas de canales">
+          <span className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Filas</span>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button key={n} onClick={() => { play('interaction.tap'); setGridRows(n); }}
+              aria-pressed={gridRows === n}
+              aria-label={`Mostrar ${n} ${n === 1 ? 'fila' : 'filas'}`}
+              className={`min-w-[24px] h-6 px-1.5 text-[10px] tabular-nums rounded-md transition-colors cursor-pointer ${
+                gridRows === n ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+              }`}>
+              {n}
             </button>
-          </div>
-        )}
+          ))}
+        </div>
+      )}
+      <div className="w-px h-4 bg-base-300" aria-hidden="true" />
+      <div className="flex items-center gap-0.5" role="group" aria-label="Orden de canales">
+        <span className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Orden</span>
+        <button onClick={() => { play('interaction.tap'); setSortOrder((prev) => prev === 'az' ? 'default' : 'az'); }}
+          aria-pressed={sortOrder === 'az'} title="Ordenar de A a Z"
+          className={`min-w-[32px] h-6 px-1.5 text-[10px] rounded-md transition-colors cursor-pointer ${
+            sortOrder === 'az' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+          }`}>
+          A-Z
+        </button>
+        <button onClick={() => { play('interaction.tap'); setSortOrder((prev) => prev === 'za' ? 'default' : 'za'); }}
+          aria-pressed={sortOrder === 'za'} title="Ordenar de Z a A"
+          className={`min-w-[32px] h-6 px-1.5 text-[10px] rounded-md transition-colors cursor-pointer ${
+            sortOrder === 'za' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+          }`}>
+          Z-A
+        </button>
       </div>
+    </div>
+  );
 
-      {isEmptyCustom ? (
-        /* Empty state — import panel */
+  const gridNode = (
+    <div className="space-y-1">
+      {gridControls}
+      <div key={`${selectedCat}-${showFavorites}-${search}-${sideActive}`} className="transition-opacity duration-200">
+        <ChannelGrid
+          channels={filtered}
+          rows={gridRows}
+          variant={sideActive ? 'wrap' : 'strip'}
+          selectedIds={viewMode === 'multiview' ? multiviewSlots.map(s => s.channel.id) : (player ? [player.channel.id] : [])}
+          favorites={favorites}
+          onSelect={handleSelect}
+          onToggleFavorite={toggleFavorite}
+          onDragChannelStart={viewMode === 'multiview' ? handleDragChannelStart : undefined}
+        />
+      </div>
+    </div>
+  );
+
+  /* Una sola card para filtros + canales: así los botones de canales se leen
+     como el resultado de los filtros y no como un bloque aparte. */
+  const filtersBlock = (
+    <div className="rounded-xl border border-base-300 bg-base-100 p-1.5 space-y-1.5">
+      {filterFields}
+      <div className="border-t border-base-300/70 pt-1">
+        {gridNode}
+      </div>
+    </div>
+  );
+
+  /* Controles del reproductor: modo (uno / varios), cuadrícula y ubicación.
+     Viven en una barra fija arriba de la sección — nunca viajan con el bloque de
+     video, así reposicionar no mueve los controles de sitio. */
+  /* "Cuadrícula" y su disposición son un solo control segmentado: al activarse,
+     las opciones se pegan al toggle compartiendo la misma superficie. */
+  const gridModeControl = (
+    <div className={`flex items-center rounded-lg transition-colors ${
+      viewMode === 'multiview' ? 'bg-primary/15' : ''
+    }`}>
+      <button onClick={handleToggleViewMode} aria-pressed={viewMode === 'multiview'}
+        title={viewMode === 'multiview' ? 'Volver a un solo canal' : 'Ver varios canales a la vez'}
+        aria-label={viewMode === 'multiview' ? 'Volver a un solo canal' : 'Ver varios canales a la vez'}
+        className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-lg transition-colors cursor-pointer ${
+          viewMode === 'multiview'
+            ? 'text-primary font-medium'
+            : 'text-base-content/70 hover:text-base-content hover:bg-base-300'
+        }`}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        <span>Cuadrícula</span>
+      </button>
+      {viewMode === 'multiview' && (
+        <div role="group" aria-label="Disposición de la cuadrícula"
+          className="flex items-center gap-0.5 pl-1.5 pr-1 border-l border-primary/25">
+          {(['1x1', '1x2', '1x3', '2x2', '2x3', '3x3'] as const).map((l) => (
+            <button key={l} onClick={() => { play('interaction.tap'); setMultiviewLayout(l); }}
+              aria-pressed={multiviewLayout === l}
+              aria-label={`Cuadrícula ${l}`}
+              title={l === '1x1' ? '1 canal — pantalla completa (móvil)' : l === '1x2' ? '2 canales vertical (móvil)' : l}
+              className={`min-w-[26px] h-6 px-1 text-[9px] rounded-md transition-colors cursor-pointer ${
+                multiviewLayout === l
+                  ? 'bg-primary text-primary-content font-semibold'
+                  : 'text-primary hover:bg-primary/20'
+              }`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  /* Solo aplica al placeholder sin canal: el video siempre va a tamaño completo. */
+  const placeholderDensityControl = !player && viewMode !== 'multiview' ? (
+    <button onClick={() => { play('interaction.toggle'); setPlaceholderCompact((v) => !v); }}
+      aria-pressed={placeholderCompact}
+      aria-label="Reproductor compacto"
+      title={placeholderCompact ? 'Ver el reproductor a tamaño completo' : 'Ver el reproductor compacto'}
+      className={`w-6 h-6 flex items-center justify-center rounded transition-colors cursor-pointer ${
+        placeholderCompact
+          ? 'bg-primary/15 text-primary'
+          : 'text-base-content/70 hover:text-base-content hover:bg-base-300'
+      }`}>
+      {placeholderCompact ? (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+        </svg>
+      ) : (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M3 16v3a2 2 0 002 2h3" />
+        </svg>
+      )}
+    </button>
+  ) : null;
+
+  /* Barra fija de la sección. Arriba la fuente de los canales (playlists);
+     abajo, los controles que afectan al bloque de video. */
+  const mediaBar = (
+    <div className="rounded-xl border border-base-300 bg-base-100 px-2 py-1.5 space-y-1.5">
+      {sourceRow}
+      <div className="h-px bg-base-300/70" aria-hidden="true" />
+      <div className="flex items-center gap-2 flex-wrap">
+        {gridModeControl}
+        <div className="ml-auto flex items-center gap-1.5">
+          {placeholderDensityControl}
+          <PlacementPicker value={effectivePlacement} allowSide={isDesktop} onChange={setPlayerPlacement} />
+        </div>
+      </div>
+    </div>
+  );
+
+  const mediaNode = viewMode === 'multiview' ? (
+    <MultiviewGrid
+      slots={multiviewSlots}
+      layout={multiviewLayout}
+      focusedSlot={focusedSlot}
+      onFocus={handleFocusSlot}
+      onRemove={handleRemoveFromMultiview}
+      onSignalChange={handleMultiviewSignalChange}
+      onReorder={handleReorderSlots}
+    />
+  ) : player ? (
+    <UnifiedPlayer
+      channel={player.channel}
+      signalIndex={player.signalIndex}
+      onSignalChange={(index) => setPlayer((prev) => prev ? { ...prev, signalIndex: index } : null)}
+      mode={player.mode}
+      onModeChange={handleModeChange}
+      onClose={handleClose}
+      autoPipEnabled={autoPipEnabled}
+      onToggleAutoPip={() => setAutoPipEnabled((v) => !v)}
+    />
+  ) : placeholderCompact ? (
+    /* Versión compacta (opt-in): una sola fila. */
+    <div className="rounded-xl bg-base-100 border border-base-300 flex items-center gap-2.5 px-3 py-2">
+      <div className="w-8 h-8 rounded-lg bg-base-200 flex items-center justify-center text-base-content/70 shrink-0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M10 10l4 2-4 2v-4z" />
+        </svg>
+      </div>
+      <p className="flex-1 min-w-0 text-xs text-base-content/70 font-medium">Selecciona un canal para ver</p>
+    </div>
+  ) : (
+    /* Versión completa (default): reserva el área 16:9 del reproductor. */
+    <div className="aspect-video rounded-xl bg-base-200/40 border border-base-300 flex flex-col items-center justify-center gap-2 px-4 text-center">
+      <div className="w-12 h-12 rounded-full bg-base-200 flex items-center justify-center text-base-content/70">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M10 10l4 2-4 2v-4z" />
+        </svg>
+      </div>
+      <p className="text-xs font-medium text-base-content/70">Selecciona un canal para ver</p>
+      <p className="text-[10px] text-base-content/70">Elige un canal de la grilla, o activa Cuadrícula para ver varios</p>
+    </div>
+  );
+
+  return (
+    <div ref={sectionRef} id="seccion-tv" className="space-y-2">
+      {loading ? (
+        <div className="space-y-1.5 animate-pulse">
+          {/* Barra fija: playlists arriba, controles del reproductor abajo */}
+          <div className="rounded-xl border border-base-300 bg-base-100 px-2 py-1.5 space-y-1.5">
+            <div className="flex gap-1.5 flex-wrap">
+              <div className="h-6 w-16 bg-base-200 rounded-md" />
+              <div className="h-6 w-16 bg-base-200 rounded-md" />
+              <div className="h-6 w-16 bg-base-200 rounded-md" />
+              <div className="h-6 w-20 bg-base-200 rounded-md" />
+            </div>
+            <div className="h-px bg-base-300/70" />
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-24 bg-base-200 rounded-md" />
+              <div className="ml-auto flex items-center gap-1.5">
+                <div className="h-6 w-6 bg-base-200 rounded" />
+                <div className="h-6 w-24 bg-base-200 rounded" />
+              </div>
+            </div>
+          </div>
+          {/* Filtros + canales, en la misma card */}
+          <div className="rounded-xl border border-base-300 bg-base-100 p-1.5 space-y-1.5">
+            <div className="h-8 bg-base-200 rounded-lg w-full" />
+            <div className="flex gap-1.5">
+              <div className="h-6 w-20 bg-base-200 rounded-md" />
+              <div className="h-6 w-20 bg-base-200 rounded-md" />
+              <div className="h-6 w-20 bg-base-200 rounded-md" />
+            </div>
+            <div className="border-t border-base-300/70 pt-1">
+              <div className="flex gap-2 overflow-hidden pt-1">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-200 shrink-0 w-[84px] sm:w-24">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-base-300" />
+                    <div className="h-2.5 w-12 bg-base-300 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : isEmptyCustom ? (
+        /* Custom source with no list yet: source switcher + import panel */
+        <div className="space-y-2">
+          <div className="rounded-xl border border-base-300 bg-base-100 p-1.5">{sourceRow}</div>
         <div className="rounded-xl bg-base-100 border border-base-300 p-5">
           <div className="max-w-lg mx-auto">
             <p className="text-xs text-base-content/50 text-center mb-4">
@@ -601,149 +991,31 @@ export function ClientTV() {
             </p>
           </div>
         </div>
+        </div>
       ) : (
         <>
-          {/* Category filter (hidden when custom empty) */}
-          {source !== 'custom' && (
-            <ChannelSelector
-              categories={allCats}
-              counts={counts}
-              selected={showFavorites ? '__favorites__' : selectedCat}
-              onSelect={handleSelectCategory}
-            />
-          )}
-
-          {/* View mode toggle */}
-          <div className="flex items-center gap-1.5">
-            <button onClick={handleToggleViewMode}
-              className={`flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-                viewMode === 'multiview'
-                  ? 'bg-primary/15 text-primary font-medium'
-                  : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
-              }`}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-                <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-              </svg>
-              Multi
-            </button>
-            {viewMode === 'multiview' && (
-              <div className="flex items-center gap-0.5 ml-1 flex-wrap">
-                {(['1x1', '1x2', '1x3', '2x2', '2x3', '3x3'] as const).map((l) => (
-                  <button key={l} onClick={() => { play('interaction.tap'); setMultiviewLayout(l); }}
-                    title={l === '1x1' ? '1 canal — pantalla completa (móvil)' : l === '1x2' ? '2 canales vertical (móvil)' : l}
-                    className={`text-[9px] px-1.5 py-1 rounded transition-colors cursor-pointer ${
-                      multiviewLayout === l ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
-                    }`}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Grid controls: rows + sort */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-0.5" role="group" aria-label="Cantidad de filas de canales">
-              <span className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Filas</span>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} onClick={() => { play('interaction.tap'); setGridRows(n); }}
-                  aria-pressed={gridRows === n}
-                  aria-label={`Mostrar ${n} ${n === 1 ? 'fila' : 'filas'}`}
-                  className={`min-w-[24px] h-6 px-1.5 text-[10px] tabular-nums rounded-md transition-colors cursor-pointer ${
-                    gridRows === n ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
-                  }`}>
-                  {n}
-                </button>
-              ))}
+          {/* Barra fija de controles: siempre en el mismo sitio de la sección. */}
+          {mediaBar}
+          <div className={
+            'flex flex-col gap-1.5 ' +
+            (sideActive
+              ? `lg:grid lg:items-start ${
+                  mediaSide === 'left'
+                    ? 'lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]'
+                    : 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]'
+                }`
+              : '')
+          }>
+            {/* `z-30` es intencional: en los laterales el wrapper es `sticky`, que crea su
+                propio stacking context; sin él el miniplayer (`fixed z-50` dentro) queda
+                pintado por debajo de las tarjetas de canales (hermanas posicionadas). */}
+            <div className={`min-w-0 rounded-xl z-30 ${mediaOrder} ${sideActive ? 'lg:sticky lg:top-[88px]' : ''} ${placementLanded ? 'tv-media-land' : ''}`}>
+              {mediaNode}
             </div>
-            <div className="flex items-center gap-0.5" role="group" aria-label="Orden de canales">
-              <span className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Orden</span>
-              <button onClick={() => { play('interaction.tap'); setSortOrder((prev) => prev === 'az' ? 'default' : 'az'); }}
-                aria-pressed={sortOrder === 'az'} title="Ordenar de A a Z"
-                className={`min-w-[32px] h-6 px-1.5 text-[10px] rounded-md transition-colors cursor-pointer ${
-                  sortOrder === 'az' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
-                }`}>
-                A-Z
-              </button>
-              <button onClick={() => { play('interaction.tap'); setSortOrder((prev) => prev === 'za' ? 'default' : 'za'); }}
-                aria-pressed={sortOrder === 'za'} title="Ordenar de Z a A"
-                className={`min-w-[32px] h-6 px-1.5 text-[10px] rounded-md transition-colors cursor-pointer ${
-                  sortOrder === 'za' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
-                }`}>
-                Z-A
-              </button>
+            <div className="min-w-0">
+              {filtersBlock}
             </div>
           </div>
-
-          {/* Row label + count */}
-          <div className="flex items-center justify-between px-0.5">
-            <p className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider">
-              {showFavorites ? 'Favoritos' : selectedCat === 'todas' ? 'Canales' : selectedCat}
-              {' '}· {filtered.length}
-            </p>
-            {(selectedCat !== 'todas' || showFavorites) && (
-              <button onClick={() => { play('navigation.tab'); setSelectedCat('todas'); setShowFavorites(false); }}
-                className="text-[9px] text-base-content/70 hover:text-base-content transition-colors cursor-pointer">
-                Ver todos
-              </button>
-            )}
-          </div>
-
-          {/* Horizontal scrollable channel row */}
-          <div key={`${selectedCat}-${showFavorites}-${search}`} className="transition-opacity duration-200">
-            <ChannelGrid
-              channels={filtered}
-              rows={gridRows}
-              selectedIds={viewMode === 'multiview' ? multiviewSlots.map(s => s.channel.id) : (player ? [player.channel.id] : [])}
-              favorites={favorites}
-              onSelect={handleSelect}
-              onToggleFavorite={toggleFavorite}
-              onDragChannelStart={viewMode === 'multiview' ? handleDragChannelStart : undefined}
-            />
-          </div>
-
-          {/* Player */}
-          {viewMode === 'multiview' ? (
-            <MultiviewGrid
-              slots={multiviewSlots}
-              layout={multiviewLayout}
-              focusedSlot={focusedSlot}
-              onFocus={handleFocusSlot}
-              onRemove={handleRemoveFromMultiview}
-              onSignalChange={handleMultiviewSignalChange}
-              onReorder={handleReorderSlots}
-            />
-          ) : player ? (
-            <UnifiedPlayer
-              channel={player.channel}
-              signalIndex={player.signalIndex}
-              onSignalChange={(index) => setPlayer((prev) => prev ? { ...prev, signalIndex: index } : null)}
-              mode={player.mode}
-              onModeChange={handleModeChange}
-              onClose={handleClose}
-              autoPipEnabled={autoPipEnabled}
-              onToggleAutoPip={() => setAutoPipEnabled((v) => !v)}
-            />
-          ) : (
-            <div className="relative rounded-xl bg-base-100 border border-base-300">
-              <div className="flex items-center gap-2.5 px-3 py-2 bg-base-100/95 backdrop-blur-sm border-b border-base-300 rounded-t-xl">
-                <div className="flex-1 min-w-0 flex items-center gap-2">
-                  <span className="text-xs text-base-content/50 font-medium">Selecciona un canal</span>
-                </div>
-              </div>
-              <div className="aspect-video rounded-b-xl bg-neutral flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-base-200/80 flex items-center justify-center">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-base-content/70">
-                      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M10 10l4 2-4 2v-4z" />
-                    </svg>
-                  </div>
-                  <p className="text-[10px] text-neutral-content">Selecciona un canal para ver</p>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -759,8 +1031,6 @@ export function ClientTV() {
           <span className="text-base-content/50">Lista personalizada</span>
         )}
       </div>
-        </>
-      )}
     </div>
   );
 }
