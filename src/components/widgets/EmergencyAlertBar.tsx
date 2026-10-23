@@ -98,7 +98,7 @@ export function EmergencyAlertBar({ items, onClose }: Props) {
       <span className={`w-1.5 h-1.5 rounded-full ${severityColors[item.severity]}`} />
       <span className="font-semibold text-base-content">{item.mag ? `M${item.mag.toFixed(1)}` : ''}</span>
       <span className="whitespace-nowrap text-base-content/70">{item.place || item.title}</span>
-      <span className="text-[10px] text-base-content/70">
+      <span className="text-[11px] text-base-content/70">
         {new Date(item.time).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
       </span>
     </a>
@@ -119,7 +119,7 @@ export function EmergencyAlertBar({ items, onClose }: Props) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="animate-pulse">
             <path d="M12 2L1 21h22L12 2zm0 4l7.5 13h-15L12 6zm-1 5v4h2v-4h-2zm0 6v2h2v-2h-2z" />
           </svg>
-          <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+          <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">
             {isCritical ? 'Alerta' : 'Sismos'}
           </span>
         </div>
@@ -140,7 +140,7 @@ export function EmergencyAlertBar({ items, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Colapsar barra de emergencia"
-            className="shrink-0 flex items-center justify-center h-full w-9 text-base-content/60 hover:text-base-content transition-colors"
+            className="shrink-0 flex items-center justify-center h-full w-9 text-base-content/70 hover:text-base-content transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />

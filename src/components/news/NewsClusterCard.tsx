@@ -62,7 +62,7 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
             <span className="text-xs font-medium text-base-content/70">
               {cluster.sourceCount} {cluster.sourceCount === 1 ? 'fuente' : 'fuentes'}
             </span>
-            <span className="text-base-content/50">·</span>
+            <span className="text-base-content/70">·</span>
             <span className="text-xs text-base-content/70">
               {new Date(mainArticle.pubDate).toLocaleDateString('es-CL', {
                 day: 'numeric',
@@ -93,7 +93,7 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
             </a>
             <button
               onClick={(e) => { e.stopPropagation(); setReaderArticle(mainArticle); }}
-              className="shrink-0 p-1 mt-0.5 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-all cursor-pointer"
+              className="shrink-0 p-1.5 mt-0.5 rounded-md hover:bg-base-300 text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
               title="Leer en ventana flotante"
               aria-label="Leer en modal"
             >
@@ -118,11 +118,11 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
                       <span className="text-xs font-medium text-base-content/80 truncate">
                         {source}
                       </span>
-                      <span className="text-[10px] font-semibold text-base-content/50 bg-base-300 px-1.5 py-0.5 rounded-full shrink-0">
+                      <span className="text-[11px] font-semibold text-base-content/70 bg-base-300 px-1.5 py-0.5 rounded-full shrink-0">
                         {srcArticles.length}
                       </span>
                       <svg
-                        className={`w-3 h-3 ml-auto text-base-content/50 shrink-0 transition-transform duration-200 ${
+                        className={`w-3 h-3 ml-auto text-base-content/70 shrink-0 transition-transform duration-200 ${
                           isExpanded ? 'rotate-180' : ''
                         }`}
                         viewBox="0 0 24 24"
@@ -164,11 +164,11 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
                               </a>
                               <button
                                 onClick={(e) => { e.stopPropagation(); setReaderArticle(article); }}
-                                className="shrink-0 p-1 rounded-md opacity-0 group-hover/article:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-all cursor-pointer"
+                                className="shrink-0 p-1.5 rounded-md hover:bg-base-300 text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
                                 title="Leer en ventana flotante"
                                 aria-label="Leer en modal"
                               >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
                                   <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                                 </svg>

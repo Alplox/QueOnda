@@ -361,12 +361,12 @@ export function FootballTable() {
         <p className="text-xs text-base-content/70 uppercase tracking-wider">Fútbol chileno</p>
         <div className="flex items-center gap-2">
           {activeFetchedAt && (
-            <p className={`text-[10px] ${activeIsStale ? 'text-warning font-semibold' : activeIsWarn ? 'text-warning/80' : 'text-base-content/50'}`} title={new Date(activeFetchedAt).toISOString()}>
+            <p className={`text-[11px] ${activeIsStale ? 'text-warning font-semibold' : activeIsWarn ? 'text-warning/80' : 'text-base-content/70'}`} title={new Date(activeFetchedAt).toISOString()}>
               {formatAbs(activeFetchedAt)} · {fmtRelative(activeFetchedAt)}{activeIsStale ? ' · desactualizado' : activeIsWarn ? ' · puede estar desactualizado' : ''}
             </p>
           )}
           {standings.length > 0 && activeTab === 'standings' && (
-            <p className="text-[10px] text-base-content/50 hidden sm:inline">{totalTeams} equipos</p>
+            <p className="text-[11px] text-base-content/70 hidden sm:inline">{totalTeams} equipos</p>
           )}
         </div>
       </div>
@@ -391,7 +391,7 @@ export function FootballTable() {
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
               activeTab === t.key
                 ? 'bg-primary text-primary-content'
-                : 'bg-base-300 text-base-content/60 hover:text-base-content'
+                : 'bg-base-300 text-base-content/70 hover:text-base-content'
             }`}
           >
             {t.label}
@@ -400,7 +400,7 @@ export function FootballTable() {
       </div>
 
       {error && (
-        <div className="px-4 py-2 text-[10px] text-base-content/70 border-b border-base-300">
+        <div className="px-4 py-2 text-[11px] text-base-content/70 border-b border-base-300">
           {error}
         </div>
       )}
@@ -409,7 +409,7 @@ export function FootballTable() {
         <div className="overflow-x-auto">
           <table className="w-full text-[12px]">
             <thead>
-              <tr className="text-base-content/50 text-[10px] uppercase tracking-wider border-b border-base-300">
+              <tr className="text-base-content/70 text-[11px] uppercase tracking-wider border-b border-base-300">
                 <th className="text-left px-3 py-1.5 font-medium w-8">#</th>
                 <th className="text-left px-1 py-1.5 font-medium" colSpan={2}>Equipo</th>
                 <th className="text-center px-2 py-1.5 font-medium w-7">PJ</th>
@@ -438,7 +438,7 @@ export function FootballTable() {
                     <div className="flex items-center gap-1">
                       {s.position}
                       {s.rankChange !== 0 && (
-                        <span className={`text-[9px] ${s.rankChange > 0 ? 'text-success' : 'text-error'}`}>
+                        <span className={`text-[11px] ${s.rankChange > 0 ? 'text-success' : 'text-error'}`}>
                           {s.rankChange > 0 ? '↑' : '↓'}
                         </span>
                       )}
@@ -525,7 +525,7 @@ export function FootballTable() {
           {liveMatches.length > 0 && (
             <div>
               <div className="px-4 py-2 border-b border-base-300 bg-base-300/30">
-                <p className="text-[10px] text-base-content/70 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                <p className="text-[11px] text-base-content/70 font-semibold uppercase tracking-wider flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                   En vivo
                 </p>
@@ -558,7 +558,7 @@ export function FootballTable() {
           {finishedMatches.length > 0 && (
             <div>
               <div className="px-4 py-2 border-b border-base-300 bg-base-300/30">
-                <p className="text-[10px] text-base-content/70 font-semibold uppercase tracking-wider">Resultados recientes</p>
+                <p className="text-[11px] text-base-content/70 font-semibold uppercase tracking-wider">Resultados recientes</p>
               </div>
               <div className="divide-y divide-base-300">
                 {finishedMatches.slice(0, 6).map((m, idx) => (
@@ -571,7 +571,7 @@ export function FootballTable() {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 bg-base-300 rounded-lg px-3 py-1 min-w-[64px] justify-center">
                         <span className="text-sm font-bold font-mono tabular-nums text-base-content">{m.homeScore ?? '-'}</span>
-                        <span className="text-xs text-base-content/50">–</span>
+                        <span className="text-xs text-base-content/70">–</span>
                         <span className="text-sm font-bold font-mono tabular-nums text-base-content">{m.awayScore ?? '-'}</span>
                       </div>
                       <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
@@ -579,7 +579,7 @@ export function FootballTable() {
                         <span className="text-xs font-medium text-base-content truncate">{m.awayTeam}</span>
                       </div>
                     </div>
-                    <p className="text-[10px] text-base-content/50 text-center mt-1">{formatDate(m.date)}</p>
+                    <p className="text-[11px] text-base-content/70 text-center mt-1">{formatDate(m.date)}</p>
                   </div>
                   </div>
                 ))}
@@ -590,7 +590,7 @@ export function FootballTable() {
           {upcomingMatches.length > 0 && (
             <div>
               <div className="px-4 py-2 border-b border-base-300 bg-base-300/30">
-                <p className="text-[10px] text-base-content/70 font-semibold uppercase tracking-wider">Próximos partidos</p>
+                <p className="text-[11px] text-base-content/70 font-semibold uppercase tracking-wider">Próximos partidos</p>
               </div>
               <div className="divide-y divide-base-300">
                 {upcomingMatches.slice(0, 6).map((m, idx) => {
@@ -605,14 +605,14 @@ export function FootballTable() {
                         {m.homeCrest && <img src={m.homeCrest} alt="" className="w-5 h-5 object-contain shrink-0 ring-1 ring-inset ring-black/5 dark:ring-white/10 rounded-full" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 bg-base-300 rounded-lg px-3 py-1 min-w-[64px] justify-center">
-                        <span className="text-[10px] text-base-content/70 whitespace-nowrap leading-none">vs</span>
+                        <span className="text-[11px] text-base-content/70 whitespace-nowrap leading-none">vs</span>
                       </div>
                       <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
                         {m.awayCrest && <img src={m.awayCrest} alt="" className="w-5 h-5 object-contain shrink-0 ring-1 ring-inset ring-black/5 dark:ring-white/10 rounded-full" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                         <span className="text-xs font-medium text-base-content truncate">{m.awayTeam}</span>
                       </div>
                     </div>
-                    <p className="text-[10px] text-base-content/50 text-center mt-1">{dateStr}</p>
+                    <p className="text-[11px] text-base-content/70 text-center mt-1">{dateStr}</p>
                   </div>
                   </div>
                   );
@@ -653,7 +653,7 @@ export function FootballTable() {
                   className="flex-1 text-left min-w-0 px-3 py-2 cursor-pointer"
                 >
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded border ${getSourceStyle(article.source)}`}>
+                    <span className={`px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider rounded border ${getSourceStyle(article.source)}`}>
                       {article.source}
                     </span>
                   </div>
@@ -664,7 +664,7 @@ export function FootballTable() {
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderUrl(article.link); }}
-                  className="shrink-0 p-1 mr-2 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content/80 transition-all cursor-pointer"
+                  className="shrink-0 p-1 mr-2 rounded-md hover:bg-base-300 text-base-content/70 hover:text-base-content/80 transition-colors cursor-pointer"
                   title="Leer en ventana flotante"
                   aria-label="Leer en modal"
                 >
@@ -681,7 +681,7 @@ export function FootballTable() {
         </>
       )}
     </div>
-    <div className="mt-2 text-right text-[10px] text-base-content/50">
+    <div className="mt-2 text-right text-[11px] text-base-content/70">
       {source === 'espn' ? (
         <>Fuentes:{' '}
         <a href="https://github.com/pseudo-r/Public-ESPN-API" target="_blank" rel="noopener noreferrer" 

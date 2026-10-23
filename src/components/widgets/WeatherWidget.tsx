@@ -185,13 +185,13 @@ function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, 
         <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5">
           {onTogglePin && (
             <button onClick={onTogglePin} className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded transition-[transform,opacity] active:scale-[0.96] cursor-pointer" title={isPinned ? 'Desfijar ciudad' : 'Fijar arriba'}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isPinned ? 'text-primary' : 'text-base-content/50 hover:text-base-content'}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isPinned ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}>
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               </svg>
             </button>
           )}
           {onRemove && (
-            <button onClick={onRemove} className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded text-base-content/50 hover:text-base-content hover:bg-base-300 transition-[transform,colors] active:scale-[0.96] cursor-pointer" title="Quitar ciudad">
+            <button onClick={onRemove} className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-[transform,colors] active:scale-[0.96] cursor-pointer" title="Quitar ciudad">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
           )}
@@ -200,7 +200,7 @@ function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, 
       <div className="flex items-center justify-between">
         <p className="text-xs text-base-content/70 uppercase tracking-wider font-medium truncate pr-4">
           {data.city}
-          {isUser && <span className="text-[10px] text-base-content/70 ml-1">(tu ubicacion)</span>}
+          {isUser && <span className="text-[11px] text-base-content/70 ml-1">(tu ubicacion)</span>}
         </p>
       </div>
       <div className="flex items-center gap-2 mt-1">
@@ -208,7 +208,7 @@ function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, 
         <span className="text-2xl font-bold text-base-content tabular-nums">{data.temp}°</span>
       </div>
       <p className="text-xs text-base-content/70 mt-0.5">{label}</p>
-      <div className="flex gap-3 mt-2 text-[10px] text-base-content/70">
+      <div className="flex gap-3 mt-2 text-[11px] text-base-content/70">
         <span className="tabular-nums">Humedad {data.humidity}%</span>
         <span className="tabular-nums">Viento {data.wind} km/h</span>
       </div>
@@ -217,7 +217,7 @@ function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, 
       {hasForecast && onToggle && (
         <button
           onClick={() => { play('interaction.toggle'); onToggle(); }}
-          className="mt-2 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+          className="mt-2 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
             className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
@@ -240,17 +240,17 @@ function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, 
                 const text = forecastTexts[i]?.[1] ?? forecastTexts[i]?.[0] ?? '';
                 const code = dmcIconToCode(icon);
                 return (
-                  <div key={i} className="flex items-center gap-2 text-[10px]">
+                  <div key={i} className="flex items-center gap-2 text-[11px]">
                     <span className="w-20 text-base-content/70 truncate font-medium">{day}</span>
                     <WeatherIcon code={code} />
                     <span className="tabular-nums text-base-content font-medium">
                       {min && <>{min}°</>}{min && max && ' / '}{max && <>{max}°</>}
                     </span>
-                    <span className="text-base-content/50 truncate flex-1">{text}</span>
+                    <span className="text-base-content/70 truncate flex-1">{text}</span>
                   </div>
                 );
               })}
-              <p className="text-[9px] text-base-content/40 text-right">Fuente: DMC</p>
+              <p className="text-[11px] text-base-content/70 text-right">Fuente: DMC</p>
             </div>
           )}
         </div>
@@ -559,8 +559,8 @@ export function WeatherWidget() {
           type="text"
           value={searchQuery}
           onChange={e => { setSearchQuery(e.target.value); setSearchError(null); }}
-          placeholder="Buscar ciudad en la grilla..."
-          className="flex-1 bg-base-100 border border-base-300 rounded-lg px-3 py-2 text-xs text-base-content placeholder-base-content/50 outline-none focus:border-primary/40 transition-colors"
+          aria-label="Buscar ciudad en la grilla" placeholder="Buscar ciudad en la grilla..."
+          className="flex-1 bg-base-100 border border-base-300 rounded-lg px-3 py-2 text-base sm:text-sm text-base-content placeholder:text-base-content/70 outline-none focus:border-primary/40 transition-colors"
         />
         <button
           type="submit"
@@ -571,7 +571,7 @@ export function WeatherWidget() {
         </button>
       </form>
       {searchError && (
-        <p className="text-[10px] text-error mb-2">{searchError}</p>
+        <p className="text-[11px] text-error mb-2">{searchError}</p>
       )}
 
       {/* Windy map toggle */}
@@ -607,7 +607,7 @@ export function WeatherWidget() {
                   <div className="h-[350px] flex items-center justify-center -mt-[350px] relative z-10">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                      <span className="text-[10px] text-base-content/70">Cargando mapa...</span>
+                      <span className="text-[11px] text-base-content/70">Cargando mapa...</span>
                     </div>
                   </div>
                 )}
@@ -637,7 +637,7 @@ export function WeatherWidget() {
                 </div>
               </div>
             )}
-            <div className="mt-2 text-right text-[10px] text-base-content/50">
+            <div className="mt-2 text-right text-[11px] text-base-content/70">
               Fuente:{' '}
               <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Windy</a>
             </div>
@@ -650,7 +650,7 @@ export function WeatherWidget() {
           <span className="text-base-content/70">Filtrando: <strong className="text-base-content">{filterCity}</strong></span>
           <button
             onClick={() => { setFilterCity(null); setSearchQuery(''); }}
-            className="px-2 py-0.5 text-[10px] rounded bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+            className="px-2 py-0.5 text-[11px] rounded bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
           >
             Limpiar filtro
           </button>
@@ -659,7 +659,7 @@ export function WeatherWidget() {
 
       {/* If search active and no local match, show add prompt */}
       {!localMatch && !filterCity && searchQuery.trim() && !searching && !searchError && (
-        <p className="text-[10px] text-base-content/70 mb-2">
+        <p className="text-[11px] text-base-content/70 mb-2">
           &ldquo;{searchQuery.trim()}&rdquo; no está en la grilla. Presiona Enter para agregarla.
         </p>
       )}
@@ -694,7 +694,7 @@ export function WeatherWidget() {
         {hasMore && (
           <button
             onClick={() => setLimit(s => s + LOAD_MORE)}
-            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[transform,background-color,border-color,ring] duration-200 active:scale-[0.96] cursor-pointer"
+            className="px-4 py-1.5 text-[11px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[transform,background-color,border-color,ring] duration-200 active:scale-[0.96] cursor-pointer"
           >
             Mostrar más ({allCities.length - limit} restantes)
           </button>
@@ -702,7 +702,7 @@ export function WeatherWidget() {
         {hasExtra && (
           <button
             onClick={() => setLimit(INITIAL)}
-            className="px-4 py-1.5 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-[transform,background-color] duration-200 active:scale-[0.96] cursor-pointer"
+            className="px-4 py-1.5 text-[11px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-[transform,background-color] duration-200 active:scale-[0.96] cursor-pointer"
           >
             Mostrar menos
           </button>
@@ -710,7 +710,7 @@ export function WeatherWidget() {
       </div>
 
       {/* Footer */}
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[11px] text-base-content/70">
         {geoError && <><span>{geoError}</span><span className="mx-1">·</span></>}
         <span>
           Fuentes:{' '}

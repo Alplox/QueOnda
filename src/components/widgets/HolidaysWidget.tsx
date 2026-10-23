@@ -154,7 +154,7 @@ export function HolidaysWidget() {
                   : 'hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] transition-colors'
               }`}
             >
-              <span className={`text-xs font-mono w-12 text-right shrink-0 ${past ? 'text-base-content/50' : 'text-base-content/70'}`}>
+              <span className={`text-xs font-mono w-12 text-right shrink-0 ${past ? 'text-base-content/70' : 'text-base-content/70'}`}>
                 {parseLocalDate(h.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
               </span>
               <div className="min-w-0 flex-1">
@@ -163,7 +163,7 @@ export function HolidaysWidget() {
                 </p>
               </div>
               {h.inalienable && !past && (
-                <span className="text-[10px] text-primary-content font-medium shrink-0 bg-primary px-2 py-0.5 rounded-full">
+                <span className="text-[11px] text-primary-content font-medium shrink-0 bg-primary px-2 py-0.5 rounded-full">
                   Irrenunciable
                 </span>
               )}
@@ -172,7 +172,7 @@ export function HolidaysWidget() {
         })}
       </div>
 
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[11px] text-base-content/70">
         Fuentes:{' '}
         <a href="https://docs.boostr.cl/reference/holidays" target="_blank" rel="noopener noreferrer" 
         className="hover:text-base-content underline underline-offset-2 transition-colors">Boostr</a>

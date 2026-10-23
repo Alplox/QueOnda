@@ -39,7 +39,7 @@ function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: s
   if (lines.length === 0) {
     return (
       <div className="mb-4">
-        <h4 className="text-sm font-semibold text-base-content mb-3">Metro de Santiago</h4>
+        <h3 className="text-sm font-semibold text-base-content mb-3">Metro de Santiago</h3>
         <div className="rounded-xl bg-base-200 border border-base-300 p-4">
           <p className="text-xs text-base-content/70 text-center">
             Información no disponible en este momento.{' '}
@@ -54,16 +54,16 @@ function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: s
   }
   return (
     <div className="mb-4">
-      <h4 className="text-sm font-semibold text-base-content mb-3">
+      <h3 className="text-sm font-semibold text-base-content mb-3">
         Metro de Santiago
         {updatedAt && (
-          <span className="text-[10px] text-base-content/50 ml-2 font-normal">
+          <span className="text-[11px] text-base-content/70 ml-2 font-normal">
             {new Date(updatedAt).toLocaleString('es-CL', {
               day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
             })}
           </span>
         )}
-      </h4>
+      </h3>
       <div className="rounded-xl bg-base-200 border border-base-300 p-4">
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
           {lines.map((line) => {
@@ -85,7 +85,7 @@ function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: s
           })}
         </div>
       </div>
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[11px] text-base-content/70">
         Fuentes:{' '}
         <a href="https://www.metro.cl/el-viaje/estado-red" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">
           Metro.cl
@@ -115,14 +115,14 @@ function StopResult({ result }: { result: StopInfo }) {
     <div>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xs font-semibold text-base-content">{result.name}</span>
-        <span className="text-[10px] text-base-content/70 font-mono">{result.id}</span>
+        <span className="text-[11px] text-base-content/70 font-mono">{result.id}</span>
       </div>
 
       <a
         href={`https://www.red.cl/planifica-tu-viaje/cuando-llega/?codsimt=${result.id}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 text-[10px] text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors mb-3"
+        className="inline-flex items-center gap-1 text-[11px] text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors mb-3"
       >
         Ver en Red Movilidad →
       </a>
@@ -131,7 +131,7 @@ function StopResult({ result }: { result: StopInfo }) {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-base-300 text-base-content/70 text-[10px] uppercase tracking-wider">
+              <tr className="border-b border-base-300 text-base-content/70 text-[11px] uppercase tracking-wider">
                 <th className="text-left px-3 py-2 font-medium">Recorrido</th>
                 <th className="text-left px-3 py-2 font-medium">Dirección</th>
                 <th className="text-left px-3 py-2 font-medium">Llegada</th>
@@ -174,7 +174,7 @@ function StopResult({ result }: { result: StopInfo }) {
                       href={`https://www.red.cl/mapas-y-horarios/bus/recorrido?codser=${p.route_id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors whitespace-nowrap"
+                      className="text-[11px] text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors whitespace-nowrap"
                     >
                       Ver recorrido →
                     </a>
@@ -366,16 +366,16 @@ function StopCombobox() {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-base-content">
-          Llegada de buses <span className="text-[10px] text-base-content/70 font-normal">(RED — Santiago)</span>
-        </h4>
+        <h3 className="text-sm font-semibold text-base-content">
+          Llegada de buses <span className="text-[11px] text-base-content/70 font-normal">(RED — Santiago)</span>
+        </h3>
         <div className="flex bg-base-200 rounded-lg p-0.5 text-xs font-medium">
           <button
             type="button"
             onClick={() => { setMode('paradero'); setRouteStops(null); setRouteInput(''); }}
             aria-pressed={mode === 'paradero'}
-            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-              mode === 'paradero' ? 'bg-base-100 text-base-content shadow-sm' : 'text-base-content/60 hover:text-base-content'
+            className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+              mode === 'paradero' ? 'bg-base-100 text-base-content shadow-sm' : 'text-base-content/70 hover:text-base-content'
             }`}
           >
             Paradero
@@ -384,8 +384,8 @@ function StopCombobox() {
             type="button"
             onClick={() => { setMode('recorrido'); setStopId(''); setResult(null); setError(null); }}
             aria-pressed={mode === 'recorrido'}
-            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-              mode === 'recorrido' ? 'bg-base-100 text-base-content shadow-sm' : 'text-base-content/60 hover:text-base-content'
+            className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+              mode === 'recorrido' ? 'bg-base-100 text-base-content shadow-sm' : 'text-base-content/70 hover:text-base-content'
             }`}
           >
             Recorrido
@@ -397,20 +397,22 @@ function StopCombobox() {
         <>
           <form onSubmit={handleSubmit} className="relative mb-2">
             <div className="flex gap-2">
+              <label htmlFor="transport-stop" className="sr-only">Buscar paradero</label>
               <input
                 ref={inputRef}
+                id="transport-stop"
                 type="text"
                 value={stopId}
                 onChange={handleInputChange}
                 onFocus={() => { setIsOpen(true); }}
                 onKeyDown={handleKeyDown}
                 placeholder="Buscar paradero (PA433, PA1...)"
-                className="flex-1 bg-base-100 border border-base-300 rounded-lg px-3 py-2 text-xs text-base-content placeholder-base-content/50 uppercase outline-none focus:border-primary/40 transition-colors"
+                className="flex-1 bg-base-100 border border-base-300 rounded-lg px-3 py-2 text-base sm:text-sm text-base-content placeholder:text-base-content/70 uppercase outline-none focus:border-primary/40 transition-colors"
               />
               <button
                 type="submit"
                 disabled={searching || !stopId.trim()}
-                className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+                className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-[background-color,transform] active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
               >
                 {searching ? '...' : 'Consultar'}
               </button>
@@ -434,7 +436,7 @@ function StopCombobox() {
                     }`}
                   >
                     <span className="font-mono text-xs font-semibold text-base-content">{stop.code}</span>
-                    {stop.comuna && <span className="text-[10px] text-base-content/70">{stop.comuna}</span>}
+                    {stop.comuna && <span className="text-[11px] text-base-content/70">{stop.comuna}</span>}
                   </button>
                   );
                 })}
@@ -449,17 +451,17 @@ function StopCombobox() {
                 type="button"
                 onClick={() => handleSelect(code)}
                 style={{ animationDelay: `${i * 60}ms` }}
-                className="px-2 py-1 text-[10px] font-medium bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:scale-105 transition-all active:scale-[0.96] cursor-pointer opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards]"
+                className="px-2 py-1 text-[11px] font-medium bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:scale-105 transition-[background-color,transform] active:scale-[0.96] cursor-pointer opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards]"
               >
                 {code}
               </button>
             ))}
           </div>
 
-          {error && <p className="text-[10px] text-error mb-2">{error}</p>}
+          {error && <p className="text-[11px] text-error mb-2">{error}</p>}
           {result && <StopResult result={result} />}
           {!result && !error && !searching && (
-            <p className="text-[10px] text-base-content/70">
+            <p className="text-[11px] text-base-content/70">
               Selecciona un paradero de la lista o escribe el código que ves en tu parada
             </p>
           )}
@@ -470,20 +472,22 @@ function StopCombobox() {
         <>
           <form onSubmit={handleSubmit} className="relative mb-2">
             <div className="flex gap-2">
+              <label htmlFor="transport-route" className="sr-only">Buscar recorrido</label>
               <input
                 ref={inputRef}
+                id="transport-route"
                 type="text"
                 value={routeInput}
                 onChange={handleInputChange}
                 onFocus={() => { setIsOpen(routeNames.length > 0); }}
                 onKeyDown={handleKeyDown}
                 placeholder="Buscar recorrido (506, 210, 424...)"
-                className="flex-1 bg-base-100 border border-base-300 rounded-lg px-3 py-2 text-xs text-base-content placeholder-base-content/50 uppercase outline-none focus:border-primary/40 transition-colors"
+                className="flex-1 bg-base-100 border border-base-300 rounded-lg px-3 py-2 text-base sm:text-sm text-base-content placeholder:text-base-content/70 uppercase outline-none focus:border-primary/40 transition-colors"
               />
               <button
                 type="submit"
                 disabled={loadingRoute || !routeInput.trim()}
-                className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+                className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-[background-color,transform] active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
               >
                 {loadingRoute ? '...' : 'Ver ruta'}
               </button>
@@ -512,7 +516,7 @@ function StopCombobox() {
           </form>
 
           {loadingRoute && (
-            <div className="flex items-center gap-2 text-[10px] text-base-content/70 pb-2">
+            <div className="flex items-center gap-2 text-[11px] text-base-content/70 pb-2">
               <span className="loading loading-spinner loading-xs" />
               Cargando paraderos...
             </div>
@@ -533,7 +537,7 @@ function StopCombobox() {
                       setShowMap(s => !s);
                     }}
                     aria-expanded={showMap}
-                    className="flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+                    className="flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
                   >
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
                       className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
@@ -542,7 +546,7 @@ function StopCombobox() {
                     {showMap ? 'Ocultar mapa' : 'Ver mapa'}
                   </button>
                 </div>
-                <span className="text-[10px] text-base-content/70 shrink-0">{routeStops.length} paraderos</span>
+                <span className="text-[11px] text-base-content/70 shrink-0">{routeStops.length} paraderos</span>
               </div>
               <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${showMap ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
                 <div className="overflow-hidden min-h-0">
@@ -576,17 +580,19 @@ function StopCombobox() {
           {routeStops && (
             <div className="relative mb-2">
               <form onSubmit={(e) => { e.preventDefault(); if (stopId.trim()) doSearch(stopId.trim()); }} className="flex gap-2">
+                <label htmlFor="transport-route-stop" className="sr-only">Consultar paradero</label>
                 <input
+                  id="transport-route-stop"
                   type="text"
                   value={stopId}
                   onChange={(e) => setStopId(e.target.value.toUpperCase())}
                   placeholder="Consultar paradero (PA433...)"
-                  className="flex-1 bg-base-100 border border-base-300 rounded-lg px-3 py-2 text-xs text-base-content placeholder-base-content/50 uppercase outline-none focus:border-primary/40 transition-colors"
+                  className="flex-1 bg-base-100 border border-base-300 rounded-lg px-3 py-2 text-base sm:text-sm text-base-content placeholder:text-base-content/70 uppercase outline-none focus:border-primary/40 transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={searching || !stopId.trim()}
-                  className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+                  className="px-3 py-2 text-xs font-medium bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition-[background-color,transform] active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
                 >
                   {searching ? '...' : 'Consultar'}
                 </button>
@@ -596,10 +602,10 @@ function StopCombobox() {
 
           {result && <StopResult result={result} />}
 
-          {error && <p className="text-[10px] text-error mb-2">{error}</p>}
+          {error && <p className="text-[11px] text-error mb-2">{error}</p>}
 
           {!routeStops && !loadingRoute && !error && (
-            <p className="text-[10px] text-base-content/70">
+            <p className="text-[11px] text-base-content/70">
               Escribe un número de recorrido para ver todos sus paraderos
             </p>
           )}
@@ -671,7 +677,7 @@ export function TransportWidget() {
     <div className="space-y-6">
       {data.metro && <MetroGrid lines={data.metro.lines} source={data.metro.source} updatedAt={data.updatedAt} />}
       <StopCombobox />
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[11px] text-base-content/70">
         {cachedTimestamp && <p className="mb-0.5">Datos desde las {cachedTimestamp}</p>}
         Fuentes:{' '}
         <a href="https://www.red.cl/predictorPlus/prediccion" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Red.cl</a>

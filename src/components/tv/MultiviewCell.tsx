@@ -164,7 +164,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
 
   return (
     <div
-      className={`relative rounded-xl overflow-hidden bg-neutral group cursor-pointer transition-all ${
+      className={`relative rounded-xl overflow-hidden bg-neutral group cursor-pointer transition-[box-shadow] ${
         focused ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : 'ring-1 ring-base-300 hover:ring-base-content/20'
       }`}
       onClick={() => { play('interaction.tap'); onFocus(); }}
@@ -176,7 +176,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
         {channel.logo && (
           <img src={channel.logo} alt="" className="w-4 h-4 rounded object-contain shrink-0" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         )}
-        <span className="text-[10px] text-white font-medium truncate flex-1 min-w-0">{channel.name}</span>
+        <span className="text-[11px] text-white font-medium truncate flex-1 min-w-0">{channel.name}</span>
         {focused && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
         <button onClick={handleClose} className="min-w-[24px] min-h-[24px] flex items-center justify-center p-0.5 rounded text-white/60 hover:text-white hover:bg-white/15 transition-colors shrink-0" title="Quitar del multiview">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -193,7 +193,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
         {error && isHlsType && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral/80">
             <div className="text-center">
-              <p className="text-white text-[10px]">Señal no disponible</p>
+              <p className="text-white text-[11px]">Señal no disponible</p>
               {hasMultipleSignals && (
                 <div className="mt-1 flex gap-1 justify-center">
                   {signals.map((s, i) => (

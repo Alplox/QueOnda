@@ -74,6 +74,9 @@ export function SideIndex() {
 
   return (
     <nav
+      aria-label="Índice de secciones"
+      aria-hidden={!visible}
+      inert={!visible}
       className={`fixed right-5 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 transition-opacity duration-300 ${
         visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
@@ -84,21 +87,22 @@ export function SideIndex() {
           <a
             key={section.id}
             href={`#${section.id}`}
-            className="relative flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-200 group"
+            aria-current={isActive ? 'true' : undefined}
+            className="relative flex items-center justify-center w-6 h-6 rounded-lg transition-colors duration-200 group"
           >
             <span
-              className={`rounded-full transition-all duration-200 ${
+              className={`rounded-full transition-[width,height,background-color] duration-200 ${
                 isActive
                   ? 'w-2 h-2 bg-primary'
                   : 'w-1.5 h-1.5 bg-base-content/20 group-hover:bg-base-content/40'
               }`}
             />
             <span
-              className={`absolute right-full mr-2 text-[11px] whitespace-nowrap leading-none py-1.5 px-2 rounded-lg border shadow-sm transition-all duration-200 ${
+              className={`absolute right-full mr-2 text-[11px] whitespace-nowrap leading-none py-1.5 px-2 rounded-lg border shadow-sm transition-[opacity,color,background-color,border-color] duration-200 ${
                 isActive
                   ? 'text-base-content font-medium bg-primary/10 border-primary/20'
-                  : 'text-base-content/60 bg-base-200 border-base-300'
-              } opacity-0 pointer-events-none group-hover:opacity-100`}
+                  : 'text-base-content/70 bg-base-200 border-base-300'
+              } opacity-0 pointer-events-none group-hover:opacity-100 group-focus-visible:opacity-100`}
             >
               {section.label}
             </span>

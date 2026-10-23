@@ -35,7 +35,7 @@ export function SectionShareHandler() {
         span.setAttribute('data-section-status', '1');
         span.setAttribute('role', 'status');
         span.className =
-          'absolute -top-7 -right-2 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap opacity-0';
+          'absolute -top-7 -right-2 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap opacity-0';
         btn.appendChild(span);
       }
       span.textContent = msg;

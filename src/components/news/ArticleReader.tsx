@@ -154,7 +154,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => play('interaction.tap')}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full bg-primary text-primary-content hover:bg-primary hover:text-primary-content transition-all ring-1 ring-inset ring-primary"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full bg-primary text-primary-content hover:bg-primary hover:text-primary-content transition-colors ring-1 ring-inset ring-primary"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -165,7 +165,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
             </a>
             <button
               onClick={() => { play('overlay.close'); onClose(); }}
-              className="p-1.5 rounded-lg hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] text-base-content/70 hover:text-base-content transition-all cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
               aria-label="Cerrar"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -203,7 +203,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => play('interaction.tap')}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-content hover:opacity-90 transition-all active:scale-[0.96]"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-content hover:opacity-90 transition-[opacity,transform] active:scale-[0.96]"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -217,7 +217,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
           <div className="px-8 py-6 space-y-5">
             <h2 className="text-lg font-bold text-base-content leading-snug">{fetchedArticle.title}</h2>
             {(fetchedArticle.author || fetchedArticle.publishedTime) && (
-              <div className="flex items-center gap-3 text-[10px] text-base-content/70">
+              <div className="flex items-center gap-3 text-[11px] text-base-content/70">
                 {fetchedArticle.author && <span>{fetchedArticle.author}</span>}
                 {fetchedArticle.publishedTime && (
                   <span>{new Date(fetchedArticle.publishedTime).toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -242,7 +242,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => play('interaction.tap')}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-content hover:opacity-90 transition-all active:scale-[0.96]"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-content hover:opacity-90 transition-[opacity,transform] active:scale-[0.96]"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -283,7 +283,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => play('interaction.tap')}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-content hover:opacity-90 transition-all active:scale-[0.96]"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-content hover:opacity-90 transition-[opacity,transform] active:scale-[0.96]"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -317,7 +317,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
             <div className="flex justify-center pt-2">
               <button
                 onClick={() => { play('interaction.tap'); handleFetchFullArticle(); }}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-content hover:opacity-90 transition-all active:scale-[0.96] cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-content hover:opacity-90 transition-[opacity,transform] active:scale-[0.96] cursor-pointer"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -333,7 +333,7 @@ export function ArticleReader({ url, onClose, initialArticle }: Props) {
         <div className="sticky bottom-0 z-10 flex items-center justify-center gap-3 px-5 py-3 border-t border-base-300 bg-base-100">
           <button
             onClick={() => { play('overlay.close'); onClose(); }}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-base-200 text-base-content ring-1 ring-inset ring-base-content/[0.06] hover:bg-base-300 hover:ring-base-content/[0.12] transition-all active:scale-[0.98] cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-base-200 text-base-content ring-1 ring-inset ring-base-content/[0.06] hover:bg-base-300 hover:ring-base-content/[0.12] transition-[background-color,box-shadow,transform] active:scale-[0.98] cursor-pointer"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
               <path d="M18 6L6 18M6 6l12 12" />

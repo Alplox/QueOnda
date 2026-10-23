@@ -89,7 +89,7 @@ export function BackToTop() {
       aria-hidden={!show}
       tabIndex={show ? 0 : -1}
       style={{ bottom }}
-      className={`fixed right-5 z-40 flex items-center justify-center w-11 h-11 rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 shadow-xl transition-all duration-200 cursor-pointer ${
+      className={`fixed right-5 z-40 flex items-center justify-center w-11 h-11 rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 shadow-xl transition-[background-color,color,box-shadow] duration-200 cursor-pointer ${
         show ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
       }`}
     >

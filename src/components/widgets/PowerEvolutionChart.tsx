@@ -142,7 +142,7 @@ export function PowerEvolutionChart({ series }: Props) {
           <button
             key={r.key}
             onClick={() => setRange(r)}
-            className={`px-2.5 py-1 text-[10px] font-medium rounded-full border transition-colors ${
+            className={`px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors ${
               range.key === r.key
                 ? 'bg-primary/10 border-primary/40 text-primary'
                 : 'border-base-300 text-base-content/70 hover:text-base-content'

@@ -132,7 +132,7 @@ export function AirQualityWidget() {
           >
             Reintentar
           </button>
-          <span className="text-base-content/50">o consulta en:</span>
+          <span className="text-base-content/70">o consulta en:</span>
           <a href="https://airechile.mma.gob.cl/" target="_blank" rel="noopener noreferrer" className="link link-hover text-primary underline underline-offset-2">Aire Chile · MMA</a>
           <a href="https://sinca.mma.gob.cl/" target="_blank" rel="noopener noreferrer" className="link link-hover text-primary underline underline-offset-2">SINCA</a>
         </div>
@@ -150,7 +150,7 @@ export function AirQualityWidget() {
       <div className="flex items-center justify-between gap-2">
         <p className="em-subhead !mb-0 !pb-1">
           <span><span className="mr-1.5" role="img" aria-label="nube">🌫️</span>Calidad del aire (MP 2,5)</span>
-          <span className="text-[10px] text-base-content/50">
+          <span className="text-[11px] text-base-content/70">
             {new Date(data.updatedAt).toLocaleString('es-CL', {
               day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
             })}
@@ -199,15 +199,15 @@ export function AirQualityWidget() {
               style={{ animationDelay: `${i * 40}ms` }}>
               <span className="text-base-content/80 min-w-0 flex-1 truncate">
                 {s.nombre}
-                <span className="text-base-content/50"> · {s.comuna !== s.nombre ? s.comuna : s.region}</span>
+                <span className="text-base-content/70"> · {s.comuna !== s.nombre ? s.comuna : s.region}</span>
                 {s.param === 'PM10' && (
-                  <span className="ml-1 rounded px-1 text-[9px] font-semibold bg-base-content/10 text-base-content/70" title="Esta estación mide MP10, no MP2.5">
+                  <span className="ml-1 rounded px-1 text-[11px] font-semibold bg-base-content/10 text-base-content/70" title="Esta estación mide MP10, no MP2.5">
                     MP10
                   </span>
                 )}
               </span>
               {row.icap != null && (
-                <span className="text-[10px] text-base-content/50 tabular-nums shrink-0 hidden sm:inline">
+                <span className="text-[11px] text-base-content/70 tabular-nums shrink-0 hidden sm:inline">
                   ICAP {row.icap} · {fmtWhen(row.datetime)}
                 </span>
               )}
@@ -217,7 +217,7 @@ export function AirQualityWidget() {
           );
         })}
         {filtered.length > 15 && (
-          <p className="text-[10px] text-base-content/50 pt-1">
+          <p className="text-[11px] text-base-content/70 pt-1">
             y {filtered.length - 15} estaciones más en el mapa ↓
           </p>
         )}
@@ -227,7 +227,7 @@ export function AirQualityWidget() {
         type="button"
         onClick={() => setShowMap(s => !s)}
         aria-expanded={showMap}
-        className="flex items-center gap-1 mt-3 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+        className="flex items-center gap-1 mt-3 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
       >
         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
           className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`} aria-hidden="true">
@@ -246,7 +246,7 @@ export function AirQualityWidget() {
         </div>
       </div>
 
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[11px] text-base-content/70">
         Fuente:{' '}
         {data.source === 'sinca' ? (
           <a

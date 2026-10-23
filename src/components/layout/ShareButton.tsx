@@ -35,7 +35,7 @@ export function ShareButton() {
         <span
           key={n}
           role="status"
-          className="absolute -top-2.5 -right-2 px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap queonda-toast"
+          className="absolute -top-2.5 -right-2 px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap queonda-toast"
         >
           {feedback === 'copied' ? '¡Copiado!' : 'Error'}
         </span>

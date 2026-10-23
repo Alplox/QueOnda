@@ -116,7 +116,7 @@ export function GoogleTrendsWidget() {
       <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center">
         <p className="text-sm text-base-content/70">Tendencias de Google no disponibles</p>
         {error && (
-          <p className="text-[10px] text-base-content/50 mt-1.5">{error}</p>
+          <p className="text-[11px] text-base-content/70 mt-1.5">{error}</p>
         )}
         <div className="mt-3 flex items-center justify-center gap-2">
           <button
@@ -126,7 +126,7 @@ export function GoogleTrendsWidget() {
           >
             Reintentar
           </button>
-          <a href="https://trends.google.com/trending?geo=CL" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')}            className="text-[10px] text-base-content/70 underline underline-offset-2 hover:text-base-content transition-colors">
+          <a href="https://trends.google.com/trending?geo=CL" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')}            className="text-[11px] text-base-content/70 underline underline-offset-2 hover:text-base-content transition-colors">
             Ver en Google Trends →
           </a>
         </div>
@@ -198,7 +198,7 @@ export function GoogleTrendsWidget() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Buscar "${trend.title}" en ${se.name}`}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-base-content/[0.06] bg-base-content/[0.03] text-base-content/50 transition-colors hover:border-base-content/20 hover:bg-base-300 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-base-content/[0.06] bg-base-content/[0.03] text-base-content/70 transition-colors hover:border-base-content/20 hover:bg-base-300 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     onClick={(e) => { play('interaction.tap'); e.stopPropagation(); }}
                   >
                     <span className="h-4 w-4" aria-hidden="true">{se.icon}</span>
@@ -208,7 +208,7 @@ export function GoogleTrendsWidget() {
             </div>
           </div>
           {trend.traffic && (
-            <span className="text-[10px] text-primary-content font-medium shrink-0 bg-primary px-2 py-0.5 rounded-full mt-0.5">
+            <span className="text-[11px] text-primary-content font-medium shrink-0 bg-primary px-2 py-0.5 rounded-full mt-0.5">
               {trend.traffic}
             </span>
           )}
@@ -216,7 +216,7 @@ export function GoogleTrendsWidget() {
         </div>
       ))}
       </div>
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[11px] text-base-content/70">
         Fuente:{' '}
         <a href="https://trends.google.com/trending?geo=CL" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">
           Google Trends

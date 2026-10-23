@@ -375,7 +375,7 @@ export function PowerOutageWidget() {
             type="button"
             onClick={retryNow}
             disabled={retrying}
-            className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-[opacity,transform] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {retrying ? 'Reintentando…' : 'Reintentar ahora'}
           </button>
@@ -436,7 +436,7 @@ export function PowerOutageWidget() {
           {forcing ? 'Actualizando…' : cooldownLeft > 0 ? (<>Reintentar en <span className="inline-block w-[5ch] text-right tabular-nums">{cooldownLeft}s</span></>) : 'Forzar actualización'}
         </button>
       </div>
-      <p className={`mt-0.5 text-[10px] ${isStale ? 'text-warning font-semibold' : 'text-base-content/50'}`} title={`Dato: ${new Date(data.updatedAt).toISOString()} · Obtenido: ${new Date(data.fetchedAt ?? data.updatedAt).toISOString()}`}>
+      <p className={`mt-0.5 text-[11px] ${isStale ? 'text-warning font-semibold' : 'text-base-content/70'}`} title={`Dato: ${new Date(data.updatedAt).toISOString()} · Obtenido: ${new Date(data.fetchedAt ?? data.updatedAt).toISOString()}`}>
         {absTime} · actualizado {relFetch}
         {isStale ? ' · desactualizado' : isWarn ? ` · esperando las ${nextHour}` : ''}
       </p>
@@ -514,7 +514,7 @@ export function PowerOutageWidget() {
         onClick={toggleBreakdown}
         aria-expanded={showBreakdown}
         aria-controls="power-breakdown"
-        className="mt-3 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="mt-3 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
           aria-hidden="true"
@@ -540,7 +540,7 @@ export function PowerOutageWidget() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
                 tab === 'regiones'
                   ? 'bg-primary text-primary-content'
-                  : 'bg-base-300 text-base-content/60 hover:text-base-content'
+                  : 'bg-base-300 text-base-content/70 hover:text-base-content'
               }`}
             >
               Regiones
@@ -550,7 +550,7 @@ export function PowerOutageWidget() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
                 tab === 'comunas'
                   ? 'bg-primary text-primary-content'
-                  : 'bg-base-300 text-base-content/60 hover:text-base-content'
+                  : 'bg-base-300 text-base-content/70 hover:text-base-content'
               }`}
             >
               Comunas ({data.comunas.length})
@@ -559,7 +559,7 @@ export function PowerOutageWidget() {
 
           {tab === 'comunas' && (
             <div className="mt-2 flex items-center gap-2">
-              <label htmlFor="power-comuna-region" className="text-[11px] text-base-content/60 shrink-0">Región:</label>
+              <label htmlFor="power-comuna-region" className="text-[11px] text-base-content/70 shrink-0">Región:</label>
               <select
                 id="power-comuna-region"
                 value={comunaRegion ?? ''}
@@ -577,7 +577,7 @@ export function PowerOutageWidget() {
           {tab === 'regiones' && (
             <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
               <div className="flex flex-wrap items-center gap-0.5" role="group" aria-label="Orden de regiones">
-                <span className="mr-0.5 text-[10px] text-base-content/50">Orden:</span>
+                <span className="mr-0.5 text-[11px] text-base-content/70">Orden:</span>
                 {([['pct', 'Mayor %'], ['affected', 'Más afectados'], ['ns', 'Norte → sur']] as const)
                   .filter(([v]) => v !== 'pct' || hasRegionPct)
                   .map(([v, label]) => (
@@ -586,8 +586,8 @@ export function PowerOutageWidget() {
                       type="button"
                       onClick={() => { play('interaction.tap'); setRegionSort(v); }}
                       aria-pressed={activeSort === v}
-                      className={`rounded-md px-2 py-1 text-[10px] transition-colors cursor-pointer ${
-                        activeSort === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/60 hover:text-base-content'
+                      className={`rounded-md px-2 py-1 text-[11px] transition-colors cursor-pointer ${
+                        activeSort === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/70 hover:text-base-content'
                       }`}
                     >
                       {label}
@@ -598,7 +598,7 @@ export function PowerOutageWidget() {
                   barra mide clientes y no hay nada que ampliar. */}
               {barMetric === 'pct' && (
                 <div className="flex flex-wrap items-center gap-0.5" role="group" aria-label="Escala de las barras de porcentaje">
-                  <span className="mr-0.5 text-[10px] text-base-content/50">Escala:</span>
+                  <span className="mr-0.5 text-[11px] text-base-content/70">Escala:</span>
                   {([['zoom', `Zoom · 0–${zoomCap.toLocaleString('es-CL')} %`], ['real', 'Real · 0–100 %']] as const).map(([v, label]) => (
                     <button
                       key={v}
@@ -608,8 +608,8 @@ export function PowerOutageWidget() {
                       title={v === 'zoom'
                         ? `La barra llega a ${zoomCap.toLocaleString('es-CL')} % de los clientes de cada región: los cortes de 0,0x–0,x % se distinguen`
                         : 'El 100 % de la barra equivale al 100 % de los clientes de esa región, sin ampliación'}
-                      className={`rounded-md px-2 py-1 text-[10px] transition-colors cursor-pointer ${
-                        scale === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/60 hover:text-base-content'
+                      className={`rounded-md px-2 py-1 text-[11px] transition-colors cursor-pointer ${
+                        scale === v ? 'bg-primary/15 font-medium text-primary' : 'text-base-content/70 hover:text-base-content'
                       }`}
                     >
                       {label}
@@ -622,7 +622,7 @@ export function PowerOutageWidget() {
 
           <div ref={listRef} className={tab === 'comunas' ? 'mt-2 max-h-72 overflow-y-auto pr-1' : 'mt-2'}>
             <div
-              className={`${tab === 'regiones' ? 'hidden sm:grid' : 'grid'} ${rowGrid} items-center gap-x-2 px-1.5 pb-1 text-[9px] uppercase tracking-wider text-base-content/40`}
+              className={`${tab === 'regiones' ? 'hidden sm:grid' : 'grid'} ${rowGrid} items-center gap-x-2 px-1.5 pb-1 text-[11px] uppercase tracking-wider text-base-content/70`}
               aria-hidden="true"
             >
               <span>{tab === 'regiones' ? 'Región' : 'Comuna'}</span>
@@ -648,7 +648,7 @@ export function PowerOutageWidget() {
                 : (r.affected / barMax) * 100;
               // Severidad: el % sube de color sólo cuando el corte pesa sobre la
               // región; en un día normal queda como dato secundario.
-              const pctTone = regionPct >= 2 ? 'text-error' : regionPct >= 0.5 ? 'text-warning' : 'text-base-content/60';
+              const pctTone = regionPct >= 2 ? 'text-error' : regionPct >= 0.5 ? 'text-warning' : 'text-base-content/70';
               const barTrack = (
                 <div className="relative h-1.5 overflow-hidden rounded-full bg-base-300/80" aria-hidden="true">
                   <div
@@ -684,10 +684,10 @@ export function PowerOutageWidget() {
                   </span>
                   {/* Base de clientes: en su propia columna, después de «Sin luz»,
                       para contrastar los valores en vertical. */}
-                  <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[10px] tabular-nums text-base-content/60 sm:row-start-auto">
-                    <span className="text-base-content/40 sm:hidden">de </span>{hasBase ? miles(regionTotal) : 's/d'}
+                  <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[11px] tabular-nums text-base-content/70 sm:row-start-auto">
+                    <span className="text-base-content/70 sm:hidden">de </span>{hasBase ? miles(regionTotal) : 's/d'}
                   </span>
-                  <span className={`pointer-events-none row-start-2 whitespace-nowrap text-right text-[10px] tabular-nums sm:row-start-auto ${hasBase ? pctTone : 'text-base-content/40'}`}>
+                  <span className={`pointer-events-none row-start-2 whitespace-nowrap text-right text-[11px] tabular-nums sm:row-start-auto ${hasBase ? pctTone : 'text-base-content/70'}`}>
                     {hasBase ? fmtPct(regionPct) : 's/d'}
                   </span>
                   <button
@@ -717,11 +717,11 @@ export function PowerOutageWidget() {
               );
             })}
             {tab === 'comunas' && rows.length === 0 && (
-              <p className="text-[11px] text-base-content/60 py-2">Sin comunas con cortes registrados en esta región.</p>
+              <p className="text-[11px] text-base-content/70 py-2">Sin comunas con cortes registrados en esta región.</p>
             )}
           </div>
           {tab === 'comunas' && (
-            <p className="mt-1.5 text-[9px] leading-snug text-base-content/60">
+            <p className="mt-1.5 text-[11px] leading-snug text-base-content/70">
               La SEC no publica clientes por comuna: la barra compara con la comuna más afectada.
             </p>
           )}
@@ -733,7 +733,7 @@ export function PowerOutageWidget() {
           type="button"
           onClick={() => { play('interaction.toggle'); if (!showMap) setMapFocusRegion(null); setShowMap(s => !s); }}
           aria-expanded={showMap}
-          className="flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+          className="flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
             className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
@@ -745,7 +745,7 @@ export function PowerOutageWidget() {
           type="button"
           onClick={() => { play('interaction.toggle'); setShowChart(s => !s); }}
           aria-expanded={showChart}
-          className="flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+          className="flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
             className={`transition-transform duration-200 ${showChart ? 'rotate-90' : ''}`}>
@@ -775,7 +775,7 @@ export function PowerOutageWidget() {
         </div>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 text-[10px] text-base-content/50">
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 text-[11px] text-base-content/70">
         <span className="max-w-[70%] leading-snug">
           La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada.
         </span>

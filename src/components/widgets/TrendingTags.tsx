@@ -68,7 +68,7 @@ export function TrendingTags({ tags, loading }: Props) {
               onClick={() => handleClick(tag)}
               aria-pressed={isActive}
               style={{ animationDelay: `${i * 40}ms` }}
-              className={`px-3 py-1.5 rounded-full text-sm border transition-all cursor-pointer active:scale-[0.96] hover:scale-105 opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
+              className={`px-3 py-1.5 rounded-full text-sm border transition-[background-color,border-color,color,transform] cursor-pointer active:scale-[0.96] hover:scale-105 opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
                 isActive
                   ? 'bg-primary border-primary text-primary-content'
                   : 'bg-base-200 text-base-content/70 border-base-300 hover:border-primary/50 hover:text-base-content'

@@ -50,7 +50,7 @@ export function Footer() {
                 <span className="text-base-content font-bold text-lg">¿Qué Onda?</span>
                 <ChileFlag />
               </div>
-              <p className="text-sm text-base-content/60 leading-relaxed">
+              <p className="text-sm text-base-content/70 leading-relaxed">
                 Chile en una sola página.<br />
                 Sin anuncios, sin ruido.
               </p>
@@ -86,7 +86,7 @@ export function Footer() {
           </div>
 
           {/* Bottom bar */}
-          <div id="footer-credits" className="mt-10 pt-6 border-t border-base-content/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-base-content/50">
+          <div id="footer-credits" className="mt-10 pt-6 border-t border-base-content/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-base-content/70">
             <span>© {new Date().getFullYear()} Hecho en Chile.</span>
             <span>Foto: <a href="https://unsplash.com/es/fotos/manada-de-caballos-en-arbustos-y-pastos-a-traves-de-la-montana-Zf2mL1gtaVg" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">modernwolo</a></span>
           </div>

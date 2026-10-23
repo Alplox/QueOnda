@@ -95,7 +95,7 @@ export function ClientJobList() {
       {/* Top bar: source selector + remote toggle */}
       <div className="flex flex-wrap items-center gap-2 p-3 border-b border-base-300">
         <div className="flex items-center gap-1 flex-wrap">
-          <span className="text-[10px] text-base-content/50 font-medium uppercase tracking-wider mr-1 shrink-0">
+          <span className="text-[11px] text-base-content/70 font-medium uppercase tracking-wider mr-1 shrink-0">
             Fuente:
           </span>
           <button
@@ -120,7 +120,7 @@ export function ClientJobList() {
                     ? 'bg-primary text-primary-content border-primary'
                     : available
                       ? 'bg-base-100 text-base-content/70 border-base-content/20 hover:border-base-content/30 hover:text-base-content/70'
-                      : 'bg-base-100/50 text-base-content/50 border-base-content/10 line-through'
+                      : 'bg-base-100/50 text-base-content/70 border-base-content/10 line-through'
                 }`}
               >
                 {sm.label}
@@ -150,13 +150,13 @@ export function ClientJobList() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar trabajos..."
-             className="w-full text-sm bg-base-100 border border-base-300 rounded-xl px-3 py-2 pr-8 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary/50 transition-colors"
+            aria-label="Buscar trabajos" placeholder="Buscar trabajos..."
+             className="w-full text-base sm:text-sm bg-base-100 border border-base-300 rounded-xl px-3 py-2 pr-8 text-base-content placeholder:text-base-content/70 focus:outline-none focus:border-primary/50 transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content/70 transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/70 hover:text-base-content/70 transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -171,10 +171,10 @@ export function ClientJobList() {
         <div className="flex flex-wrap gap-1.5 px-3 pt-2">
           <button
             onClick={() => setActiveCategory('')}
-            className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+            className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
               activeCategory === ''
                 ? 'bg-primary text-primary-content border-primary'
-                : 'bg-base-100 text-base-content/50 border-base-content/20 hover:text-base-content/70'
+                : 'bg-base-100 text-base-content/70 border-base-content/20 hover:text-base-content/70'
             }`}
           >
             Todas
@@ -183,10 +183,10 @@ export function ClientJobList() {
             <button
               key={cat}
               onClick={() => setActiveCategory(activeCategory === cat ? '' : cat)}
-              className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+              className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
                 activeCategory === cat
                   ? 'bg-primary text-primary-content border-primary'
-                  : 'bg-base-100 text-base-content/50 border-base-content/20 hover:text-base-content/70'
+                  : 'bg-base-100 text-base-content/70 border-base-content/20 hover:text-base-content/70'
               }`}
             >
               {cat}
@@ -219,14 +219,14 @@ export function ClientJobList() {
           </div>
         ) : filteredJobs.length === 0 ? (
           <div className="text-center py-10">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-base-300 mb-2 text-base-content/50">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-base-300 mb-2 text-base-content/70">
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="6" width="16" height="12" rx="2" />
                 <path d="M7 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
               </svg>
             </div>
             <p className="text-sm text-base-content/70 font-medium">No se encontraron ofertas</p>
-            <p className="text-xs text-base-content/50 mt-1">Prueba con otros filtros</p>
+            <p className="text-xs text-base-content/70 mt-1">Prueba con otros filtros</p>
           </div>
         ) : (
           <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
@@ -242,21 +242,21 @@ export function ClientJobList() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-base-content truncate">{job.title}</p>
-                    <p className="text-xs text-base-content/60 mt-0.5 truncate">{job.company}</p>
+                    <p className="text-xs text-base-content/70 mt-0.5 truncate">{job.company}</p>
                   </div>
                   {job.remote && (
-                    <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-primary text-primary-content font-medium">
+                    <span className="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full bg-primary text-primary-content font-medium">
                       Remoto
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1.5 text-[10px] text-base-content/70">
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1.5 text-[11px] text-base-content/70">
                   {job.salary && formatSalary(job.salary) && (
                     <span className="font-medium text-base-content/70">{formatSalary(job.salary)}</span>
                   )}
                   <span>{job.location}</span>
-                  <span className="text-base-content/50">{timeAgo(job.publishedAt)}</span>
-                  <span className="text-[9px] uppercase tracking-wider text-base-content/50 ml-auto">
+                  <span className="text-base-content/70">{timeAgo(job.publishedAt)}</span>
+                  <span className="text-[11px] uppercase tracking-wider text-base-content/70 ml-auto">
                     {JOB_SOURCES.find((m) => m.key === job.source)?.label || job.source}
                   </span>
                 </div>
@@ -265,7 +265,7 @@ export function ClientJobList() {
                     {job.tags.slice(0, 4).map((tag) => (
                       <span
                         key={tag}
-                        className="text-[9px] px-1.5 py-0.5 rounded-md bg-base-200 text-base-content/70"
+                        className="text-[11px] px-1.5 py-0.5 rounded-md bg-base-200 text-base-content/70"
                       >
                         {tag}
                       </span>
@@ -279,7 +279,7 @@ export function ClientJobList() {
       </div>
 
       {/* Attribution */}
-      <div className="px-3 pb-3 text-right text-[10px] text-base-content/50">
+      <div className="px-3 pb-3 text-right text-[11px] text-base-content/70">
         Fuentes:{' '}
         {JOB_SOURCES.map((sm, i) => (
           <span key={sm.key}>
@@ -295,7 +295,7 @@ export function ClientJobList() {
           </span>
         ))}
       </div>
-      <div className="px-3 pb-3 text-right text-[10px] text-base-content/50 border-t border-base-300 pt-2">
+      <div className="px-3 pb-3 text-right text-[11px] text-base-content/70 border-t border-base-300 pt-2">
         <a
           href="https://mis-recursos-webdev.pages.dev/#chile-búsqueda-trabajo"
           target="_blank"

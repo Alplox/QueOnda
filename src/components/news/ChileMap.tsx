@@ -49,7 +49,7 @@ export function ChileMap({ allSources, selectedRegion, onSelectRegion }: ChileMa
                 fill={isSelected ? 'var(--color-primary)' : 'var(--color-base-content)'}
                 stroke={isSelected ? 'var(--color-primary)' : 'var(--color-base-content)'}
                 opacity={isSelected ? 1 : 0.2}
-                className={!hasNoSources ? 'transition-all hover:brightness-110' : ''}
+                className={!hasNoSources ? 'transition-[filter] hover:brightness-110' : ''}
               />
               <text
                 x={r.cx}

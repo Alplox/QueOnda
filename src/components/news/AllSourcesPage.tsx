@@ -86,7 +86,7 @@ function SourceCheckbox({ source, checked, onChange }: {
         <FaviconImg domain={extractHost(source.siteUrl || source.url)} />
         <span className="text-xs text-base-content truncate">{source.name}</span>
       </div>
-      <span className="shrink-0 text-[10px] text-base-content/50">{extractHost(source.url)}</span>
+      <span className="shrink-0 text-[11px] text-base-content/70">{extractHost(source.url)}</span>
     </label>
   );
 }
@@ -579,7 +579,7 @@ export function AllSourcesPage() {
         <NavBar onBack={handleBack} />
         <div className="max-w-2xl mx-auto px-4 py-12 text-center">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-base-content/60">Cargando fuentes...</p>
+          <p className="text-sm text-base-content/70">Cargando fuentes...</p>
         </div>
       </div>
     );
@@ -597,10 +597,10 @@ export function AllSourcesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Buscar fuentes..."
-                className="w-full text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2.5 pl-10 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
+                aria-label="Buscar fuentes" placeholder="Buscar fuentes..."
+                className="w-full text-base sm:text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2.5 pl-10 text-base-content placeholder:text-base-content/70 focus:outline-none focus:border-primary transition-colors"
               />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
@@ -615,7 +615,7 @@ export function AllSourcesPage() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => { play('interaction.tap'); (allSelected || selected.size > 0 ? deselectAll() : selectAll()); }}
-              className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all cursor-pointer ${
+              className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-colors cursor-pointer ${
 allSelected || selected.size > 0
                     ? 'bg-base-content/10 text-base-content/70 hover:text-base-content'
                     : 'bg-primary text-primary-content hover:bg-primary'
@@ -652,7 +652,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
           </div>
 
           {mainOnly && (
-            <p className="text-[10px] text-base-content/50">
+            <p className="text-[11px] text-base-content/70">
               {visibleSources.length} de {filteredSources.length} fuentes · un feed principal por sitio
             </p>
           )}
@@ -675,7 +675,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 />
               ))
             ) : (
-              <div className="px-4 py-8 text-center text-xs text-base-content/50">
+              <div className="px-4 py-8 text-center text-xs text-base-content/70">
                 {searchQuery ? 'Sin resultados para esta búsqueda' : 'No hay fuentes disponibles'}
               </div>
             )}
@@ -687,7 +687,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
             <div className="sticky bottom-4">
               <button
                 onClick={() => { play('interaction.tap'); handleFetch(); }}
-                className="w-full py-3 text-sm font-semibold bg-primary text-primary-content rounded-xl hover:opacity-90 transition-all active:scale-[0.96] shadow-lg shadow-primary/20 cursor-pointer"
+                className="w-full py-3 text-sm font-semibold bg-primary text-primary-content rounded-xl hover:opacity-90 transition-[opacity,transform] active:scale-[0.96] shadow-lg shadow-primary/20 cursor-pointer"
               >
                 Cargar {selectedCount} {selectedCount === 1 ? 'fuente' : 'fuentes'}
               </button>
@@ -716,7 +716,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
           </div>
           <div className="w-full max-w-md mx-auto h-2 bg-base-300 rounded-full overflow-hidden">
             <div
-              className="h-full bg-primary rounded-full transition-all duration-300 ease-out"
+              className="h-full bg-primary rounded-full transition-[width] duration-300 ease-out"
               style={{ width: `${Math.min(pct, 100)}%` }}
             />
           </div>
@@ -726,7 +726,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
           >
             Cancelar
           </button>
-          <p className="text-[10px] text-base-content/50">{BATCH_CACHE_TTL_HINT}</p>
+          <p className="text-[11px] text-base-content/70">{BATCH_CACHE_TTL_HINT}</p>
         </div>
       </div>
     );
@@ -748,7 +748,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 : 'Sin resultados'}
             </h2>
             {cachedTimestamp && (
-              <p className="text-[10px] text-base-content/50">Resultados cacheados desde las {cachedTimestamp}</p>
+              <p className="text-[11px] text-base-content/70">Resultados cacheados desde las {cachedTimestamp}</p>
             )}
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -757,17 +757,17 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 type="text"
                 value={resultsSearch}
                 onChange={e => setResultsSearch(e.target.value)}
-                placeholder="Buscar en resultados..."
-                className="w-full text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2 pl-9 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
+                aria-label="Buscar en resultados" placeholder="Buscar en resultados..."
+                className="w-full text-base sm:text-sm bg-base-200 border border-base-300 rounded-xl px-4 py-2 pl-9 text-base-content placeholder:text-base-content/70 focus:outline-none focus:border-primary transition-colors"
               />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               {resultsSearch && (
                 <button
                   onClick={() => { play('interaction.tap'); setResultsSearch(''); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-base-content/50 hover:text-base-content transition-colors cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -795,10 +795,10 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
             <button
               key={opt.value}
               onClick={() => { play('interaction.tap'); setDateFilter(opt.value); }}
-              className={`px-3 py-1.5 text-[11px] rounded-lg transition-all cursor-pointer ${
+              className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors cursor-pointer ${
                 dateFilter === opt.value
                   ? 'bg-primary text-primary-content font-medium'
-                  : 'bg-base-200 text-base-content/60 border border-base-300 hover:border-primary/50 hover:text-base-content'
+                  : 'bg-base-200 text-base-content/70 border border-base-300 hover:border-primary/50 hover:text-base-content'
               }`}
             >
               {opt.label}
@@ -808,7 +808,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
 
         {/* Filter status — below pills to avoid layout shift */}
         {hasActiveFilter && (
-          <p className="text-[10px] text-base-content/50">
+          <p className="text-[11px] text-base-content/70">
             {searchedArticles.length > 0
               ? `mostrando ${searchedArticles.length} con filtro`
               : 'ninguna coincidencia con el filtro actual'}
@@ -864,7 +864,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                 Artículos por fuente
               </h3>
               {activeTag && (
-                <span className="text-[10px] text-base-content/50">
+                <span className="text-[11px] text-base-content/70">
                   filtrando por «{activeTag}»
                 </span>
               )}
@@ -914,9 +914,9 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                   {availableRegions.length > 0 && (
                     <div className="px-3 pt-3 pb-2 border-b border-base-300">
                       <select
-                        value={addSourceRegion ?? ''}
+                        aria-label="Filtrar por región" value={addSourceRegion ?? ''}
                         onChange={e => { setAddSourceRegion(e.target.value || null); setAddSourceQuery(''); }}
-                        className="w-full text-xs bg-base-100 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                        className="w-full text-base sm:text-sm bg-base-100 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content focus:outline-none focus:border-primary transition-colors cursor-pointer"
                       >
                         <option value="">Todas las regiones</option>
                         {availableRegions.map(r => (
@@ -930,11 +930,11 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                       type="text"
                       value={addSourceQuery}
                       onChange={e => setAddSourceQuery(e.target.value)}
-                      placeholder="Buscar fuente para agregar..."
-                      className="w-full text-sm bg-base-100 border border-base-300 rounded-lg px-3 py-2 pl-9 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
+                      aria-label="Buscar fuente para agregar" placeholder="Buscar fuente para agregar..."
+                      className="w-full text-base sm:text-sm bg-base-100 border border-base-300 rounded-lg px-3 py-2 pl-9 text-base-content placeholder:text-base-content/70 focus:outline-none focus:border-primary transition-colors"
                       autoFocus
                     />
-                    <svg className="absolute left-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="absolute left-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-base-content/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="11" cy="11" r="8" />
                       <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
@@ -949,11 +949,11 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                         >
                           <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
                           <span className="truncate">{s.name}</span>
-                          <span className="shrink-0 text-[10px] text-base-content/50 ml-auto">{extractHost(s.url)}</span>
+                          <span className="shrink-0 text-[11px] text-base-content/70 ml-auto">{extractHost(s.url)}</span>
                         </button>
                       ))
                     ) : (
-            <div className="px-3 py-4 text-center text-[11px] text-base-content/50 h-full flex items-center justify-center">
+            <div className="px-3 py-4 text-center text-[11px] text-base-content/70 h-full flex items-center justify-center">
                         {addSourceQuery ? 'Sin resultados' : 'Todas las fuentes ya están agregadas'}
                       </div>
                     )}
@@ -983,7 +983,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
         )}
 
         {/* Attribution */}
-        <div className="mt-4 text-right text-[10px] text-base-content/50">
+        <div className="mt-4 text-right text-[11px] text-base-content/70">
           Fuente:{' '}
           <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
         </div>
@@ -1037,13 +1037,13 @@ function FailedSourcesPanel({ failedSources, allSources, retryingSources, expand
           {failedSources.length} {failedSources.length === 1 ? 'fuente falló' : 'fuentes fallaron'}
         </span>
         <div className="flex items-center gap-2 ml-auto">
-          <button onClick={onToggle} className="text-[10px] text-base-content/50 hover:text-base-content cursor-pointer transition-colors">
+          <button onClick={onToggle} className="text-[11px] text-base-content/70 hover:text-base-content cursor-pointer transition-colors">
             {expanded ? 'Ocultar' : 'Detalles'}
           </button>
           <button
             onClick={onRetryAll}
             disabled={anyRetrying}
-            className="text-[10px] text-primary hover:text-primary font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="text-[11px] text-primary hover:text-primary font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Reintentar todo
           </button>
@@ -1058,13 +1058,13 @@ function FailedSourcesPanel({ failedSources, allSources, retryingSources, expand
               <div key={f.name} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2">
                 <FaviconImg domain={extractHost(f.url)} />
                 <span className="text-xs text-base-content/80 truncate">{f.name}</span>
-                <span className="text-[10px] text-error/60">
+                <span className="text-[11px] text-error/60">
                   {f.statusCode ? `${f.statusCode} ` : ''}{f.error ?? 'Error desconocido'}
                 </span>
                 <button
                   onClick={() => { play('interaction.tap'); onRetryOne(sourceKey); }}
                   disabled={retrying}
-                  className="ml-auto shrink-0 text-[10px] text-primary hover:text-primary font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="ml-auto shrink-0 text-[11px] text-primary hover:text-primary font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {retrying ? (
                     <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 border border-primary border-t-transparent rounded-full animate-spin" /> Retry</span>
@@ -1093,7 +1093,7 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
         <span className="text-sm font-semibold truncate text-base-content">{sourceResult.name}</span>
         <button
           onClick={() => { play('interaction.tap'); onRemove(sourceResult.name); }}
-          className="shrink-0 p-1 rounded-md text-base-content/50 hover:text-error hover:bg-base-300 transition-colors cursor-pointer ml-auto"
+          className="shrink-0 p-1 rounded-md text-base-content/70 hover:text-error hover:bg-base-300 transition-colors cursor-pointer ml-auto"
           title="Quitar fuente"
           aria-label={`Quitar ${sourceResult.name}`}
         >
@@ -1124,7 +1124,7 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
                   </a>
                   <button
                     onClick={(e) => { play('interaction.tap'); e.stopPropagation(); onOpenArticle(a); }}
-                    className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content/80 transition-all cursor-pointer"
+                    className="shrink-0 p-1 mr-1 rounded-md hover:bg-base-300 text-base-content/70 hover:text-base-content/80 transition-colors cursor-pointer"
                     title="Leer en ventana flotante"
                     aria-label="Leer en modal"
                   >
@@ -1139,14 +1139,14 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full py-8 px-4 text-center">
-            <p className="text-xs text-base-content/50">
+            <p className="text-xs text-base-content/70">
               {hasActiveFilter ? 'Sin coincidencias' : 'Sin artículos disponibles'}
             </p>
           </div>
         )}
       </div>
-      <div className="px-3 py-1.5 border-t border-base-300 text-[10px] text-base-content/50 flex items-center justify-between gap-2 flex-shrink-0">
-        <span className="text-base-content/50">
+      <div className="px-3 py-1.5 border-t border-base-300 text-[11px] text-base-content/70 flex items-center justify-between gap-2 flex-shrink-0">
+        <span className="text-base-content/70">
           {articles.length} artículos
         </span>
         <div className="flex items-center gap-2 min-w-0">

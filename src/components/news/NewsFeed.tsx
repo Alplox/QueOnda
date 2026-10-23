@@ -59,19 +59,19 @@ function SourceErrorPanel({ sourceResults, onRetry }: { sourceResults: SourceRes
     <div className="rounded-xl border border-error/20 bg-base-200 overflow-hidden">
       <div className="px-4 py-2.5 flex items-center justify-between">
         <span className="text-xs text-base-content/70">
-          {loaded > 0 && <span className="text-success/80">{loaded} con artículos · </span>}
-          <span className="text-error/80">{failed} fallaron</span>
+          {loaded > 0 && <span className="text-success">{loaded} con artículos · </span>}
+          <span className="text-error">{failed} fallaron</span>
         </span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="px-2 py-1 text-[11px] text-base-content/50 hover:text-base-content bg-base-300 rounded-lg transition-colors cursor-pointer"
+            className="px-2 py-1 text-[11px] text-base-content/70 hover:text-base-content bg-base-300 rounded-lg transition-colors cursor-pointer"
           >
             {expanded ? 'Ocultar' : 'Detalles'}
           </button>
           <button
             onClick={onRetry}
-            className="px-3 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer"
+            className="px-3 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-[opacity,transform] active:scale-[0.96] cursor-pointer"
           >
             Reintentar
           </button>
@@ -154,6 +154,19 @@ export function NewsFeed({
 
   const hasActiveFilter = !!(activeTag || debouncedSearch || dateFilter !== 'all');
 
+  function clearFilters() {
+    play('interaction.tap');
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setDateFilter('all');
+    if (activeTag) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('tag');
+      window.history.replaceState({}, '', url);
+      window.dispatchEvent(new Event('tagchange'));
+    }
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
@@ -215,7 +228,7 @@ export function NewsFeed({
     return (
       <div className="text-center flex flex-col items-center gap-4 py-12 text-base-content/70">
         <p>No se pudieron cargar las fuentes de noticias</p>
-        <button onClick={onRetry} className="px-4 py-2 text-xs font-medium bg-primary text-primary-content border border-primary rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer">Reintentar</button>
+        <button onClick={onRetry} className="px-4 py-2 text-xs font-medium bg-primary text-primary-content border border-primary rounded-lg hover:opacity-80 transition-[opacity,transform] active:scale-[0.96] cursor-pointer">Reintentar</button>
       </div>
     );
   }
@@ -232,18 +245,18 @@ export function NewsFeed({
         </div>
       )}
 
-      <div className="transition-all duration-300">
+      <div className="transition-opacity duration-300">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs text-base-content/60 uppercase tracking-wider font-semibold">
+            <h3 className="text-xs text-base-content/70 uppercase tracking-wider font-semibold">
               {activeTag ? `"${activeTag}" en medios` : 'Últimas noticias'}
             </h3>
-            <span className="text-[10px] text-base-content/50">{slotCount}/12</span>
+            <span className="text-[11px] text-base-content/70">{slotCount}/12</span>
             <div className="flex gap-0.5">
               <button
                 onClick={() => { play('interaction.toggle'); onAddSlot(); }}
                 disabled={slotCount >= 12}
-                className="p-0.5 rounded hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
+                className="inline-flex items-center justify-center p-1.5 rounded hover:bg-base-300 text-base-content/70 hover:text-base-content transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
                 title="Añadir bloque"
                 aria-label="Añadir bloque"
               >
@@ -255,7 +268,7 @@ export function NewsFeed({
               <button
                 onClick={() => { play('interaction.toggle'); onRemoveSlot(); }}
                 disabled={slotCount <= 1}
-                className="p-0.5 rounded hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
+                className="inline-flex items-center justify-center p-1.5 rounded hover:bg-base-300 text-base-content/70 hover:text-base-content transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
                 title="Quitar bloque"
                 aria-label="Quitar bloque"
               >
@@ -267,18 +280,20 @@ export function NewsFeed({
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <div className="relative min-w-0 w-full sm:w-auto sm:min-w-[140px] sm:max-w-[220px]">
+              <label htmlFor="news-search" className="sr-only">Buscar en noticias</label>
               <input
+                id="news-search"
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Buscar en noticias..."
-                className="w-full text-xs bg-base-300 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
+                className="w-full text-base sm:text-sm bg-base-300 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/70 focus:outline-none focus:border-primary transition-colors"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   aria-label="Limpiar búsqueda"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-base-content/70 hover:text-base-content"
                 >
                   <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -297,10 +312,10 @@ export function NewsFeed({
                 <button
                   key={opt.value}
                   onClick={() => { play('interaction.tap'); setDateFilter(opt.value); }}
-                  className={`px-2.5 py-1 text-[11px] rounded-lg transition-all ${
+                  className={`px-2.5 py-1 text-[11px] rounded-lg transition-colors ${
                     dateFilter === opt.value
                   ? 'bg-primary text-primary-content font-medium'
-                      : 'bg-base-300 text-base-content/60 hover:text-base-content'
+                      : 'bg-base-300 text-base-content/70 hover:text-base-content'
                   }`}
                 >
                   {opt.label}
@@ -349,15 +364,25 @@ export function NewsFeed({
             </div>
           </>
         ) : (
-          <div className="text-center py-16 text-base-content/50 text-sm">
-            Sin resultados{activeTag ? ` para "${activeTag}"` : ''}{searchQuery ? ` para "${searchQuery}"` : ''}{dateFilter !== 'all' ? ' con filtro de fecha' : ''}
+          <div className="text-center py-16 text-sm">
+            <p className="text-base-content/70">
+              Sin resultados{activeTag ? ` para "${activeTag}"` : ''}{searchQuery ? ` para "${searchQuery}"` : ''}{dateFilter !== 'all' ? ' con filtro de fecha' : ''}
+            </p>
+            {hasActiveFilter && (
+              <button
+                onClick={clearFilters}
+                className="mt-3 px-3 py-1.5 text-xs font-medium bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 rounded-lg transition-colors cursor-pointer"
+              >
+                Limpiar filtros
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {(visibleClusters.length > 0 || (clusters.length > 0 && filteredClusters.length === 0 && activeTag)) && (
-        <div className="transition-all duration-300 animate-[fadeSlideIn_0.4s_ease-out]">
-          <h3 className="text-xs text-base-content/60 uppercase tracking-wider font-semibold mb-3">
+        <div className="transition-opacity duration-300 animate-[fadeSlideIn_0.4s_ease-out]">
+          <h3 className="text-xs text-base-content/70 uppercase tracking-wider font-semibold mb-3">
             Agrupadas por tema
           </h3>
           {visibleClusters.length > 0 ? (
@@ -373,7 +398,7 @@ export function NewsFeed({
                 {hasMoreClusters && (
                   <button
                     onClick={() => setClusterLimit(c => c + 3)}
-                    className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
+                    className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.96] cursor-pointer"
                   >
                     Cargar más temas
                   </button>
@@ -381,22 +406,30 @@ export function NewsFeed({
                 {clusterLimit > 3 && (
                   <button
                     onClick={() => setClusterLimit(3)}
-                    className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-all duration-200 active:scale-[0.96] cursor-pointer"
+                    className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.96] cursor-pointer"
                   >
-                    Colapsar todo
+                    Mostrar solo 3
                   </button>
                 )}
               </div>
             </>
           ) : (
-            <div className="text-center py-12 text-base-content/50 text-sm rounded-xl border border-dashed border-base-300">
+            <div className="text-center py-12 text-base-content/70 text-sm rounded-xl border border-dashed border-base-300">
               Sin temas que coincidan con "{activeTag}"
+              <div>
+                <button
+                  onClick={clearFilters}
+                  className="mt-3 px-3 py-1.5 text-xs font-medium bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 rounded-lg transition-colors cursor-pointer"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[11px] text-base-content/70">
         Fuente:{' '}
         <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
       </div>

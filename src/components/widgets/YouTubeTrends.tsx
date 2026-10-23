@@ -100,7 +100,7 @@ function VideoCard({ video, isCompact, onPlay }: { video: Video; isCompact?: boo
         <p className="text-xs text-base-content line-clamp-2 leading-snug group-hover:text-base-content group-hover:underline decoration-primary/60 underline-offset-2 transition-colors" title={video.title}>
           {video.title}
         </p>
-        <p className="text-[10px] text-base-content/70 mt-1 truncate">{video.author}</p>
+        <p className="text-[11px] text-base-content/70 mt-1 truncate">{video.author}</p>
       </div>
     </a>
   );
@@ -139,7 +139,7 @@ function MobileCarousel({ videos, onNearEnd, onPlay }: { videos: Video[]; onNear
         <div className="absolute left-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to right, var(--color-base-100) 40%, transparent)' }}>
           <button onClick={() => { scrollBy(-1); play('interaction.subtle'); }} aria-label="Anterior"
-            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer ml-1">
+            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer ml-1">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
           </button>
         </div>
@@ -157,7 +157,7 @@ function MobileCarousel({ videos, onNearEnd, onPlay }: { videos: Video[]; onNear
         <div className="absolute right-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to left, var(--color-base-100) 40%, transparent)' }}>
           <button onClick={() => { scrollBy(1); play('interaction.subtle'); }} aria-label="Siguiente"
-            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer mr-1">
+            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer mr-1">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>
@@ -366,7 +366,7 @@ export function YouTubeTrends() {
           No se pudieron cargar los videos de YouTube en este momento.
           <div className="mt-3">
             <button onClick={() => { play('interaction.subtle'); loadTrends(); }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer">
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-[opacity,transform] cursor-pointer">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 12a9 9 0 1 1-2.64-6.36" />
                 <path d="M21 3v6h-6" />
@@ -402,7 +402,7 @@ export function YouTubeTrends() {
             </>
           )}
           {errorCount > 0 && <span className="text-warning"> · {errorCount} con error{emptyCount > 0 && <> · {emptyCount} sin videos hoy</>}</span>}
-          {errorCount === 0 && emptyCount > 0 && <span className="text-base-content/50"> · {emptyCount} sin videos hoy</span>}
+          {errorCount === 0 && emptyCount > 0 && <span className="text-base-content/70"> · {emptyCount} sin videos hoy</span>}
           {isRetryingAll && (
             <span className="inline-flex items-center gap-1 ml-1">
               <span className="w-3 h-3 rounded-full border-2 border-warning border-t-transparent animate-spin" />
@@ -413,7 +413,7 @@ export function YouTubeTrends() {
 
         {!isRetryingAll && errorCount > 0 && (
           <button onClick={handleRetryAllErrors}
-            className="px-2 py-1 text-[10px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer">
+            className="px-2 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-[opacity,transform] active:scale-[0.96] cursor-pointer">
             Reintentar todos ({errorCount})
           </button>
         )}
@@ -421,7 +421,7 @@ export function YouTubeTrends() {
         {(!selectedIds || selectedIds.size !== 1) && (
           <select value={perChannel} onChange={(e) => handlePerChannel(Number(e.target.value))}
             aria-label="Videos por canal"
-            className="px-2 py-1 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-colors cursor-pointer outline-none focus:border-primary">
+            className="px-2 py-1 text-base sm:text-sm font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 transition-colors cursor-pointer outline-none focus:border-primary">
             {PER_CHANNEL_OPTIONS.map((o) => (
               <option key={o} value={o}>{o} por canal</option>
             ))}
@@ -432,22 +432,22 @@ export function YouTubeTrends() {
           <button onClick={() => { play('interaction.tap'); setConfigOpen(o => !o); }}
             aria-expanded={configOpen}
             aria-controls="youtube-canales-panel"
-            className="px-2.5 py-1 text-[10px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary transition-all active:scale-[0.96] cursor-pointer">
+            className="px-2.5 py-1 text-[11px] font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary transition-[background-color,border-color,transform] active:scale-[0.96] cursor-pointer">
             Canales
           </button>
           {configOpen && (
               <div id="youtube-canales-panel" className="absolute top-full left-0 sm:right-0 sm:left-auto mt-1 z-20 w-60 max-w-[calc(100vw-16px)] bg-base-200 border border-base-300 rounded-xl shadow-xl overflow-hidden">
               <div className="p-2 border-b border-base-300 space-y-1.5">
                 <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar canal..."
-                  className="w-full px-2.5 py-1.5 text-xs bg-base-100 border border-base-300 rounded-lg outline-none focus:border-primary placeholder:text-base-content/50" />
+                  aria-label="Buscar canal" placeholder="Buscar canal..."
+                  className="w-full px-2.5 py-1.5 text-base sm:text-sm bg-base-100 border border-base-300 rounded-lg outline-none focus:border-primary placeholder:text-base-content/70" />
                 <div className="flex gap-1.5">
                   <button onClick={() => { play('interaction.tap'); setSelectedIds(null); saveJSON(STORAGE_KEY, null); }}
-                    className="flex-1 px-2 py-1 text-[10px] font-medium text-base-content bg-base-100 border border-base-300 rounded-lg hover:bg-base-300 transition-colors cursor-pointer">
+                    className="flex-1 px-2 py-1 text-[11px] font-medium text-base-content bg-base-100 border border-base-300 rounded-lg hover:bg-base-300 transition-colors cursor-pointer">
                     Todos
                   </button>
                   <button onClick={() => { play('interaction.tap'); setSelectedIds(new Set()); saveJSON(STORAGE_KEY, []); }}
-                    className="flex-1 px-2 py-1 text-[10px] font-medium text-base-content bg-base-100 border border-base-300 rounded-lg hover:bg-base-300 transition-colors cursor-pointer">
+                    className="flex-1 px-2 py-1 text-[11px] font-medium text-base-content bg-base-100 border border-base-300 rounded-lg hover:bg-base-300 transition-colors cursor-pointer">
                     Ninguno
                   </button>
                 </div>
@@ -476,37 +476,37 @@ export function YouTubeTrends() {
                         </button>
                         <button onClick={() => { if (isError) { setExpandedErrors(prev => { const n = new Set(prev); if (n.has(ch.id)) n.delete(ch.id); else n.add(ch.id); return n; }); } else { toggleChannel(ch.id); } }}
                           className={`flex-1 flex items-center gap-2 min-w-0 text-left transition-colors cursor-pointer ${
-                            on ? 'text-primary' : 'text-base-content/50 hover:text-base-content'
+                            on ? 'text-primary' : 'text-base-content/70 hover:text-base-content'
                           }`}>
                           <span className="truncate flex-1">{ch.name}</span>
                           {ch.status === 'ok' && ch.count > 0 && (
-                            <span className="text-[10px] text-primary/60 shrink-0 ml-1">{ch.count}</span>
+                            <span className="text-[11px] text-primary/60 shrink-0 ml-1">{ch.count}</span>
                           )}
                           {ch.status === 'empty' && (
                             <span className="shrink-0 ml-1" title="Sin videos hoy">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-base-content/50"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-base-content/70"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
                             </span>
                           )}
                           {ch.status === 'error' && (
                             <span className="shrink-0 ml-1 flex items-center gap-1" title="Error al cargar">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-warning"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
-                              <svg className={`w-3 h-3 text-base-content/50 transition-transform ${expanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                              <svg className={`w-3 h-3 text-base-content/70 transition-transform ${expanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                             </span>
                           )}
                         </button>
                       </div>
                       {isError && expanded && (
                         <div className="px-4 pb-2 space-y-1.5">
-                          <p className="text-[10px] text-warning/80 leading-relaxed break-words">{ch.errorMessage || 'Error desconocido'}</p>
+                          <p className="text-[11px] text-warning/80 leading-relaxed break-words">{ch.errorMessage || 'Error desconocido'}</p>
                           <div className="flex gap-2">
                             <button onClick={() => { navigator.clipboard.writeText(ch.errorMessage || ''); play('interaction.confirm'); }}
-                              className="px-2 py-1 text-[10px] font-medium bg-base-100 border border-base-300 rounded-lg text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer active:scale-[0.96]" title="Copiar error">
+                              className="px-2 py-1 text-[11px] font-medium bg-base-100 border border-base-300 rounded-lg text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer active:scale-[0.96]" title="Copiar error">
                               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline mr-0.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                               Copiar
                             </button>
                             <button onClick={() => { play('interaction.subtle'); handleRetryChannel(ch); }}
                               disabled={retryingChannel === ch.id}
-                              className="px-2 py-1 text-[10px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all cursor-pointer active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed">
+                              className="px-2 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-[opacity,transform] cursor-pointer active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed">
                               {retryingChannel === ch.id ? 'Reintentando...' : 'Reintentar'}
                             </button>
                           </div>
@@ -516,7 +516,7 @@ export function YouTubeTrends() {
                   );
                 })}
                 {filteredChannels.length === 0 && (
-                  <p className="text-[10px] text-base-content/50 text-center py-4">Sin resultados</p>
+                  <p className="text-[11px] text-base-content/70 text-center py-4">Sin resultados</p>
                 )}
               </div>
             </div>
@@ -526,12 +526,12 @@ export function YouTubeTrends() {
 
       {displayVideos.length === 0 ? (
         <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-base-content/50">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-base-content/70">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
           </svg>
           <p className="text-sm text-base-content/70">Todos los canales están desactivados</p>
-          <p className="text-[10px] text-base-content/50 mt-1">Abre el selector y activa al menos un canal para ver videos</p>
+          <p className="text-[11px] text-base-content/70 mt-1">Abre el selector y activa al menos un canal para ver videos</p>
         </div>
       ) : (
         <>
@@ -549,7 +549,7 @@ export function YouTubeTrends() {
         </>
       )}
 
-      <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
+      <div className="mt-1 -mb-1 text-right text-[11px] text-base-content/70">
         Fuentes:{' '}
         <a href="https://github.com/Alplox/json-teles/blob/main/countries/cl.json" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
       </div>

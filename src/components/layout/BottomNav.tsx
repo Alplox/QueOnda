@@ -581,7 +581,7 @@ export function BottomNav() {
                 aria-label={section.label}
                 aria-current={isActive ? 'true' : undefined}
                 style={{ animationDelay: `${i * 45}ms` }}
-                className={`min-w-0 flex-1 flex flex-col items-center justify-center gap-0.5 pt-1.5 pb-1 rounded-xl text-[10px] font-medium no-underline opacity-0 animate-[fadeInUp_0.35s_ease-out_forwards] transition-transform active:scale-[0.96] ${
+                className={`min-w-0 flex-1 flex flex-col items-center justify-center gap-0.5 pt-1.5 pb-1 rounded-xl text-[11px] font-medium no-underline opacity-0 animate-[fadeInUp_0.35s_ease-out_forwards] transition-transform active:scale-[0.96] ${
                   isActive
                     ? 'text-primary'
                     : 'text-base-content/70 hover:text-base-content'
@@ -629,7 +629,7 @@ export function BottomNav() {
             aria-expanded={sheetOpen}
             aria-label="Todas las secciones"
             style={{ animationDelay: `${dock.length * 45}ms` }}
-            className="min-w-0 flex-1 flex flex-col items-center justify-center gap-0.5 pt-1.5 pb-1 rounded-xl text-[10px] font-medium text-base-content/70 hover:text-base-content opacity-0 animate-[fadeInUp_0.35s_ease-out_forwards] transition-transform active:scale-[0.96]"
+            className="min-w-0 flex-1 flex flex-col items-center justify-center gap-0.5 pt-1.5 pb-1 rounded-xl text-[11px] font-medium text-base-content/70 hover:text-base-content opacity-0 animate-[fadeInUp_0.35s_ease-out_forwards] transition-transform active:scale-[0.96]"
           >
             <span className="flex items-center justify-center w-11 h-7 rounded-lg">
               <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

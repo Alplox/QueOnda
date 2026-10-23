@@ -366,7 +366,7 @@ export function EmergencyWidget() {
               )}
               {shareMsg && (
                 <span key={shareMsgKey} role="status" 
-                    className="absolute -top-7 -right-2 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap queonda-toast-long">
+                    className="absolute -top-7 -right-2 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-primary text-primary-content shadow whitespace-nowrap queonda-toast-long">
                   {shareMsg}
                 </span>
               )}
@@ -402,7 +402,7 @@ export function EmergencyWidget() {
               </p>
               {/* Segunda línea: el bloque de canales no compite con el mensaje
                   y puede envolver sin apretar los enlaces. */}
-              <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] text-base-content/60">
+              <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] text-base-content/70">
                 <span className="mr-0.5">Ver SENAPRED en:</span>
                 {SENAPRED_LINKS.map((l, i) => (
                   // El separador viaja pegado a su enlace (nowrap): al envolver
@@ -436,7 +436,7 @@ export function EmergencyWidget() {
                 >
                   <div className="mb-1.5 flex items-center justify-between gap-2">
                     <span className={severityBadges[a.severity] + ' shrink-0'}>{severityLabels[a.severity]}</span>
-                    <span className="shrink-0 text-[9px] text-base-content/50">
+                    <span className="shrink-0 text-[11px] text-base-content">
                       {new Date(a.time).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -445,7 +445,7 @@ export function EmergencyWidget() {
               ))}
             </ScrollRow>
           )}
-          <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
+          <div className="mt-1 -mb-1 text-right text-[11px] text-base-content/70">
             Fuente:{' '}
             <a href="https://t.me/SenapredChile" target="_blank" rel="noopener noreferrer"
               className="hover:text-base-content underline underline-offset-2 transition-colors">Telegram SENAPRED</a>
@@ -467,7 +467,7 @@ export function EmergencyWidget() {
           ) : sismosError ? (
             <LoadErrorBox retrying={retrying} retryIn={retryIn} onRetry={retryNow} />
           ) : items.length === 0 ? (
-            <p className="text-xs text-base-content/50 pb-1">Sin sismos recientes -{' '}
+            <p className="text-xs text-base-content/70 pb-1">Sin sismos recientes -{' '}
               <a href="https://www.sismologia.cl/" target="_blank" rel="noopener noreferrer"
                 className="underline hover:text-base-content transition-colors">Sismología Chile</a>
             </p>
@@ -492,7 +492,7 @@ export function EmergencyWidget() {
                           onClick={() => openMap(item)}
                           aria-label="Ver dónde ocurrió en el mapa"
                           title="Ver en el mapa"
-                          className="ml-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer"
+                          className="ml-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
@@ -501,7 +501,7 @@ export function EmergencyWidget() {
                         </button>
                       )}
                     </div>
-                    <span className="block text-[10px] text-base-content/60 mt-0.5">
+                    <span className="block text-[11px] text-base-content/70 mt-0.5">
                       {new Date(item.time).toLocaleDateString('es-CL', {
                         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                       })}
@@ -510,10 +510,10 @@ export function EmergencyWidget() {
                   <p className="text-xs text-base-content leading-snug line-clamp-2" title={item.place || item.title}>{item.place || item.title}</p>
                   <div className="mt-auto pt-1.5 flex items-center justify-between gap-1">
                     {item.depth !== undefined && (
-                      <span className="text-[10px] text-base-content/70">{item.depth.toFixed(1)} km</span>
+                      <span className="text-[11px] text-base-content/70">{item.depth.toFixed(1)} km</span>
                     )}
                     {item.url && (
-                      <span className="ml-auto text-[10px] text-base-content/60 truncate max-w-[70%]">{extractHost(item.url)}</span>
+                      <span className="ml-auto text-[11px] text-base-content/70 truncate max-w-[70%]">{extractHost(item.url)}</span>
                     )}
                   </div>
                 </div>
@@ -530,7 +530,7 @@ export function EmergencyWidget() {
                 }}
                 aria-expanded={showMap}
                 aria-controls="sismos-map"
-                className="mt-1 flex items-center gap-1 text-[10px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+                className="mt-1 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
               >
                 <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
                   className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
@@ -550,7 +550,7 @@ export function EmergencyWidget() {
             </div>
             </>
           )}
-          <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
+          <div className="mt-1 -mb-1 text-right text-[11px] text-base-content/70">
             Fuentes:{' '}
             <a href="https://www.csn.uchile.cl/" target="_blank" rel="noopener noreferrer"
               className="hover:text-base-content underline underline-offset-2 transition-colors">CSN (U. de Chile)</a>
@@ -594,7 +594,7 @@ function LoadErrorBox({
         type="button"
         onClick={onRetry}
         disabled={retrying}
-        className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+        className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-[opacity,transform] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 12a9 9 0 1 1-2.64-6.36" />
@@ -644,7 +644,7 @@ function ScrollRow({ children }: { children: ReactNode }) {
         <div className="absolute left-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to right, var(--color-base-100) 40%, transparent)' }}>
           <button onClick={() => { scrollBy(-1); play('interaction.subtle'); }} aria-label="Desplazar a la izquierda"
-            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer ml-1">
+            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer ml-1">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           </button>
         </div>
@@ -658,7 +658,7 @@ function ScrollRow({ children }: { children: ReactNode }) {
         <div className="absolute right-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to left, var(--color-base-100) 40%, transparent)' }}>
           <button onClick={() => { scrollBy(1); play('interaction.subtle'); }} aria-label="Desplazar a la derecha"
-            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer mr-1">
+            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer mr-1">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>

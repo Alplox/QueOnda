@@ -135,11 +135,11 @@ function SkeletonCard() {
 function ValueCard({ item, value, date, index }: { item: ItemDef; value: number; date: string; index: number }) {
   return (
     <div
-      className="rounded-xl bg-base-200 border border-base-300 p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-md opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards] min-w-0"
+      className="rounded-xl bg-base-200 border border-base-300 p-4 transition-[transform,box-shadow] duration-200 hover:scale-[1.02] hover:shadow-md opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards] min-w-0"
       style={{ animationDelay: `${index * 70}ms` }}
     >
       <div className="flex items-center gap-1.5 mb-1.5">
-        <span className="text-base-content/50">{item.icon}</span>
+        <span className="text-base-content/70">{item.icon}</span>
         <span className="text-xs text-base-content/70 uppercase tracking-wider">{item.label}</span>
       </div>
       <p className="text-xl sm:text-2xl font-semibold text-base-content font-mono tabular-nums tracking-tight break-words leading-tight">
@@ -148,7 +148,7 @@ function ValueCard({ item, value, date, index }: { item: ItemDef; value: number;
         {item.suffix}
       </p>
       {date && (
-        <p className="text-[10px] text-base-content/50 mt-1">{formatDate(date)}</p>
+        <p className="text-[11px] text-base-content/70 mt-1">{formatDate(date)}</p>
       )}
     </div>
   );
@@ -164,7 +164,7 @@ const SOURCES = [
 
 function SourceAttribution() {
   return (
-    <div className="mt-2 text-right text-[10px] text-base-content/50">
+    <div className="mt-2 text-right text-[11px] text-base-content/70">
       Fuentes:{' '}
       {SOURCES.map((s, i) => (
         <span key={s.name}>
@@ -229,7 +229,7 @@ export function FinanceWidget() {
   if (error && !data) {
     return (
       <div>
-        <p className="text-xs text-base-content/50 pb-1">Indicadores no disponibles</p>
+        <p className="text-xs text-base-content/70 pb-1">Indicadores no disponibles</p>
         <SourceAttribution />
       </div>
     );

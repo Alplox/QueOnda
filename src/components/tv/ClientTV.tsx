@@ -497,7 +497,7 @@ export function ClientTV() {
     if (viewMode !== 'multiview') return;
     e.preventDefault();
     const ghost = document.createElement('div');
-    ghost.className = 'fixed z-[9999] w-20 h-20 rounded-xl bg-primary/80 text-primary-content flex items-center justify-center text-[9px] font-bold shadow-2xl pointer-events-none';
+    ghost.className = 'fixed z-[9999] w-20 h-20 rounded-xl bg-primary/80 text-primary-content flex items-center justify-center text-[11px] font-bold shadow-2xl pointer-events-none';
     ghost.textContent = ch.name.slice(0, 20);
     ghost.style.left = `${e.clientX - 40}px`;
     ghost.style.top = `${e.clientY - 40}px`;
@@ -628,20 +628,20 @@ export function ClientTV() {
         return (
           <button key={s} onClick={() => handleSourceChange(s)}
             aria-pressed={isActive}
-            className={`inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors cursor-pointer ${
-              isActive ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+            className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-colors cursor-pointer ${
+              isActive ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/70 hover:text-base-content/70 hover:bg-base-content/[0.04]'
             }`}>
             {s === 'json-teles' ? 'json-teles' : s === 'iptv-org' ? 'iptv-org' : s === 'mi-iptv' ? 'mi-iptv' : 'Lista M3U'}
             {/* El conteo va con la playlist activa, no como badge suelto */}
             {isActive && total > 0 && (
-              <span className="text-[9px] font-mono tabular-nums px-1 py-0.5 rounded bg-primary/20">{total}</span>
+              <span className="text-[11px] font-mono tabular-nums px-1 py-0.5 rounded bg-primary/20">{total}</span>
             )}
           </button>
         );
       })}
       {source === 'custom' && customChannels.length > 0 && (
         <button onClick={handleClearCustom}
-          className="ml-auto text-[10px] px-2 py-1 rounded-md text-base-content/70 hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1">
+          className="ml-auto text-[11px] px-2 py-1 rounded-md text-base-content/70 hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
           Quitar lista
         </button>
@@ -664,7 +664,7 @@ export function ClientTV() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar canales..."
           aria-label="Buscar canales"
-          className="w-full bg-base-200/60 border border-base-300 rounded-lg pl-8 pr-8 py-1.5 text-xs text-base-content placeholder-base-content/50 outline-none focus:border-primary/40 transition-colors"
+          className="w-full bg-base-200/60 border border-base-300 rounded-lg pl-8 pr-8 py-1.5 text-base sm:text-sm text-base-content placeholder:text-base-content/70 outline-none focus:border-primary/40 transition-colors"
         />
         {search && (
           <button onClick={() => { play('interaction.subtle'); setSearch(''); }} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-base-content/70 hover:text-base-content transition-colors cursor-pointer">
@@ -693,13 +693,13 @@ export function ClientTV() {
       </span>
       {!sideActive && (
         <div className="flex items-center gap-0.5" role="group" aria-label="Cantidad de filas de canales">
-          <span className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Filas</span>
+          <span className="text-[11px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Filas</span>
           {[1, 2, 3, 4, 5].map((n) => (
             <button key={n} onClick={() => { play('interaction.tap'); setGridRows(n); }}
               aria-pressed={gridRows === n}
               aria-label={`Mostrar ${n} ${n === 1 ? 'fila' : 'filas'}`}
-              className={`min-w-[24px] h-6 px-1.5 text-[10px] tabular-nums rounded-md transition-colors cursor-pointer ${
-                gridRows === n ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+              className={`min-w-[24px] h-6 px-1.5 text-[11px] tabular-nums rounded-md transition-colors cursor-pointer ${
+                gridRows === n ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/70 hover:text-base-content/70 hover:bg-base-content/[0.04]'
               }`}>
               {n}
             </button>
@@ -708,18 +708,18 @@ export function ClientTV() {
       )}
       <div className="w-px h-4 bg-base-300" aria-hidden="true" />
       <div className="flex items-center gap-0.5" role="group" aria-label="Orden de canales">
-        <span className="text-[9px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Orden</span>
+        <span className="text-[11px] text-base-content/70 font-medium uppercase tracking-wider mr-1">Orden</span>
         <button onClick={() => { play('interaction.tap'); setSortOrder((prev) => prev === 'az' ? 'default' : 'az'); }}
           aria-pressed={sortOrder === 'az'} title="Ordenar de A a Z"
-          className={`min-w-[32px] h-6 px-1.5 text-[10px] rounded-md transition-colors cursor-pointer ${
-            sortOrder === 'az' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+          className={`min-w-[32px] h-6 px-1.5 text-[11px] rounded-md transition-colors cursor-pointer ${
+            sortOrder === 'az' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/70 hover:text-base-content/70 hover:bg-base-content/[0.04]'
           }`}>
           A-Z
         </button>
         <button onClick={() => { play('interaction.tap'); setSortOrder((prev) => prev === 'za' ? 'default' : 'za'); }}
           aria-pressed={sortOrder === 'za'} title="Ordenar de Z a A"
-          className={`min-w-[32px] h-6 px-1.5 text-[10px] rounded-md transition-colors cursor-pointer ${
-            sortOrder === 'za' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70 hover:bg-base-content/[0.04]'
+          className={`min-w-[32px] h-6 px-1.5 text-[11px] rounded-md transition-colors cursor-pointer ${
+            sortOrder === 'za' ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/70 hover:text-base-content/70 hover:bg-base-content/[0.04]'
           }`}>
           Z-A
         </button>
@@ -768,7 +768,7 @@ export function ClientTV() {
       <button onClick={handleToggleViewMode} aria-pressed={viewMode === 'multiview'}
         title={viewMode === 'multiview' ? 'Volver a un solo canal' : 'Ver varios canales a la vez'}
         aria-label={viewMode === 'multiview' ? 'Volver a un solo canal' : 'Ver varios canales a la vez'}
-        className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-lg transition-colors cursor-pointer ${
+        className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-lg transition-colors cursor-pointer ${
           viewMode === 'multiview'
             ? 'text-primary font-medium'
             : 'text-base-content/70 hover:text-base-content hover:bg-base-300'
@@ -787,7 +787,7 @@ export function ClientTV() {
               aria-pressed={multiviewLayout === l}
               aria-label={`Cuadrícula ${l}`}
               title={l === '1x1' ? '1 canal — pantalla completa (móvil)' : l === '1x2' ? '2 canales vertical (móvil)' : l}
-              className={`min-w-[26px] h-6 px-1 text-[9px] rounded-md transition-colors cursor-pointer ${
+              className={`min-w-[26px] h-6 px-1 text-[11px] rounded-md transition-colors cursor-pointer ${
                 multiviewLayout === l
                   ? 'bg-primary text-primary-content font-semibold'
                   : 'text-primary hover:bg-primary/20'
@@ -879,7 +879,7 @@ export function ClientTV() {
         </svg>
       </div>
       <p className="text-xs font-medium text-base-content/70">Selecciona un canal para ver</p>
-      <p className="text-[10px] text-base-content/70">Elige un canal de la grilla, o activa Cuadrícula para ver varios</p>
+      <p className="text-[11px] text-base-content/70">Elige un canal de la grilla, o activa Cuadrícula para ver varios</p>
     </div>
   );
 
@@ -930,7 +930,7 @@ export function ClientTV() {
           <div className="rounded-xl border border-base-300 bg-base-100 p-1.5">{sourceRow}</div>
         <div className="rounded-xl bg-base-100 border border-base-300 p-5">
           <div className="max-w-lg mx-auto">
-            <p className="text-xs text-base-content/50 text-center mb-4">
+            <p className="text-xs text-base-content/70 text-center mb-4">
               Aún no has cargado una lista M3U personalizada.
             </p>
 
@@ -939,7 +939,7 @@ export function ClientTV() {
               {(['file', 'url', 'text'] as const).map((m) => (
                 <button key={m} onClick={() => { setImportMethod(m); setImportError(null); }}
                   className={`text-[11px] px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                    importMethod === m ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/50 hover:text-base-content/70'
+                    importMethod === m ? 'bg-primary/15 text-primary font-medium' : 'text-base-content/70 hover:text-base-content/70'
                   }`}>
                   {m === 'file' ? <><Emoji emoji="📁" /> Archivo</> : m === 'url' ? <><Emoji emoji="🔗" /> URL</> : <><Emoji emoji="📝" /> Texto</>}
                 </button>
@@ -949,11 +949,11 @@ export function ClientTV() {
             {/* Tab content */}
             {importMethod === 'file' && (
               <label className="flex flex-col items-center gap-2 py-6 px-4 rounded-lg border-2 border-dashed border-base-300 hover:border-primary/40 cursor-pointer transition-colors">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-base-content/50">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-base-content/70">
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                 </svg>
                 <span className="text-xs text-base-content/70">Seleccionar archivo .m3u</span>
-                <span className="text-[10px] text-base-content/50">o arrastra el archivo aquí</span>
+                <span className="text-[11px] text-base-content/70">o arrastra el archivo aquí</span>
                 <input type="file" accept=".m3u,.m3u8" onChange={handleFileImport} className="hidden" />
               </label>
             )}
@@ -961,8 +961,8 @@ export function ClientTV() {
             {importMethod === 'url' && (
               <div className="space-y-2">
                 <input type="url" value={urlInput} onChange={(e) => setUrlInput(e.target.value)}
-                  placeholder="https://ejemplo.com/lista.m3u"
-                  className="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-xs text-base-content placeholder-base-content/50 outline-none focus:border-primary/40 transition-colors" />
+                  aria-label="URL de la lista M3U" placeholder="https://ejemplo.com/lista.m3u"
+                  className="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base sm:text-sm text-base-content placeholder:text-base-content/70 outline-none focus:border-primary/40 transition-colors" />
                 <button onClick={handleURLImport} disabled={importing}
                   className="w-full text-[11px] px-3 py-1.5 rounded-md bg-primary/15 text-primary hover:bg-primary/25 disabled:opacity-50 transition-colors cursor-pointer">
                   {importing ? 'Obteniendo...' : 'Obtener lista'}
@@ -974,7 +974,7 @@ export function ClientTV() {
               <div className="space-y-2">
                 <textarea value={textInput} onChange={(e) => setTextInput(e.target.value)} rows={6}
                   placeholder="Pega aquí el contenido del archivo M3U..."
-                  className="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-xs text-base-content placeholder-base-content/50 outline-none focus:border-primary/40 transition-colors resize-y" />
+                  className="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base sm:text-sm text-base-content placeholder:text-base-content/70 outline-none focus:border-primary/40 transition-colors resize-y" />
                 <button onClick={handleTextImport}
                   className="w-full text-[11px] px-3 py-1.5 rounded-md bg-primary/15 text-primary hover:bg-primary/25 transition-colors cursor-pointer">
                   Cargar lista
@@ -983,10 +983,10 @@ export function ClientTV() {
             )}
 
             {importError && (
-              <p className="mt-3 text-[10px] text-error text-center">{importError}</p>
+              <p className="mt-3 text-[11px] text-error text-center">{importError}</p>
             )}
 
-            <p className="mt-4 text-[9px] text-base-content/50 text-center leading-relaxed">
+            <p className="mt-4 text-[11px] text-base-content/70 text-center leading-relaxed">
               Formatos soportados: M3U y M3U8. Si la URL falla por CORS, usa la opción Texto para pegar el contenido directamente.
             </p>
           </div>
@@ -1019,7 +1019,7 @@ export function ClientTV() {
         </>
       )}
 
-      <div className="mt-2 text-right text-[10px] text-base-content/50">
+      <div className="mt-2 text-right text-[11px] text-base-content/70">
         Fuente:{' '}
         {source === 'json-teles' ? (
           <a href="https://github.com/Alplox/json-teles" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
@@ -1028,7 +1028,7 @@ export function ClientTV() {
         ) : source === 'mi-iptv' ? (
           <a href="https://github.com/fparrav/mi-iptv" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">mi-iptv</a>
         ) : (
-          <span className="text-base-content/50">Lista personalizada</span>
+          <span className="text-base-content/70">Lista personalizada</span>
         )}
       </div>
     </div>

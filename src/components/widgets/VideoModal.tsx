@@ -73,7 +73,7 @@ export function VideoModal({ videoId, title, author, link, onClose }: Props) {
         <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-base-300">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-base-content line-clamp-2 leading-snug">{title}</p>
-            {author && <p className="text-[10px] text-base-content/70 mt-0.5 truncate">{author}</p>}
+            {author && <p className="text-[11px] text-base-content/70 mt-0.5 truncate">{author}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <a
@@ -82,7 +82,7 @@ export function VideoModal({ videoId, title, author, link, onClose }: Props) {
               rel="noopener noreferrer"
               onClick={() => play('interaction.tap')}
               aria-label="Abrir en YouTube"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full bg-primary text-primary-content hover:opacity-90 transition-all active:scale-[0.96]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full bg-primary text-primary-content hover:opacity-90 transition-[opacity,transform] active:scale-[0.96]"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -96,7 +96,7 @@ export function VideoModal({ videoId, title, author, link, onClose }: Props) {
               type="button"
               data-autofocus
               onClick={() => { play('overlay.close'); onClose(); }}
-              className="p-1.5 rounded-lg hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] text-base-content/70 hover:text-base-content transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="p-1.5 rounded-lg hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] text-base-content/70 hover:text-base-content transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               aria-label="Cerrar"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">

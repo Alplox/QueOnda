@@ -388,8 +388,8 @@ const CELEBRATION_MESSAGES = [
 ];
 
 const PREP_STATUS: { threshold: number; emoji: string; text: string; color: string }[] = [
-  { threshold: 120, emoji: '🧊', text: 'Aún falta bastante', color: 'text-base-content/50' },
-  { threshold: 60, emoji: '🪁', text: 'Ya se empieza a sentir septiembre', color: 'text-base-content/60' },
+  { threshold: 120, emoji: '🧊', text: 'Aún falta bastante', color: 'text-base-content/70' },
+  { threshold: 60, emoji: '🪁', text: 'Ya se empieza a sentir septiembre', color: 'text-base-content/70' },
   { threshold: 30, emoji: '🥟', text: 'Hora de pensar en las empanadas', color: 'text-base-content/70' },
   { threshold: 15, emoji: '🔥', text: 'Prendan la parrilla', color: 'text-base-content/80' },
   { threshold: 7, emoji: '🍷', text: 'Comprando el terremoto', color: 'text-primary' },
@@ -441,9 +441,9 @@ const SEASON_MESSAGES: Record<Season, { text: string; emoji: string }[]> = {
 
 const SEASON_STATUS: Record<Exclude<Season, 'pre18'>, { emoji: string; text: string; color: string }> = {
   celebration: { emoji: '🎉', text: '¡Estamos celebrando!', color: 'text-primary' },
-  recovery: { emoji: '😴', text: 'Recuperándose del 18...', color: 'text-base-content/50' },
-  halloween: { emoji: '🎃', text: 'Halloween a la vista, el 18 sigue en la memoria', color: 'text-base-content/60' },
-  christmas: { emoji: '🎄', text: 'Navidad encima, septiembre en el horizonte', color: 'text-base-content/60' },
+  recovery: { emoji: '😴', text: 'Recuperándose del 18...', color: 'text-base-content/70' },
+  halloween: { emoji: '🎃', text: 'Halloween a la vista, el 18 sigue en la memoria', color: 'text-base-content/70' },
+  christmas: { emoji: '🎄', text: 'Navidad encima, septiembre en el horizonte', color: 'text-base-content/70' },
 };
 
 function getProgress(): number {
@@ -690,7 +690,7 @@ export function FiestasCountdown() {
             <div className="text-[11px] font-semibold text-base-content/70 mt-1 uppercase tracking-[0.2em]">
               días
             </div>
-            <div className="text-xs sm:text-sm text-base-content/50 mt-3 tabular-nums">
+            <div className="text-xs sm:text-sm text-base-content/70 mt-3 tabular-nums">
               {String(timeLeft.hours)}h <span className="mx-0.5">·</span>{' '}
               {String(timeLeft.minutes).padStart(2, '0')}m{' '}
               <span className="mx-0.5">·</span>{' '}
@@ -711,11 +711,11 @@ export function FiestasCountdown() {
               <span key={`h-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.hours).padStart(2, '0')}
               </span>
-              <span className="text-3xl sm:text-4xl align-middle text-base-content/50 mx-1">:</span>
+              <span className="text-3xl sm:text-4xl align-middle text-base-content/70 mx-1">:</span>
               <span key={`m-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.minutes).padStart(2, '0')}
               </span>
-              <span className="text-3xl sm:text-4xl align-middle text-base-content/50 mx-1">:</span>
+              <span className="text-3xl sm:text-4xl align-middle text-base-content/70 mx-1">:</span>
               <span key={`s-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.seconds).padStart(2, '0')}
               </span>
@@ -728,13 +728,13 @@ export function FiestasCountdown() {
 
         {phase === 'before' && timeLeft && (
           <div className="mt-5">
-            <div className="flex justify-between text-[10px] text-base-content/50 mb-1">
+            <div className="flex justify-between text-[11px] text-base-content/70 mb-1">
               <span>Hoy</span>
               <span>18 de septiembre</span>
             </div>
             <div className="h-1.5 rounded-full bg-base-300 overflow-hidden">
               <div
-                className="h-full rounded-full bg-primary transition-all duration-1000"
+                className="h-full rounded-full bg-primary transition-[width] duration-1000"
                 style={{ width: `${Math.min(99.5, getProgress())}%` }}
               />
             </div>
@@ -750,13 +750,13 @@ export function FiestasCountdown() {
         <div className="flex flex-col items-center gap-3">
           <EmojiCard card={currentCard} flipping={flipping} revealing={revealing} />
           <div className="flex items-center gap-3">
-            <span className="text-xs text-base-content/50 tabular-nums">
+            <span className="text-xs text-base-content/70 tabular-nums">
               {cardIndex + 1}/{EMOJI_COLLECTION.length}
             </span>
             <button
               onClick={rollDice}
               disabled={spinning}
-              className="group flex items-center gap-1.5 rounded-full border border-base-300 bg-base-200 px-3 py-1.5 text-xs font-semibold text-base-content transition-all duration-200 hover:border-primary hover:bg-primary/10 hover:text-primary active:scale-95 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="group flex items-center gap-1.5 rounded-full border border-base-300 bg-base-200 px-3 py-1.5 text-xs font-semibold text-base-content transition-[background-color,border-color,color,transform] duration-200 hover:border-primary hover:bg-primary/10 hover:text-primary active:scale-95 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/40"
               title="Elegir al azar"
             >
               <svg

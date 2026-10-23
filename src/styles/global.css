@@ -273,12 +273,12 @@ section[id][data-visible] h2 .letter {
 .em-subhead {
   padding-bottom: 0.375rem;
   margin-bottom: 0.375rem;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-base-content);
-  opacity: 0.6;
+  opacity: 0.7;
   border-bottom: 1px solid var(--color-base-300);
   display: flex;
   align-items: baseline;
@@ -290,7 +290,7 @@ section[id][data-visible] h2 .letter {
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-base-content);
-  opacity: 0.6;
+  opacity: 0.7;
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: opacity 0.2s ease-out;
@@ -378,6 +378,13 @@ section[id][data-visible] h2 .letter {
   --stagger-step: 40ms;
 }
 
+/* Acento legible: `primary` es un color de superficie, no de tinta. Cuando se
+   usa como texto se mezcla con el color de contenido para conservar el tono sin
+   caer bajo 4.5:1 en los temas donde primary es claro (cupcake, pastel, retro…). */
+.text-accent-safe {
+  color: color-mix(in oklab, var(--color-primary), var(--color-base-content) 72%);
+}
+
 /* will-change hints for animated elements */
 .will-animate {
   will-change: transform, opacity;
@@ -421,7 +428,7 @@ section[id][data-visible] h2 .letter {
   inset: 0;
   z-index: 10;
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 0.7;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -749,9 +756,14 @@ input[type="range"].range-thumb::-moz-range-thumb {
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-/* footer */
-.footer-reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
-.footer-reveal.visible { opacity: 1; transform: translateY(0); }
+/* footer: visible por defecto — la animación es un extra, nunca el mecanismo que
+   revela la atribución si el IntersectionObserver no llega a dispararse */
+.footer-reveal.visible { animation: footerReveal 0.6s ease both; }
+
+@keyframes footerReveal {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 /* Multiview fullscreen: video area fills full height instead of 16:9 */
 :fullscreen > .aspect-video {

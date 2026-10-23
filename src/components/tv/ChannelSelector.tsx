@@ -192,7 +192,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
         <div className="absolute left-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to right, var(--color-base-100) 40%, transparent)' }}>
           <button onClick={() => { scrollBy(-1); play('interaction.subtle'); }} aria-label="Desplazar categorías a la izquierda"
-            className="pointer-events-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer ml-1">
+            className="pointer-events-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer ml-1">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           </button>
         </div>
@@ -214,7 +214,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
                   key={cat}
                   data-cat-chip={cat}
                   style={{ animationDelay: `${i * 40}ms` }}
-                  className={`flex items-center shrink-0 whitespace-nowrap rounded-lg text-xs font-medium transition-all opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
+                  className={`flex items-center shrink-0 whitespace-nowrap rounded-lg text-xs font-medium transition-colors opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
                     isActive
                       ? 'bg-primary text-primary-content ring-1 ring-primary'
                       : 'bg-base-content/[0.04] text-base-content/70'
@@ -227,7 +227,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
                     className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-l-lg cursor-pointer active:scale-[0.96] transition-transform"
                   >
                     <span>{label}</span>
-                    <span className={`text-[10px] font-mono px-1 py-0.5 rounded ${
+                    <span className={`text-[11px] font-mono px-1 py-0.5 rounded ${
                       isActive ? 'bg-primary text-primary-content' : 'bg-base-content/[0.05] text-base-content/70'
                     }`}>
                       {count}
@@ -262,7 +262,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
                 onClick={() => { play('navigation.tab'); onSelect(cat); }}
                 aria-pressed={isActive}
                 style={{ animationDelay: `${i * 40}ms` }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-[0.96] opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-[background-color,color,border-color,transform] cursor-pointer active:scale-[0.96] opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
                   isActive
                     ? 'bg-primary text-primary-content ring-1 ring-primary'
                     : 'text-base-content/70 hover:text-base-content/70 hover:bg-base-content/[0.04]'
@@ -274,7 +274,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
                   </svg>
                 ) : null}
                 <span>{label}</span>
-                <span className={`text-[10px] font-mono px-1 py-0.5 rounded ${
+                <span className={`text-[11px] font-mono px-1 py-0.5 rounded ${
                   isActive ? 'bg-primary text-primary-content' : 'bg-base-content/[0.05] text-base-content/70'
                 }`}>
                   {count}
@@ -289,7 +289,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
         <div className="absolute right-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to left, var(--color-base-100) 40%, transparent)' }}>
           <button onClick={() => { scrollBy(1); play('interaction.subtle'); }} aria-label="Desplazar categorías a la derecha"
-            className="pointer-events-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer mr-1">
+            className="pointer-events-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer mr-1">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>
@@ -321,7 +321,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar categoría..."
               aria-label="Buscar categoría"
-              className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
+              className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/70 focus:outline-none focus:border-primary transition-colors"
             />
           </div>
           <div role="group" aria-label="Categorías" className="py-1 overflow-y-auto overscroll-contain flex-1 min-h-0">
@@ -341,7 +341,7 @@ export function ChannelSelector({ categories, counts, selected, onSelect }: Prop
                   }`}
                 >
                   <span className="flex-1 truncate">{catLabel(cat)}</span>
-                  <span className="shrink-0 text-[10px] font-mono tabular-nums text-base-content/70">{counts[cat] ?? 0}</span>
+                  <span className="shrink-0 text-[11px] font-mono tabular-nums text-base-content/70">{counts[cat] ?? 0}</span>
                   {isActive && (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
                       <polyline points="20 6 9 17 4 12" />

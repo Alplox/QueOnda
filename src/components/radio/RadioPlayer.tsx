@@ -112,7 +112,7 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
         )}
         {/* Station logo (on top) */}
         <div className={[
-          'relative w-24 h-24 max-md:w-14 max-md:h-14 rounded-full overflow-hidden bg-base-100 ring-2 transition-all duration-500 z-10',
+          'relative w-24 h-24 max-md:w-14 max-md:h-14 rounded-full overflow-hidden bg-base-100 ring-2 transition-[box-shadow,transform] duration-500 z-10',
           playing ? 'ring-primary shadow-[0_0_30px_-8px_var(--color-primary)]' : 'ring-base-content/10',
         ].join(' ')}>
           {station.logo ? (
@@ -131,7 +131,7 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => play('interaction.tap')}
-            className="flex items-center gap-1 text-[10px] text-base-content/50 hover:text-base-content underline-offset-2 underline transition-colors"
+            className="flex items-center gap-1 text-[11px] text-base-content/70 hover:text-base-content underline-offset-2 underline transition-colors"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -171,7 +171,7 @@ function BoomboxControls({
         <div className="flex items-center gap-2.5 shrink-0 md:w-full md:justify-center">
           <button
             onClick={onPlayPause}
-            className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center hover:bg-primary/90 transition-all active:scale-[0.96] shadow-lg"
+            className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center hover:bg-primary/90 transition-[background-color,transform] active:scale-[0.96] shadow-lg"
             title={playing ? 'Pausar' : 'Reproducir'}
           >
             {playing ? PAUSE_ICON : PLAY_ICON}
@@ -179,7 +179,7 @@ function BoomboxControls({
           <button
             onClick={onStop}
             disabled={stopped}
-            className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-all active:scale-[0.96] disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-[background-color,transform] active:scale-[0.96] disabled:opacity-30 disabled:cursor-not-allowed"
             title="Detener"
           >
             {STOP_ICON}
@@ -276,7 +276,7 @@ function StationCard({
         className={`shrink-0 p-1.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors ${
           isFav
             ? 'text-base-content hover:text-base-content/70'
-            : 'text-base-content/40 group-hover:text-base-content/60 hover:text-base-content/80'
+            : 'text-base-content/70 group-hover:text-base-content/70 hover:text-base-content/80'
         }`}
       >
         {isFav ? STAR_FILLED : STAR_EMPTY}
@@ -650,7 +650,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                         key={idx}
                         onClick={() => { play('interaction.tap'); setSignalIndex(idx); }}
                         aria-pressed={idx === signalIndex}
-                        className={`text-[10px] px-2 py-1 rounded transition-colors cursor-pointer whitespace-nowrap ${
+                        className={`text-[11px] px-2 py-1 rounded transition-colors cursor-pointer whitespace-nowrap ${
                           idx === signalIndex
                             ? 'bg-primary text-primary-content border border-primary'
                             : 'bg-base-content/5 text-base-content/70 hover:bg-base-content/10 border border-transparent hover:border-base-content/20'
@@ -711,12 +711,12 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar radios..."
-                    className="w-full text-sm bg-base-100 border border-base-300 rounded-xl px-3 py-2 pr-8 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary/50 transition-colors"
+                    className="w-full text-sm bg-base-100 border border-base-300 rounded-xl px-3 py-2 pr-8 text-base-content placeholder:text-base-content/70 focus:outline-none focus:border-primary/50 transition-colors"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => { play('interaction.subtle'); setSearchQuery(''); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content/70 transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/70 hover:text-base-content/70 transition-colors"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -741,7 +741,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
               {activeState && (
                 <button
                   onClick={() => { play('interaction.confirm'); setActiveState(''); }}
-                  className="mt-1.5 text-[10px] text-base-content/50 hover:text-base-content/70 transition-colors"
+                  className="mt-1.5 text-[11px] text-base-content/70 hover:text-base-content/70 transition-colors"
                 >
                   Limpiar ciudad
                 </button>
@@ -755,7 +755,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                         key={tag}
                         onClick={() => { play('interaction.tap'); toggleTag(tag); }}
                         aria-pressed={active}
-                        className={`shrink-0 whitespace-nowrap text-[10px] px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+                        className={`shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border transition-colors cursor-pointer ${
                           active
                             ? 'bg-primary text-primary-content border-primary'
                             : 'bg-base-100 text-base-content/70 border-base-content/20 hover:border-base-content/30 hover:text-base-content'
@@ -768,7 +768,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   {activeTags.length > 0 && (
                     <button
                       onClick={() => { play('interaction.confirm'); setActiveTags([]); }}
-                      className="shrink-0 whitespace-nowrap text-[10px] px-2 py-1 rounded-full border border-transparent text-base-content/50 hover:text-base-content/70 transition-colors"
+                      className="shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border border-transparent text-base-content/70 hover:text-base-content/70 transition-colors"
                     >
                       Limpiar
                     </button>
@@ -784,10 +784,10 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                 aria-expanded={favExpanded}
                 className="w-full flex items-center justify-between px-1.5 py-1 rounded-lg hover:bg-base-100 transition-colors"
               >
-                <span className="text-[10px] text-base-content/50 font-semibold uppercase tracking-wider">
+                <span className="text-[11px] text-base-content/70 font-semibold uppercase tracking-wider">
                   Favoritos {favoriteStations.length > 0 ? `(${favoriteStations.length})` : ''}
                 </span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-base-content/50 transition-transform duration-200 ${favExpanded ? 'rotate-180' : ''}`}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-base-content/70 transition-transform duration-200 ${favExpanded ? 'rotate-180' : ''}`}>
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
@@ -808,7 +808,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-base-content/50 px-1.5 py-2 italic leading-relaxed">
+                    <p className="text-xs text-base-content/70 px-1.5 py-2 italic leading-relaxed">
                       Sin favoritos todavía. Pulsa la estrella de alguna radio para guardarla.
                     </p>
                   )}
@@ -821,14 +821,14 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
             {/* Scrollable list area */}
             <div className="flex-1 max-h-[360px] min-h-[360px] overflow-y-auto -mx-1 px-1">
               <div className="sticky top-0 z-10 bg-base-200 pt-0.5 pb-1 flex items-center justify-between">
-                <p className="text-[10px] text-base-content/50 font-semibold uppercase tracking-wider px-1.5">
+                <p className="text-[11px] text-base-content/70 font-semibold uppercase tracking-wider px-1.5">
                   Todas ({otherStations.length})
                 </p>
                 <button
                   onClick={() => { play('interaction.tap'); setSortAZ((v) => !v); }}
                   aria-pressed={sortAZ}
                   aria-label="Orden alfabético"
-                  className="text-[10px] text-base-content/50 hover:text-base-content px-1.5 transition-colors"
+                  className="text-[11px] text-base-content/70 hover:text-base-content px-1.5 transition-colors"
                 >
                   {sortAZ ? 'A-Z' : 'Z-A'}
                 </button>
@@ -857,7 +857,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
         </div>
       </div>
 
-      <div className="mt-1 -mb-1 text-right text-[10px] text-base-content/50">
+      <div className="mt-1 -mb-1 text-right text-[11px] text-base-content/70">
         Fuentes:{' '}
         <a href="https://api.radio-browser.info" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">radio-browser.info</a>
         {' · '}
@@ -887,7 +887,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-base-content font-medium truncate">{current.name}</p>
-            <p className="text-[9px] text-base-content font-semibold uppercase tracking-wider">En Vivo</p>
+            <p className="text-[11px] text-base-content font-semibold uppercase tracking-wider">En Vivo</p>
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={() => { play('interaction.toggle'); if (videoRef.current) videoRef.current.muted = !videoRef.current.muted; if (audioRef.current) audioRef.current.muted = !audioRef.current.muted; setMuted((m) => !m); }}

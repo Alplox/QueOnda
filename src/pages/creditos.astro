@@ -39,7 +39,7 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
   </head>
   <body class="bg-base-100 text-base-content min-h-screen">
     <main class="max-w-3xl mx-auto px-4 py-10 md:py-14">
-      <a href="/" class="text-sm text-base-content/60 hover:text-base-content underline underline-offset-2 transition-colors">← Volver al dashboard</a>
+      <a href="/" class="text-sm text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">← Volver al dashboard</a>
       <h1 class="mt-4 text-3xl font-bold tracking-tight text-balance">Créditos y licencias</h1>
       <p class="mt-2 text-base text-base-content/70 leading-relaxed">
         ¿Qué Onda? se construye sobre datos y recursos de terceros. Esta página los lista con su licencia y enlace original.
@@ -52,7 +52,7 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
           <li>
             <a href="https://simpleicons.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Simple Icons</a>
             — CC0 1.0 Universal. Logos de marca usados para identificar el buscador al que lleva cada enlace.{' '}
-            <span class="text-base-content/60">CC0 cubre el archivo SVG, no la marca registrada: se usan sólo de forma nominativa, sin alterar el logotipo ni sugerir respaldo.</span>
+            <span class="text-base-content/70">CC0 cubre el archivo SVG, no la marca registrada: se usan sólo de forma nominativa, sin alterar el logotipo ni sugerir respaldo.</span>
           </li>
           <li>
             <a href="https://twemoji.twitter.com" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Twemoji</a>
@@ -98,7 +98,7 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
         <div class="mt-4 space-y-5">
           <div>
             <h3 class="text-sm font-semibold text-base-content/90">Discos CD (PNGImg, CC-BY-NC 4.0)</h3>
-            <p class="text-sm text-base-content/50 mt-0.5">Usados de forma decorativa en el reproductor de radio.</p>
+            <p class="text-sm text-base-content/70 mt-0.5">Usados de forma decorativa en el reproductor de radio.</p>
             <ul class="mt-2 space-y-1 text-sm text-base-content/70">
               <li><a href="https://pngimg.com/image/9081" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">cd_dvd_PNG9081</a></li>
               <li><a href="https://pngimg.com/image/9079" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">cd_dvd_PNG9079</a></li>
@@ -109,11 +109,11 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
           </div>
           <div>
             <h3 class="text-sm font-semibold text-base-content/90">{imgGroup!.title}</h3>
-            {imgGroup!.strategy && <p class="text-sm text-base-content/50 mt-0.5">{imgGroup!.strategy}</p>}
+            {imgGroup!.strategy && <p class="text-sm text-base-content/70 mt-0.5">{imgGroup!.strategy}</p>}
             <ul class="mt-2 space-y-1.5">
               {imgGroup!.items.map((item) => (
                 <li class="flex items-start gap-2 text-base text-base-content/80">
-                  <span class="shrink-0 mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-base-200 text-base-content/60">
+                  <span class="shrink-0 mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-base-200 text-base-content/70">
                     Único
                   </span>
                   <span class="min-w-0">
@@ -122,7 +122,7 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
                     ) : (
                       <span class="font-medium">{item.name}</span>
                     )}
-                    {item.note && <span class="text-base-content/60"> — {item.note}</span>}
+                    {item.note && <span class="text-base-content/70"> — {item.note}</span>}
                   </span>
                 </li>
               ))}
@@ -130,7 +130,7 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
           </div>
           <div>
             <h3 class="text-sm font-semibold text-base-content/90">Fondos de portada (rotan por día)</h3>
-            <p class="text-sm text-base-content/50 mt-0.5">Pexels y Unsplash.</p>
+            <p class="text-sm text-base-content/70 mt-0.5">Pexels y Unsplash.</p>
             <ul class="mt-2 space-y-1 text-sm text-base-content/70">
               {heroBgs.map((bg) => (
                 <li>
@@ -151,13 +151,13 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
           <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-primary/15 text-primary font-medium">Primario</span>
           <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-base-300/60 text-base-content/70 font-medium">Respaldo</span>
           <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-warning/15 text-warning font-medium">Final</span>
-          <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-base-200 text-base-content/60 font-medium">Único</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-base-200 text-base-content/70 font-medium">Único</span>
         </div>
         <div class="mt-4 space-y-5">
           {dataSources.groups.filter((g) => g.title !== 'Imágenes y assets').map((group) => (
             <div>
               <h3 class="text-sm font-semibold text-base-content/90">{group.title}</h3>
-              {group.strategy && <p class="text-sm text-base-content/50 mt-0.5">{group.strategy}</p>}
+              {group.strategy && <p class="text-sm text-base-content/70 mt-0.5">{group.strategy}</p>}
               <ul class="mt-2 space-y-1.5">
                 {group.items.map((item) => (
                   <li class="flex items-start gap-2 text-base text-base-content/80">
@@ -166,7 +166,7 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
                       item.role === 'fallback' ? 'bg-base-300/60 text-base-content/70' :
                       item.role === 'final' ? 'bg-warning/15 text-warning' :
                       item.role === 'merge' ? 'bg-info/15 text-info' :
-                      'bg-base-200 text-base-content/60'
+                      'bg-base-200 text-base-content/70'
                     }`}>
                       {item.role === 'primary' ? 'Primario' :
                        item.role === 'fallback' ? 'Respaldo' :
@@ -179,9 +179,9 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
                       ) : (
                         <span class="font-medium">{item.name}</span>
                       )}
-                      {item.note && <span class="text-base-content/60"> — {item.note}</span>}
+                      {item.note && <span class="text-base-content/70"> — {item.note}</span>}
                       {Array.isArray(item.links) && item.links.length > 0 && (
-                        <span class="text-base-content/60"> - {item.links.map((l, i) => (
+                        <span class="text-base-content/70"> - {item.links.map((l, i) => (
                           <span>
                             {i > 0 && ', '}
                             <a href={l.url} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">{l.label}</a>
@@ -211,7 +211,7 @@ const imgGroup = dataSources.groups.find((x) => x.title === 'Imágenes y assets'
         </ul>
       </section>
 
-      <p class="mt-10 text-sm text-base-content/50">
+      <p class="mt-10 text-sm text-base-content/70">
         Si detectas un recurso mal atribuido o una licencia incorrecta, abre un <a href="https://github.com/Alplox/QueOnda/issues" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">issue en GitHub</a>.
       </p>
     </main>

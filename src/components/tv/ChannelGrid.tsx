@@ -69,7 +69,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
       <div
         key={ch.id}
         style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
-        className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all ${
+        className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-[background-color,border-color,box-shadow,color] ${
           wrap ? 'w-full' : 'shrink-0 w-[84px] sm:w-24'
         } opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards] ${
           isSelected
@@ -91,7 +91,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
             type="button"
             onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onDragChannelStart(ch, e); }}
             aria-label="Arrastrar al multiview"
-            className="absolute -top-1 -left-1 z-20 w-5 h-5 flex items-center justify-center rounded-full bg-base-300 border border-base-300 text-base-content/50 hover:text-base-content hover:bg-base-200 cursor-grab active:cursor-grabbing touch-none transition-colors"
+            className="absolute -top-1 -left-1 z-20 w-5 h-5 flex items-center justify-center rounded-full bg-base-300 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-200 cursor-grab active:cursor-grabbing touch-none transition-colors"
             style={{ touchAction: 'none' }}
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -105,7 +105,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
           onClick={(e) => { e.stopPropagation(); play('interaction.toggle'); onToggleFavorite(ch.id); }}
           aria-label={isFav ? `Quitar ${ch.name} de favoritos` : `Agregar ${ch.name} a favoritos`}
           aria-pressed={isFav}
-          className={`absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center rounded-full transition-all active:scale-[0.85] ${
+          className={`absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center rounded-full transition-[background-color,color,transform] active:scale-[0.85] ${
             isFav
               ? isSelected
                 ? 'bg-base-100 text-primary ring-1 ring-primary'
@@ -127,7 +127,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
         </div>
 
         {/* Name */}
-        <span className={`text-[10px] truncate leading-tight w-full text-center ${isSelected ? 'text-primary-content' : 'text-base-content/70'}`}>
+        <span className={`text-[11px] truncate leading-tight w-full text-center ${isSelected ? 'text-primary-content' : 'text-base-content/70'}`}>
           {ch.name}
         </span>
       </div>
@@ -153,7 +153,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
         <div className="absolute left-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to right, var(--color-base-100) 40%, transparent)' }}>
           <button onClick={() => { scrollBy(-1); play('interaction.subtle'); }} aria-label="Desplazar a la izquierda"
-            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer ml-1">
+            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer ml-1">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
           </button>
         </div>
@@ -178,7 +178,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
         <div className="absolute right-0 inset-y-0 z-10 flex items-center pointer-events-none"
           style={{ background: 'linear-gradient(to left, var(--color-base-100) 40%, transparent)' }}>
           <button onClick={() => { scrollBy(1); play('interaction.subtle'); }} aria-label="Desplazar a la derecha"
-            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all cursor-pointer mr-1">
+            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer mr-1">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>

@@ -282,13 +282,13 @@ export const SlotCard = memo(function SlotCard({
             className="relative cursor-pointer"
           >
             <div className="w-12 h-12 rounded-full bg-base-300 flex items-center justify-center mb-3 mx-auto hover:bg-primary/20 hover:border-primary/50 transition-colors border-2 border-transparent">
-              <svg className="w-5 h-5 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-5 h-5 text-base-content/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="16" />
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
             </div>
-            <p className="text-xs text-base-content/50">Seleccionar fuente</p>
+            <p className="text-xs text-base-content/70">Seleccionar fuente</p>
           </button>
         </div>
         {dropdownOpen && portalPos && createPortal(
@@ -343,12 +343,12 @@ export const SlotCard = memo(function SlotCard({
               className="text-sm font-semibold text-left text-balance text-base-content cursor-pointer hover:text-base-content/80 transition-colors inline-flex items-center gap-1 min-w-0"
             >
               <span className="truncate">{selectedSource.name}</span>
-              <svg className={`shrink-0 w-3 h-3 mt-0.5 text-base-content/50 transition-transform duration-200 ${dropdownOpen || closingDropdown ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className={`shrink-0 w-3 h-3 mt-0.5 text-base-content/70 transition-transform duration-200 ${dropdownOpen || closingDropdown ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
             {isFallback && (
-              <span className="shrink-0 text-[9px] font-medium text-warning/80 bg-warning/10 px-1.5 py-0.5 rounded-full" title="Esta fuente ya no está en el listado principal, se cargó desde la URL guardada">
+              <span className="shrink-0 text-[11px] font-medium text-warning/80 bg-warning/10 px-1.5 py-0.5 rounded-full" title="Esta fuente ya no está en el listado principal, se cargó desde la URL guardada">
                 Externa
               </span>
             )}
@@ -356,7 +356,7 @@ export const SlotCard = memo(function SlotCard({
 
           <button
             onClick={() => { play('interaction.toggle'); onTogglePin(slotIndex, selectedSource); }}
-            className={`group shrink-0 p-1 rounded-md hover:bg-base-300 transition-colors cursor-pointer ${pinnedSource?.sourceKey === selectedSource.sourceKey ? 'text-primary' : 'text-base-content/50 hover:text-base-content/60'}`}
+            className={`group shrink-0 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-300 transition-colors cursor-pointer ${pinnedSource?.sourceKey === selectedSource.sourceKey ? 'text-primary' : 'text-base-content/70 hover:text-base-content/80'}`}
             title={pinnedSource?.sourceKey === selectedSource.sourceKey ? 'Fijado — siempre cargado aquí' : 'Fijar a este bloque'}
             aria-label={pinnedSource?.sourceKey === selectedSource.sourceKey ? 'Desfijar' : 'Fijar'}
           >
@@ -367,7 +367,7 @@ export const SlotCard = memo(function SlotCard({
 
           <button
             onClick={handleClear}
-            className="shrink-0 p-1 rounded-md hover:bg-base-300 text-base-content/50 hover:text-error transition-colors cursor-pointer"
+            className="shrink-0 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-300 text-base-content/70 hover:text-error transition-colors cursor-pointer"
             title="Vaciar slot"
             aria-label="Vaciar slot"
           >
@@ -395,10 +395,10 @@ export const SlotCard = memo(function SlotCard({
               <p className="text-xs text-warning/70 mb-1">
                 <span className="font-semibold">{selectedSource?.name}</span> falló: {skipProgress.reason || 'Error'}
               </p>
-              <p className="text-xs text-base-content/60">
+              <p className="text-xs text-base-content/70">
                 Probando con <span className="font-semibold">{skipProgress.newSourceName}</span>
               </p>
-              <p className="text-[10px] text-base-content/50 mt-1 mb-3">
+              <p className="text-[11px] text-base-content/70 mt-1 mb-3">
                 {skipProgress.isPending
                   ? `aplicando en ${skipProgress.countdown}s`
                   : skipProgress.countdown > 0
@@ -407,14 +407,14 @@ export const SlotCard = memo(function SlotCard({
               </p>
               <div className="w-16 h-1 bg-base-300 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-warning rounded-full transition-all"
+                  className="h-full bg-warning rounded-full transition-[width]"
                   style={{ width: `${(skipProgress.countdown / 5) * 100}%` }}
                 />
               </div>
               {onCancelSkip && (
                 <button
                     onClick={() => { play('interaction.subtle'); onCancelSkip(slotIndex); }}
-                  className="mt-3 px-3 py-1.5 text-[11px] font-medium bg-base-300 text-base-content/70 hover:text-base-content rounded-lg transition-all active:scale-[0.96] cursor-pointer"
+                  className="mt-3 px-3 py-1.5 text-[11px] font-medium bg-base-300 text-base-content/70 hover:text-base-content rounded-lg transition-[transform,background-color,color] active:scale-[0.96] cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -429,11 +429,11 @@ export const SlotCard = memo(function SlotCard({
               </svg>
               <p className="text-xs text-error/60 mb-1">Error al cargar</p>
               {error && (
-                <p className="text-[10px] text-base-content/50 mb-3 max-w-[200px] truncate">{error}</p>
+                <p className="text-[11px] text-base-content/70 mb-3 max-w-[200px] truncate">{error}</p>
               )}
               <button
                 onClick={handleRetry}
-                className="px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-content border border-primary rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer"
+                className="px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-content border border-primary rounded-lg hover:opacity-80 transition-[opacity,transform] active:scale-[0.96] cursor-pointer"
               >
                 Reintentar
               </button>
@@ -454,13 +454,13 @@ export const SlotCard = memo(function SlotCard({
                       onClick={() => play('interaction.tap')}
                       className="flex-1 text-left min-w-0 px-3 py-2 cursor-pointer"
                     >
-                      <p className="text-xs text-base-content leading-snug line-clamp-2">
+                      <p className="text-sm text-base-content leading-snug line-clamp-2">
                         {article.title}
                       </p>
                     </a>
                     <button
                       onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderArticle(article); }}
-                      className="shrink-0 p-1 mr-1 rounded-md opacity-50 group-hover:opacity-100 focus:opacity-100 hover:bg-base-300 text-base-content/50 hover:text-base-content/80 transition-all cursor-pointer"
+                      className="shrink-0 inline-flex items-center justify-center p-1.5 mr-1 rounded-md hover:bg-base-300 text-base-content/70 hover:text-base-content/80 transition-colors cursor-pointer"
                       title="Leer en ventana flotante"
                       aria-label="Leer en modal"
                     >
@@ -478,21 +478,21 @@ export const SlotCard = memo(function SlotCard({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full py-8 px-4 text-center">
-              <p className="text-xs text-base-content/50 mb-2">
+              <p className="text-xs text-base-content/70 mb-2">
                 {hasActiveFilter ? 'Sin coincidencias' : 'Vacío por ahora'}
               </p>
               {!hasActiveFilter && (
                 <div className="flex gap-2">
                   <button
                     onClick={() => { play('interaction.subtle'); handleRetry(); }}
-                    className="px-3 py-1 text-[11px] font-medium bg-base-300 text-base-content/60 rounded-lg hover:bg-primary hover:text-primary-content transition-colors cursor-pointer"
+                    className="px-3 py-1 text-[11px] font-medium bg-base-300 text-base-content/70 rounded-lg hover:bg-primary hover:text-primary-content transition-colors cursor-pointer"
                   >
                     Recargar
                   </button>
                   {nextAvailable && (
                     <button
                       onClick={() => { play('interaction.tap'); onSourceChange(slotIndex, nextAvailable, true); }}
-                      className="px-3 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-all active:scale-[0.96] cursor-pointer"
+                      className="px-3 py-1 text-[11px] font-medium bg-primary text-primary-content rounded-lg hover:opacity-80 transition-[opacity,transform] active:scale-[0.96] cursor-pointer"
                     >
                       Cargar siguiente
                     </button>
@@ -503,8 +503,8 @@ export const SlotCard = memo(function SlotCard({
           )}
         </div>
 
-        <div className="px-3 py-1.5 border-t border-base-300 text-right text-[10px] text-base-content/50 flex items-center justify-between gap-2">
-          <span className="text-base-content/50">
+        <div className="px-3 py-1.5 border-t border-base-300 text-right text-[11px] text-base-content/70 flex items-center justify-between gap-2">
+          <span className="text-base-content/70">
             {loading ? 'Cargando...' : error ? '' : `${articles.length} artículos`}
           </span>
           {selectedSource && (
@@ -636,7 +636,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
           value={searchQuery}
           onChange={e => onSearchChange(e.target.value)}
           placeholder="Buscar fuente..."
-          className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/50 focus:outline-none focus:border-primary transition-colors"
+          className="w-full text-xs bg-base-200 border border-base-300 rounded-lg px-2.5 py-1.5 text-base-content placeholder:text-base-content/70 focus:outline-none focus:border-primary transition-colors"
         />
         <div className="flex items-center gap-1.5">
           <select
@@ -658,10 +658,10 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
                 onClick={() => onSortChange(dir)}
                 aria-pressed={sortDir === dir}
                 title={hint}
-                className={`text-[10px] font-medium px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                className={`text-[11px] font-medium px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   sortDir === dir
                     ? 'bg-primary/15 text-primary'
-                    : 'text-base-content/60 hover:text-base-content hover:bg-base-200'
+                    : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
                 }`}
               >
                 {label}
@@ -675,10 +675,10 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
             onClick={() => onToggleMainOnly(!mainOnly)}
             aria-pressed={mainOnly}
             title="Muestra solo el feed principal de cada medio y oculta sus secciones (deportes, regiones, etc.)"
-            className={`flex-1 min-w-0 flex items-center gap-1.5 text-[10px] px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
+            className={`flex-1 min-w-0 flex items-center gap-1.5 text-[11px] px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
               mainOnly
                 ? 'bg-primary/15 text-primary font-medium'
-                : 'text-base-content/60 hover:text-base-content hover:bg-base-200'
+                : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
             }`}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
@@ -686,12 +686,12 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
             </svg>
             <span className="truncate">Solo principales por sitio</span>
           </button>
-          <span className="shrink-0 text-[10px] text-base-content/50 tabular-nums">{filteredSources.length}</span>
+          <span className="shrink-0 text-[11px] text-base-content/70 tabular-nums">{filteredSources.length}</span>
         </div>
       </div>
       <div className="overflow-y-auto max-h-52">
         {sorted.pinned.length > 0 && (
-          <div className="px-3 pt-2 pb-1 text-[10px] text-base-content/50 uppercase tracking-wider font-semibold">
+          <div className="px-3 pt-2 pb-1 text-[11px] text-base-content/70 uppercase tracking-wider font-semibold">
             Fijados
           </div>
         )}
@@ -730,7 +730,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
                   </svg>
                 </button>
               ) : (
-                <span className="shrink-0 text-[10px] text-base-content/50 px-1 py-0.5 rounded bg-base-200/50">
+                <span className="shrink-0 text-[11px] text-base-content/70 px-1 py-0.5 rounded bg-base-200/50">
                   Slot {pinnedSlotIdx + 1}
                 </span>
               )}
@@ -757,7 +757,7 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
               </button>
               <button
                 onClick={() => { play('interaction.toggle'); onTogglePin(currentSlotIndex, source); onSelect(source); }}
-                className="shrink-0 p-1 rounded hover:bg-base-200 text-base-content/50 hover:text-base-content/80 transition-colors cursor-pointer"
+                className="shrink-0 p-1 rounded hover:bg-base-200 text-base-content/70 hover:text-base-content/80 transition-colors cursor-pointer"
                 title="Fijar a este bloque"
                 aria-label="Fijar"
               >
@@ -769,10 +769,10 @@ const SourceDropdown = forwardRef<HTMLDivElement, DropdownProps>(function Source
           );
         })}
         {filteredSources.length === 0 && (
-          <div className="px-3 py-4 text-xs text-base-content/50 text-center">
+          <div className="px-3 py-4 text-xs text-base-content/70 text-center">
             {searchQuery ? 'Sin resultados' : 'No hay fuentes disponibles'}
             {mainOnly && (
-              <p className="mt-1 text-[10px]">
+              <p className="mt-1 text-[11px]">
                 Prueba desactivando &ldquo;Solo principales por sitio&rdquo;.
               </p>
             )}

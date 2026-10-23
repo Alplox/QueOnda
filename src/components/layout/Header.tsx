@@ -14,6 +14,7 @@ export function Header() {
   const lastScrollY = useRef(0);
   const moreRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
+  const drawerTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -83,25 +84,49 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    if (isDrawerOpen) {
-      document.body.style.overflow = 'hidden';
-      // Move focus into the drawer so keyboard users don't get trapped behind the overlay
-      drawerRef.current?.querySelector<HTMLElement>('a, button')?.focus?.();
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!isDrawerOpen) return;
+
+    document.body.style.overflow = 'hidden';
+    const drawer = drawerRef.current;
+
+    const focusables = () =>
+      Array.from(
+        drawer?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
+    // Move focus into the drawer so keyboard users don't get trapped behind the overlay
+    focusables()[0]?.focus();
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setDrawerOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKey);
     return () => {
+      document.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
+      // Return focus to the control that opened the drawer
+      drawerTriggerRef.current?.focus();
     };
   }, [isDrawerOpen]);
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDrawerOpen(false);
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, []);
 
   const handleNavClick = () => {
     play('navigation.forward');
@@ -120,19 +145,20 @@ export function Header() {
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1 min-w-0">
             <button
+              ref={drawerTriggerRef}
               onClick={() => { play(isDrawerOpen ? 'overlay.close' : 'overlay.open'); setDrawerOpen(!isDrawerOpen); }}
-              className="lg:hidden relative flex items-center justify-center w-9 h-9 text-base-content/70 hover:text-base-content rounded-lg hover:bg-base-200 transition-colors shrink-0"
+              className="lg:hidden relative flex items-center justify-center w-10 h-10 -ml-1 text-base-content/70 hover:text-base-content rounded-lg hover:bg-base-200 transition-colors shrink-0"
               aria-label={isDrawerOpen ? 'Cerrar menú' : 'Abrir menú'}
               aria-expanded={isDrawerOpen}
               aria-controls="nav-drawer"
             >
               <div className="relative w-5 h-5">
-                <svg className="absolute inset-0 transition-all duration-200" style={{ opacity: isDrawerOpen ? 0 : 1, transform: `scale(${isDrawerOpen ? 0.25 : 1})` }} width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <svg className="absolute inset-0 transition-[opacity,transform] duration-200" style={{ opacity: isDrawerOpen ? 0 : 1, transform: `scale(${isDrawerOpen ? 0.25 : 1})` }} width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <line x1="3" y1="5" x2="17" y2="5" />
                   <line x1="3" y1="10" x2="17" y2="10" />
                   <line x1="3" y1="15" x2="17" y2="15" />
                 </svg>
-                <svg className="absolute inset-0 transition-all duration-200" style={{ opacity: isDrawerOpen ? 1 : 0, transform: `scale(${isDrawerOpen ? 1 : 0.25})` }} width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <svg className="absolute inset-0 transition-[opacity,transform] duration-200" style={{ opacity: isDrawerOpen ? 1 : 0, transform: `scale(${isDrawerOpen ? 1 : 0.25})` }} width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <line x1="5" y1="5" x2="15" y2="15" />
                   <line x1="15" y1="5" x2="5" y2="15" />
                 </svg>
@@ -140,12 +166,12 @@ export function Header() {
             </button>
 
             <a href="#" onClick={() => play('interaction.tap')} className="flex items-center gap-1 text-xl font-bold text-base-content no-underline shrink-0 group/title overflow-hidden text-ellipsis whitespace-nowrap">
-              <span className="text-primary inline-block animate-[float_3s_ease-in-out_infinite] group-hover/title:animate-[float_1s_ease-in-out_infinite]">¿</span>
+              <span className="text-accent-safe inline-block animate-[float_3s_ease-in-out_infinite] group-hover/title:animate-[float_1s_ease-in-out_infinite]">¿</span>
               <span>Qué Onda</span>
-              <span className="text-primary inline-block animate-[float_3s_ease-in-out_infinite_0.5s] group-hover/title:animate-[float_1s_ease-in-out_infinite_0.5s]">?</span>
+              <span className="text-accent-safe inline-block animate-[float_3s_ease-in-out_infinite_0.5s] group-hover/title:animate-[float_1s_ease-in-out_infinite_0.5s]">?</span>
             </a>
 
-            <nav className="hidden lg:flex items-center gap-1 ml-2">
+            <nav aria-label="Secciones principales" className="hidden lg:flex items-center gap-1 ml-2">
               {PRIMARY.map((section, i) => (
                 <a
                   key={section.id}
@@ -241,8 +267,11 @@ export function Header() {
         ref={(el) => { drawerRef.current = el as HTMLElement | null; }}
         id="nav-drawer"
         role="dialog"
-        aria-modal="true"
+        aria-modal={isDrawerOpen || undefined}
         aria-label="Menú de secciones"
+        aria-hidden={!isDrawerOpen}
+        inert={!isDrawerOpen}
+        tabIndex={-1}
         className={`fixed top-0 left-0 z-[60] h-full w-72 bg-base-100 border-r border-base-300 shadow-2xl transition-transform duration-300 lg:hidden ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}

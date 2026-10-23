@@ -436,7 +436,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
       {/* Sentinel: maintains layout when player is fixed (pip mode or during FLIP animation) */}
       {(mode === 'pip' || (animating && animStyle.position === 'fixed')) && (
         <div data-tv-sentinel className="w-full rounded-xl bg-base-100 border-2 border-dashed border-base-300/50 flex items-center justify-center gap-1.5 select-none" style={{ height: inlineRectRef.current?.height ?? PIP_HEIGHT }}>
-          <span className="flex items-center gap-1.5 text-base-content/50 text-[10px]">
+          <span className="flex items-center gap-1.5 text-base-content/70 text-[11px]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <rect x="10" y="8" width="10" height="9" rx="1" />
@@ -475,21 +475,21 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                 <div className="flex items-center gap-0.5 shrink-0">
                   {channel.website && (
                     <a href={channel.website} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-0.5 p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all active:scale-[0.9] shrink-0"
+                      className="flex items-center gap-0.5 p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-[background-color,transform] active:scale-[0.9] shrink-0"
                       onClick={(e) => { play('interaction.tap'); e.stopPropagation(); }} title="Sitio web">
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                         <polyline points="15 3 21 3 21 9" />
                         <line x1="10" y1="14" x2="21" y2="3" />
                       </svg>
-                      <span className="hidden sm:inline text-[9px]">Sitio web</span>
+                      <span className="hidden sm:inline text-[11px]">Sitio web</span>
                     </a>
                   )}
                   {onToggleAutoPip && (
                     <>
                       <div className="w-px h-3.5 bg-base-300 shrink-0" />
                       <button onClick={() => { play('interaction.toggle'); onToggleAutoPip?.(); }}
-                        className={`flex items-center gap-0.5 p-1 rounded transition-all active:scale-[0.9] ${
+                        className={`flex items-center gap-0.5 p-1 rounded transition-[background-color,color,transform] active:scale-[0.9] ${
                           autoPipEnabled ? 'text-base-content hover:text-base-content' : 'text-base-content/70 hover:text-base-content hover:bg-base-300'
                         }`}
                         aria-label={autoPipEnabled ? 'Auto-PiP: Activado' : 'Auto-PiP: Desactivado'}
@@ -500,11 +500,11 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                     </>
                   )}
                   <div className="w-px h-3.5 bg-base-300 shrink-0" />
-                  <button onClick={handleFloat} className="flex items-center gap-0.5 p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all active:scale-[0.9]" aria-label="Abrir en ventana flotante" title="Abrir en ventana flotante">
+                  <button onClick={handleFloat} className="flex items-center gap-0.5 p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-[background-color,transform] active:scale-[0.9]" aria-label="Abrir en ventana flotante" title="Abrir en ventana flotante">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="3" /><path d="M2 9h20" /><path d="M9 2v20" /></svg>
                     <span className="hidden sm:inline text-[7px] font-medium leading-none">PiP</span>
                   </button>
-                  <button onClick={() => { play('overlay.close'); onClose(); }} className="p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-all active:scale-[0.9]" aria-label="Cerrar reproductor" title="Cerrar reproductor">
+                  <button onClick={() => { play('overlay.close'); onClose(); }} className="p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-[background-color,transform] active:scale-[0.9]" aria-label="Cerrar reproductor" title="Cerrar reproductor">
                     {CLOSE_ICON}
                   </button>
                 </div>
@@ -587,7 +587,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                   <div className="mt-1.5 flex items-center gap-1.5 justify-center">
                     {signals.map((s, i) => (
                       <button key={i} onClick={() => { play('interaction.tap'); onSignalChange(i); }}
-                        className={`text-[10px] px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                        className={`text-[11px] px-2 py-0.5 rounded transition-colors cursor-pointer ${
                           i === signalIndex ? 'bg-primary text-primary-content' : 'bg-base-300/80 text-base-content/70 hover:bg-base-200'
                         }`}>
                         {SIGNAL_LABEL[s.type] ?? s.type}
@@ -673,7 +673,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                     <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume} onChange={handleVolume}
                       className="w-14 h-0.5 accent-primary cursor-pointer" />
                   </div>
-                  <span className="text-[9px] text-white/70 font-mono tabular-nums ml-0.5">{formatTime(currentTime)}</span>
+                  <span className="text-[11px] text-white/70 font-mono tabular-nums ml-0.5">{formatTime(currentTime)}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={toggleFullscreen} className="p-1 text-white/70 hover:text-base-content transition-colors" aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'} title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}>{FULLSCREEN_ICON}</button>
