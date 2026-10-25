@@ -43,6 +43,8 @@ src/
       sports.ts              # Sports RSS (server-cached 10 min)
       futbol.ts              # Chilean football standings + matches + news fallback chain (server-cached 10 min)
       emergency.ts           # Sismos (server-cached 5 min)
+      power.ts               # SEC clientes sin suministro (server-cached 15 min)
+      cyber.ts               # CSIRT Nacional + CISA KEV (server-cached 15 min; 3 min si algún bloque falló)
       holidays.ts            # Chilean holidays (server-cached 30 min)
       article.ts             # Article proxy via cheerio (server-cached 10 min per URL)
       cron.ts                # Cache pre-warming cron endpoint (sports, youtube, power, trends) — Bearer auth
@@ -60,7 +62,7 @@ src/
       BackToTop.tsx          # Appears after 500px scroll; lifts above dock/sheet/radio miniplayer using the nav sentinel bottom + dock's rendered rect incl. its lift transform (parsed from inline style); reacts to `dock:visibility`
     news/
       ClientNewsFeed.tsx      # Client wrapper — 6-slot orchestrator (client:idle; clustering code-split via dynamic import)
-      NewsFeed.tsx            # Slot grid + clusters + trending (presentational)
+      NewsFeed.tsx            # Slot grid + clusters + trending (presentational). El skeleton de carga pinta exactamente `slotCount` bloques (los del usuario, no un 6 fijo ni los que quepan en pantalla) dentro del mismo contenedor que la grilla real (`slotGridCols`: carrusel snap en móvil, 2/3/4 columnas según slotCount), así no hay salto al llegar los datos
       NewsClusterCard.tsx     # Single news cluster card
       SlotCard.tsx            # Card with source dropdown selector + articles
       ArticleReader.tsx       # Modal lector de artículos vía /api/article
@@ -101,8 +103,10 @@ src/
       PowerOutageMap.tsx       # Leaflet + OpenFreeMap comuna dot map (theme-aware styles, rank-band circles, filtros región/comuna, foco por región vía pin con flyToBounds)
       PowerEvolutionChart.tsx  # Chart.js evolución horaria de clientes sin suministro (24h/48h/72h/7d)
       HolidaysWidget.tsx       # Chilean holidays calendar (client:idle)
-      FiestasCountdown.tsx     # Fiestas Patrias countdown (client:idle). Temporadas en computeSeason(): pre18 (1 ene–17 sep), celebration (18–20 sep), recovery (2 semanas → hasta el 3 oct), halloween (oct), christmas (nov–dic). Mensajes por temporada en SEASON_MESSAGES — Halloween/Navidad se intercalan con los del 18 vía interleave(); la línea de estado sale de SEASON_STATUS
-      EmojiCard.tsx           # Card component for FiestasCountdown (client:idle)
+      FiestasCountdown.tsx     # Fiestas Patrias countdown (client:idle). Temporadas en computeSeason(): pre18 (1 ene–17 sep), celebration (18–20 sep), recovery (2 semanas → hasta el 3 oct), halloween (oct), christmas (nov–dic). Mensajes por temporada en SEASON_MESSAGES — Halloween/Navidad se intercalan con los del 18 vía interleave(); la línea de estado sale de SEASON_STATUS. «Lanzar» revela la carta y, **solo si es legendaria**, dispara `burstConfetti` (dos oleadas) + `notification.success`
+      EmojiCard.tsx           # Card component for FiestasCountdown (client:idle). Legendaria: aro de cromo líquido (conic-gradient animado con @property --emoji-chrome-angle, recortado con mask) en vez del halo amarillo, más un glow neutro que sigue el tema
+      CyberWidget.tsx         # Ciberseguridad (client:idle): dos pestañas — Alertas Chile (CSIRT) y Vulnerabilidades (CISA KEV) — con el conteo dentro del pill activo, buscador accent-insensitive con botón de limpiar, filtros por pestaña «Solo críticas» / «Solo ransomware» en la misma barra de herramientas (cada uno con **estado propio**: activar el de una pestaña no recorta el conteo de la otra), chips de proveedor, lectura de alertas en `ArticleReader` (modal compartido con Noticias; NVD queda como enlace externo), render por lotes en contenedor `max-h-[440px]` e IDB cache 15 min. El «N críticas» del encabezado es un botón que salta a Alertas con «Solo críticas» activo
+      CyberRows.tsx           # Filas presentacionales de CyberWidget (alerta, KEV) + formato relativo. Cada fila es un contenedor con dos acciones hermanas: el `<a target="_blank">` que abre el sitio original (clic normal) y el botón de libro que abre el modal — mismo contrato que `SlotCard`
       RouteMap.tsx             # Transit route map component (Leaflet + OpenFreeMap, client:idle)
       openfreemap-layer.ts     # Shared lazy MapLibre/OpenFreeMap basemap + theme switching for Leaflet maps
       ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
@@ -121,17 +125,19 @@ src/
     transport.ts             # City configs, stop predictions, Metro API, POPULAR_STOPS list
     comunas-coords.ts        # Comuna → [lat, lon] table (monitor-sinluz + supplements) + comunaCoords() matcher
     power.ts                 # Snapshot SEC compartido por /api/power y /api/cron: serie horaria + desglose regional + base de clientes por región (GetClientesRegional, cache 7 días con fallback compilado) → `pct` por región
+    cyber.ts                 # Ciberseguridad: CSIRT Nacional + catálogo CISA KEV (recorte a 30/90 días + ventana de ransomware de 180 días + conteo por vendor), severidad CSIRT, bloques independientes y TTL degradado (compartido por /api/cyber y /api/cron)
     ua.ts                    # BROWSER_UA constant (shared by rss.ts + radios.ts, client-safe)
-    backgrounds.ts            # Hero background images data
+    backgrounds.ts            # Rotación diaria del hero (getTodayBg); las fotos viven en data-sources.json → sections.images
     emoji.ts                  # Emoji-to-SVG-path helper + text splitter
     festivities.ts            # Date-range-based festivity/theming logic
     idb-cache.ts              # IndexedDB client-side caching utility (idbGet/idbSet/cacheGet/cacheSet)
     chile-time.ts             # parseChileLocal() — Chile-local time→epoch (DST-safe), shared by /api/emergency + EmergencyWidget client coord enrichment
+    confetti.ts               # burstConfetti(target, opts) — estallido de confeti en canvas sin dependencias (equivalente mínimo de canvas-confetti) usado al revelar la carta de Fiestas Patrias; un solo canvas fijo compartido que se retira al vaciarse y respeta prefers-reduced-motion
     rate-limit.ts             # In-memory sliding window rate limiter
     regions.ts                # Canonical region slugs N→S + labels + SEC name normalizer (SlotCard, AllSourcesPage, PowerOutageWidget)
     auto-refresh.ts           # Module singleton that auto-refreshes the emergency section every 5 min + on tab re-focus (60s throttle; always on, no toggle)
     retry.ts                  # useErrorRetry(hasError, retry): reintento con backoff compartido por los bloques en error (5 s → 10 s → 20 s → 30 s → 60 s, tope), cuenta atrás y guardia de un solo intento en vuelo; retryNow() reinicia el backoff sin desmontar el bloque
-    sections.ts               # Section ID/label constants for nav
+    sections.ts               # Section ID/label constants for nav (`navLabel` = etiqueta corta para la barra superior). Ciberseguridad va antes de Finanzas y ocupa el 5º lugar de PRIMARY; Spotify pasa a OVERFLOW («Más»)
     sources.ts                # Feed/outlet helpers: foldAccents, mainFeedTier, isBetterMainFeed, outletKey, groupByOutlet, orderByOutlet, resolveOutlet (SlotCard + ClientNewsFeed)
     storage.ts                # localStorage JSON get/set helpers
     url.ts                    # extractHost() URL helper
@@ -177,6 +183,7 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
 | `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain (coords attached from Boostr); senapred: 🚨 SAE alerts via Telegram (rendered separately from the sismos chain — Telegram is the official live SAE feed; the CREF events page requires AWS AppSync Cognito/SigV4, fragile to reimplement). If Boostr is unreachable from the Worker, EmergencyWidget re-enriches `lat/lon` client-side from Boostr (API is CORS-open) so sismo pins always render |
 | `GET /api/power` (+ `?fresh=1` bypass con rate-limit 1/2min por IP) | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria). Cada región trae `{ region, affected, total, pct }`: `total` = clientes de esa región (`GetClientesRegional`, cacheado 7 días + tabla compilada de respaldo) y `pct` = % de su base sin suministro. Payload construido por `src/lib/power.ts`, compartido con `/api/cron`. **Única fuente, sin cadena de fallback**: si la SEC falla sirve el snapshot durable `power:lastgood` (6 h) con `stale: true`; solo si tampoco existe devuelve 502 `SEC no disponible`, y ese error va con `no-store` (nunca se cachea en el edge) |
+| `GET /api/cyber` | 15 min (3 min si un bloque falló) | `{ alerts, kev, blocks, updatedAt }` — CSIRT Nacional (alertas + severidad) y CISA KEV recortado a 30/90 días + ventana de ransomware de 180 días y conteo por vendor. Bloques independientes: si uno falla viaja con `blocks.*.ok=false` y el otro se sirve igual; snapshot durable `cyber:lastgood` (6 h) con `stale:true` si todo falla |
 | `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
 | `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
 | `GET /api/radio-stations`             | 1 hour | `{ stations }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits)                              |
@@ -285,6 +292,16 @@ All routes return JSON. CORS is not needed (same-origin).
 4. Returns clusters sorted by score (article count × source diversity)
 5. Clustering runs automatically in the browser whenever slot articles change
 
+### Ciberseguridad system
+
+- **Dos bloques independientes** (`src/lib/cyber.ts`): alertas CSIRT Nacional y vulnerabilidades CISA KEV. Cada bloque se resuelve en paralelo y expone `blocks.*.ok` + `sources[]` con el estado por fuente: si el CSIRT cae, KEV se sirve igual (nunca se muestra «sin alertas» por un fallo de red)
+- **Severidad CSIRT**: `Vulnerabilidad Crítica` → `critical`, `Campaña Fraudulenta`/phishing/ransomware → `high`, resto → `info`. El vendor sale de la primera categoría no genérica del feed
+- **KEV recortado en el servidor**: el JSON de CISA pesa ~1,8 MB; se recorta a 30 días (90 si hay <10 entradas) y se cachea 6 h. El flag `knownRansomwareCampaignUse` es raro (0–3 al mes), así que el filtro «Solo ransomware» usa una ventana aparte de 180 días (`kev.ransomwareRecent`) en vez de filtrar la lista de 30 días
+- **TTL degradado**: `/api/cyber` cachea 15 min; si algún bloque falló, 3 min para que se recupere solo. Si ambos fallan se sirve el snapshot durable `cyber:lastgood` (6 h) con `stale: true`
+- **Cliente**: `CyberWidget` pinta desde IDB (`cyber`, 15 min) antes del fetch, se refresca con `subscribeAutoRefresh` (5 min + foco de pestaña), reintenta con `useErrorRetry` y pagina de a 20 filas dentro de un contenedor `max-h-[440px]` (con botón «Cargar más» para teclado)
+- **Lectura en modal**: el clic normal en una fila abre el sitio original en otra pestaña (como Noticias); el botón de libro del extremo derecho abre `ArticleReader` (el mismo lector de Noticias) para quien prefiere no salir. Funciona con las alertas CSIRT porque son HTML normal y `/api/article` las extrae. KEV no pasa por el lector: NVD es una ficha, no un artículo
+- **Estilo de fila**: tarjetas neutras (`bg-base-100` + `border-base-300`), sin barra de color lateral; la severidad vive sólo en el chip. No hay banner de alerta crítica: repetía la primera alerta de la lista, así que el conteo «N críticas» del encabezado es un botón que salta a Alertas con «Solo críticas» activo. La barra de herramientas pone primero las pestañas (con su conteo) y debajo buscador + filtro de la pestaña activa
+
 ### Accessibility conventions
 
 Accessibility is treated as part of the component craft, not a compliance pass. These are the project-wide rules:
@@ -331,6 +348,16 @@ Accessibility is treated as part of the component craft, not a compliance pass. 
 - DaisyUI v5 configured via `@plugin "daisyui"` with inline theme list in global.css
 - Custom CSS (scrollbar, keyframes) in global.css uses `var(--color-*)` DaisyUI variables
 
+### Loading skeletons
+
+Cada skeleton reserva el alto real de su bloque para que la sección no salte al llegar los datos. Convención:
+
+- El contenedor de carga lleva `min-h-[<móvil>px] sm:min-h-[<desktop>px]` con el alto **del bloque real** (sin contar el header de `Section`, que aporta 60 px + `mb-5`).
+- Las listas/tarjetas internas usan `flex-1` para llenar la reserva (`flex flex-col` en el contenedor) en vez de dejar un hueco vacío al final.
+- Se mantiene el chrome real: barras de pestañas/buscador y ventanas fijas (`max-h-[460px]`, `[440px]`, `[480px]`) se pintan con el mismo alto, y el bloque expone un `sr-only role="status"` para anunciar la carga.
+- Valores medidos en producción (móvil/desktop): YouTube 300/524, TV 579/1031, Ciber 633/613, Trabajos 812/716 (lista 480 + fila de chips que solo existía con datos), Deportes 843/826 (tabla 16×41 px), Emergencia 1632/1339 (SENAPRED + sismos con fila "Ver mapa" + cortes de luz 1137/864), Aire 624, Feriados 881/853, Tendencias 1001/881, Clima 687/518, Transporte 456/366. Finanzas, Radios, Spotify y Fiestas ya coincidían.
+- Noticias es el caso especial: el skeleton pinta exactamente la grilla de `slotCount` slots (ver `NewsFeed.tsx`). Los clusters y las tendencias solo existen cuando hay artículos, así que no se reservan.
+
 ### Hero (portada)
 
 - Fondo rotativo diario desde `src/lib/backgrounds.ts` (`getTodayBg()`, con `focalPoint` por foto) + scrim suave `from-base-100/25 via-base-100/30 to-base-100/70`
@@ -370,7 +397,7 @@ Every widget/section must include a right-aligned source attribution at the bott
 
 > Fuente canónica: `src/lib/data-sources.json` (renderizada en `/creditos`).
 > Esta sección es solo una referencia — no duplica el contenido del JSON.
-> Para consultar la lista completa de fuentes, cadenas de fallback y licencias, leer directamente `src/lib/data-sources.json` (JSON estructurado por grupos).
+> Para consultar la lista completa de fuentes, cadenas de fallback y licencias, leer directamente `src/lib/data-sources.json` (JSON estructurado por secciones).
 > Regenerar `/creditos` y la tabla del `README.md` con `pnpm run sync-credits` si se edita el JSON.
 
 
@@ -397,7 +424,7 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 - **Static asset caching**: `public/_headers` sets immutable cache for `/_astro/*`, `/emoji/*`, `/cd-disc-*.webp` (1 year) and 86400 for favicons/og-image
 - **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate
   - Critical (rAF): `/api/emergency`
-  - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/channels?source=mi-iptv`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/air-quality`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`
+  - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/channels?source=mi-iptv`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/air-quality`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`, `/api/cyber`
   - Scheduled: `/api/cron` (external cron job for persistent cache warming)
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)
 - **Map rendering**: Leaflet stays lazy; MapLibre GL/OpenFreeMap and its worker load only when a map is first opened, then are shared across map widgets

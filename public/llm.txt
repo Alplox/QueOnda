@@ -104,6 +104,13 @@ Both fetch channel/station lists via server endpoints (CORS-free); IDB 24 h fall
 - `Header` (fixed, hides on down-scroll), `SideIndex` (vertical section index), `Footer` (image credit + sound toggle), `Section` (letter-by-letter animated title + inline icon share button), `SectionShareHandler` (delegated section-anchor share), `BackToTop` (fixed, lifts above footer credits when near bottom), `ShareButton` (navbar: native share on touch / clipboard on desktop), `Emoji.tsx`.
 - Section attribution: right-aligned `Fuente:` / `Fuentes:` with links to primary + fallbacks (e.g. emergency = Gael → Boostr → USGS).
 
+## Links
+
+- [Home](https://queonda.pages.dev/)
+- [All sources](https://queonda.pages.dev/todas-las-fuentes)
+- [Credits](https://queonda.pages.dev/creditos)
+- [Sitemap](https://queonda.pages.dev/sitemap.xml)
+
 ## Conventions
 
 - Named React exports, `.tsx`, Tailwind classes. `client:*` directives respected.

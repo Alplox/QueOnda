@@ -3,6 +3,7 @@ import type { Channel } from '../../types';
 import { ChannelSelector } from './ChannelSelector';
 import { ChannelGrid } from './ChannelGrid';
 import { UnifiedPlayer } from './UnifiedPlayer';
+import { SectionSources } from '../SectionSources';
 import { MultiviewGrid } from './MultiviewGrid';
 import type { MultiviewLayout } from './MultiviewGrid';
 import { maxSlots } from './MultiviewGrid';
@@ -767,7 +768,7 @@ export function ClientTV() {
     }`}>
       <button onClick={handleToggleViewMode} aria-pressed={viewMode === 'multiview'}
         title={viewMode === 'multiview' ? 'Volver a un solo canal' : 'Ver varios canales a la vez'}
-        aria-label={viewMode === 'multiview' ? 'Volver a un solo canal' : 'Ver varios canales a la vez'}
+        aria-label={viewMode === 'multiview' ? 'Cuadrícula: volver a un solo canal' : 'Cuadrícula: ver varios canales a la vez'}
         className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-lg transition-colors cursor-pointer ${
           viewMode === 'multiview'
             ? 'text-primary font-medium'
@@ -886,7 +887,11 @@ export function ClientTV() {
   return (
     <div ref={sectionRef} id="seccion-tv" className="space-y-2">
       {loading ? (
-        <div className="space-y-1.5 animate-pulse">
+        /* Reserva el alto real del bloque (medido: 1031 px en desktop, 579 px en
+           móvil, sin contar la atribución de fuentes que va debajo): barra de
+           playlists + reproductor 16:9 + card de filtros/canales. Antes faltaba
+           el reproductor y la sección crecía ~770 px. */
+        <div className="flex flex-col space-y-1.5 animate-pulse min-h-[579px] sm:min-h-[1031px]" aria-hidden="true">
           {/* Barra fija: playlists arriba, controles del reproductor abajo */}
           <div className="rounded-xl border border-base-300 bg-base-100 px-2 py-1.5 space-y-1.5">
             <div className="flex gap-1.5 flex-wrap">
@@ -904,15 +909,17 @@ export function ClientTV() {
               </div>
             </div>
           </div>
-          {/* Filtros + canales, en la misma card */}
-          <div className="rounded-xl border border-base-300 bg-base-100 p-1.5 space-y-1.5">
+          {/* Reproductor: mismo aspect-video que el placeholder real */}
+          <div className="aspect-video shrink-0 rounded-xl bg-base-200/50 border border-base-300" />
+          {/* Filtros + canales, en la misma card (crece para llenar la reserva) */}
+          <div className="flex flex-1 flex-col rounded-xl border border-base-300 bg-base-100 p-1.5 space-y-1.5">
             <div className="h-8 bg-base-200 rounded-lg w-full" />
             <div className="flex gap-1.5">
               <div className="h-6 w-20 bg-base-200 rounded-md" />
               <div className="h-6 w-20 bg-base-200 rounded-md" />
               <div className="h-6 w-20 bg-base-200 rounded-md" />
             </div>
-            <div className="border-t border-base-300/70 pt-1">
+            <div className="flex-1 border-t border-base-300/70 pt-1">
               <div className="flex gap-2 overflow-hidden pt-1">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-200 shrink-0 w-[84px] sm:w-24">
@@ -1019,18 +1026,13 @@ export function ClientTV() {
         </>
       )}
 
-      <div className="mt-2 text-right text-[11px] text-base-content/70">
-        Fuente:{' '}
-        {source === 'json-teles' ? (
-          <a href="https://github.com/Alplox/json-teles" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
-        ) : source === 'iptv-org' ? (
-          <a href="https://github.com/iptv-org/iptv" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">iptv-org</a>
-        ) : source === 'mi-iptv' ? (
-          <a href="https://github.com/fparrav/mi-iptv" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">mi-iptv</a>
-        ) : (
+      {source === 'json-teles' || source === 'iptv-org' || source === 'mi-iptv' ? (
+        <SectionSources section="tv" only={[source === 'json-teles' ? 'json-teles' : source === 'iptv-org' ? 'iptv-org' : 'mi-iptv']} />
+      ) : (
+        <div className="mt-2 text-right text-[11px] text-base-content/70">
           <span className="text-base-content/70">Lista personalizada</span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

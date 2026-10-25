@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import type { Job, JobSource } from '../../lib/jobs/types';
 import { JOB_SOURCES } from '../../lib/jobs/types';
 import { Emoji } from '../Emoji';
+import { SectionSources } from '../SectionSources';
 
 export function ClientJobList() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -166,44 +167,55 @@ export function ClientJobList() {
         </div>
       </div>
 
-      {/* Category chips */}
-      {categories.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-3 pt-2">
-          <button
-            onClick={() => setActiveCategory('')}
-            className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
-              activeCategory === ''
-                ? 'bg-primary text-primary-content border-primary'
-                : 'bg-base-100 text-base-content/70 border-base-content/20 hover:text-base-content/70'
-            }`}
-          >
-            Todas
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(activeCategory === cat ? '' : cat)}
-              className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
-                activeCategory === cat
-                  ? 'bg-primary text-primary-content border-primary'
-                  : 'bg-base-100 text-base-content/70 border-base-content/20 hover:text-base-content/70'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+      {/* Category chips — mientras carga, las píldoras reservan la fila (se
+          envuelven igual que las reales: 1 línea en desktop, ~3 en móvil) */}
+      {(loading || categories.length > 0) && (
+        <div className="flex flex-wrap gap-1.5 px-3 pt-2" aria-hidden={loading || undefined}>
+          {loading ? (
+            Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="h-[21px] w-[92px] animate-pulse rounded-full bg-base-300/70" />
+            ))
+          ) : (
+            <>
+              <button
+                onClick={() => setActiveCategory('')}
+                className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                  activeCategory === ''
+                    ? 'bg-primary text-primary-content border-primary'
+                    : 'bg-base-100 text-base-content/70 border-base-content/20 hover:text-base-content/70'
+                }`}
+              >
+                Todas
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(activeCategory === cat ? '' : cat)}
+                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                    activeCategory === cat
+                      ? 'bg-primary text-primary-content border-primary'
+                      : 'bg-base-100 text-base-content/70 border-base-content/20 hover:text-base-content/70'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
 
       {/* Content */}
       <div className="p-3">
         {loading ? (
-          <div className="space-y-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="animate-pulse rounded-xl bg-base-300/50 p-3 space-y-2">
+          /* La lista real vive en una ventana `max-h-[480px]`: el skeleton ocupa
+             ese mismo alto para que el bloque no crezca al llegar las ofertas. */
+          <div className="flex min-h-[480px] flex-col gap-2" aria-hidden="true">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex-1 animate-pulse rounded-xl bg-base-300/50 p-3">
                 <div className="h-4 bg-base-300 rounded w-3/5" />
-                <div className="h-3 bg-base-300 rounded w-2/5" />
-                <div className="h-3 bg-base-300 rounded w-1/3" />
+                <div className="h-3 bg-base-300 rounded w-2/5 mt-2" />
+                <div className="h-3 bg-base-300 rounded w-1/3 mt-2" />
               </div>
             ))}
           </div>
@@ -279,31 +291,18 @@ export function ClientJobList() {
       </div>
 
       {/* Attribution */}
-      <div className="px-3 pb-3 text-right text-[11px] text-base-content/70">
-        Fuentes:{' '}
-        {JOB_SOURCES.map((sm, i) => (
-          <span key={sm.key}>
-            {i > 0 && ' · '}
-            <a
-              href={sm.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-base-content underline underline-offset-2 transition-colors"
-            >
-              {sm.label}
-            </a>
-          </span>
-        ))}
-      </div>
       <div className="px-3 pb-3 text-right text-[11px] text-base-content/70 border-t border-base-300 pt-2">
-        <a
-          href="https://mis-recursos-webdev.pages.dev/#chile-búsqueda-trabajo"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-base-content underline underline-offset-2 transition-colors"
-        >
-          <Emoji emoji="📋" /> Ir a lista con portales de empleo en Chile
-        </a>
+        <SectionSources section="jobs" inline />
+        <div className="mt-1">
+          <a
+            href="https://mis-recursos-webdev.pages.dev/#chile-búsqueda-trabajo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-base-content underline underline-offset-2 transition-colors"
+          >
+            <Emoji emoji="📋" /> Ir a lista con portales de empleo en Chile
+          </a>
+        </div>
       </div>
     </div>
   );

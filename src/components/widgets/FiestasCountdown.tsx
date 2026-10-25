@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, type CSSProperties } from 'react';
 import { play } from '@/lib/sound';
+import { burstConfetti } from '@/lib/confetti';
 import { EmojiCard, type CardData } from './EmojiCard';
 import { Emoji } from '../Emoji';
 import { splitEmojiText } from '../../lib/emoji';
@@ -589,6 +590,7 @@ export function FiestasCountdown() {
   const [spinning, setSpinning] = useState(false);
   const [flipping, setFlipping] = useState(false);
   const [revealing, setRevealing] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCardIndex(Math.floor(Math.random() * EMOJI_COLLECTION.length));
@@ -618,14 +620,24 @@ export function FiestasCountdown() {
     play('interaction.tap');
     setFlipping(true);
     setSpinning(true);
+
+    let next = cardIndex;
+    while (next === cardIndex) next = Math.floor(Math.random() * EMOJI_COLLECTION.length);
+    const nextCard = EMOJI_COLLECTION[next];
+
     setTimeout(() => {
-      setCardIndex(prev => {
-        let next = prev;
-        while (next === prev) next = Math.floor(Math.random() * EMOJI_COLLECTION.length);
-        return next;
-      });
+      setCardIndex(next);
       setFlipping(false);
       setRevealing(true);
+
+      // El confeti es solo para las legendarias: es el premio, no feedback de cada tirada.
+      if (nextCard.rarity === 'legendary') {
+        play('notification.success');
+        burstConfetti(cardRef.current, { count: 140, spread: 120, velocity: 17 });
+        // Segunda oleada: la legendaria escupe chispas un instante después.
+        setTimeout(() => burstConfetti(cardRef.current, { count: 60, spread: 80, velocity: 12 }), 220);
+      }
+
       setTimeout(() => setRevealing(false), 450);
       setTimeout(() => setSpinning(false), 250);
     }, 200);
@@ -748,7 +760,9 @@ export function FiestasCountdown() {
         <div className="h-px bg-gradient-to-r from-transparent via-base-content/20 to-transparent my-5" />
 
         <div className="flex flex-col items-center gap-3">
-          <EmojiCard card={currentCard} flipping={flipping} revealing={revealing} />
+          <div ref={cardRef} className="w-full">
+            <EmojiCard card={currentCard} flipping={flipping} revealing={revealing} />
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-base-content/70 tabular-nums">
               {cardIndex + 1}/{EMOJI_COLLECTION.length}

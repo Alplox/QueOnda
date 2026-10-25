@@ -3,6 +3,7 @@ import { play } from '@/lib/sound';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 import { VideoModal } from './VideoModal';
+import { SectionSources } from '../SectionSources';
 
 interface Video {
   title: string;
@@ -32,31 +33,49 @@ const IDB_TTL = 30 * 60 * 1000; // 30 min
 // crecer sin límite con "Mostrar más".
 const VIEW_BATCH = 15;
 
+/**
+ * Skeleton del bloque YouTube. Reserva el alto real del bloque (medido: 544 px
+ * en ≥sm, 320 px en móvil) y lo llena con las mismas piezas: barra de conteo +
+ * "10 por canal" + Canales, carrusel de una fila en móvil y la ventana fija de
+ * 460 px en ≥sm. Antes pintaba una sola fila y el bloque crecía 322 px al llegar
+ * los datos.
+ */
 function YouTubeSkeleton() {
-  const [count, setCount] = useState(10);
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth < 640) setCount(2);
-      else if (window.innerWidth < 768) setCount(3);
-      else if (window.innerWidth < 1024) setCount(4);
-      else setCount(5);
-    };
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="rounded-xl overflow-hidden bg-base-200 border border-base-300 animate-pulse">
-          <div className="aspect-video bg-base-300" />
-          <div className="p-2 space-y-2">
-            <div className="h-3 bg-base-300 rounded w-full" />
-            <div className="h-3 bg-base-300 rounded w-3/4" />
-            <div className="h-2.5 bg-base-300 rounded w-1/2" />
+    <div className="flex min-h-[300px] flex-col sm:min-h-[524px]">
+      <p className="sr-only" role="status">Cargando videos de YouTube…</p>
+      <div aria-hidden="true" className="flex flex-1 flex-col gap-3 animate-pulse">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-40 rounded bg-base-300" />
+          <div className="ml-auto h-7 w-24 rounded-lg bg-base-300" />
+          <div className="h-7 w-20 rounded-lg bg-base-300" />
+        </div>
+        <div className="flex gap-3 overflow-hidden sm:hidden">
+          {[0, 1].map((i) => (
+            <div key={i} className="w-52 shrink-0 rounded-xl overflow-hidden bg-base-200 border border-base-300">
+              <div className="aspect-video bg-base-300" />
+              <div className="p-2 space-y-2">
+                <div className="h-3 bg-base-300 rounded w-full" />
+                <div className="h-3 bg-base-300 rounded w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden flex-1 overflow-hidden sm:block sm:max-h-[460px]">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {Array.from({ length: VIEW_BATCH }).map((_, i) => (
+              <div key={i} className="rounded-xl overflow-hidden bg-base-200 border border-base-300">
+                <div className="aspect-video bg-base-300" />
+                <div className="p-2 space-y-2">
+                  <div className="h-3 bg-base-300 rounded w-full" />
+                  <div className="h-3 bg-base-300 rounded w-3/4" />
+                  <div className="h-2.5 bg-base-300 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
@@ -549,10 +568,7 @@ export function YouTubeTrends() {
         </>
       )}
 
-      <div className="mt-1 -mb-1 text-right text-[11px] text-base-content/70">
-        Fuentes:{' '}
-        <a href="https://github.com/Alplox/json-teles/blob/main/countries/cl.json" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
-      </div>
+      <SectionSources section="youtube-trends" />
 
       {playing && (
         <VideoModal

@@ -1,140 +1,698 @@
 {
-  "groups": [
-    {
+  "sections": {
+    "weather": {
       "title": "Clima (/api/weather)",
-      "strategy": "Fallback secuencial",
-      "items": [
+      "strategy": "Fallback secuencial: Open-Meteo → Gael Cloud → Boostr",
+      "role": "primary",
+      "sources": [
         {
           "name": "Open-Meteo",
-          "url": "https://open-meteo.com",
+          "url": "https://open-meteo.com/",
           "role": "primary",
+          "license": "CC BY 4.0",
           "note": "api.open-meteo.com/v1/forecast, todas las ciudades en una llamada, timeout 8s"
         },
         {
           "name": "Gael Cloud",
-          "url": "https://api.gael.cloud",
+          "url": "https://api.gael.cloud/#todos-los-climas",
           "role": "fallback",
+          "license": "API pública — sin licencia explícita",
           "note": "api.gael.cloud/general/public/clima/{ICAO}, timeout 8s"
         },
         {
           "name": "Boostr",
-          "url": "https://docs.boostr.cl",
+          "url": "https://docs.boostr.cl/reference/weather-code",
           "role": "fallback",
+          "license": "API pública — sin licencia explícita",
           "note": "api.boostr.cl/weather/{ICAO}.json, timeout 5s"
         },
         {
-          "name": "Caché stale",
-          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/cache.ts",
-          "role": "final",
-          "note": "datos previos vía KV; si todo falla, { weather: null }"
+          "name": "Open-Meteo Geocoding",
+          "url": "https://open-meteo.com/en/docs/geocoding-api",
+          "role": "single",
+          "license": "CC BY 4.0 (datos GeoNames)",
+          "note": "búsqueda y geolocalización inversa en el widget de clima"
+        },
+        {
+          "name": "DMC",
+          "url": "https://www.meteochile.gob.cl/",
+          "role": "single",
+          "license": "Datos públicos del Estado — sin licencia explícita",
+          "note": "pronostico.js (5 días, ~60 ciudades) vía /api/forecast"
+        },
+        {
+          "name": "Windy",
+          "url": "https://www.windy.com/",
+          "role": "single",
+          "license": "Embed gratuito con atribución",
+          "note": "mapa de radar y precipitación embebido"
         }
       ]
     },
-    {
+    "emergency": {
       "title": "Sismos / Emergencias (/api/emergency)",
       "strategy": "Fallback secuencial (magnitud mínima 5.0; pasa al siguiente si items.length === 0)",
-      "items": [
+      "role": "primary",
+      "sources": [
         {
           "name": "Gael Cloud",
           "url": "https://api.gael.cloud",
           "role": "primary",
-          "note": "api.gael.cloud/general/public/sismos, timeout 10s"
+          "license": "API pública — sin licencia explícita",
+          "note": "api.gael.cloud/general/public/sismos, timeout 10s; los datos provienen del CSN"
         },
         {
           "name": "Boostr",
           "url": "https://docs.boostr.cl",
           "role": "fallback",
-          "note": "api.boostr.cl/earthquakes/recent.json, timeout 10s"
+          "license": "API pública — sin licencia explícita",
+          "note": "api.boostr.cl/earthquakes/recent.json, timeout 10s; añade coordenadas"
         },
         {
           "name": "USGS",
           "url": "https://earthquake.usgs.gov",
           "role": "fallback",
+          "license": "Dominio público (USGS)",
           "note": "earthquake.usgs.gov/.../2.5_day.geojson, filtrado a Chile/Sudamérica, timeout 10s"
+        },
+        {
+          "name": "CSN (U. de Chile)",
+          "url": "https://www.csn.uchile.cl/",
+          "role": "single",
+          "license": "Datos públicos — sin licencia explícita",
+          "note": "origen de los datos sísmicos; enlace de cada sismo (no se consulta directamente)"
         }
       ]
     },
-    {
+    "senapred": {
       "title": "Alertas SENAPRED (canal independiente)",
       "strategy": "Única fuente",
-      "items": [
+      "role": "single",
+      "sources": [
         {
           "name": "Telegram SenapredChile",
           "url": "https://t.me/s/SenapredChile",
           "role": "single",
+          "license": "Canal oficial público — sin licencia explícita",
           "note": "scraping de t.me/s/SenapredChile (BROWSER_UA); parsea .js-widget_message (data-post, <time datetime>, .js-message_text); severidad por keyword (desborde/aluvión/evacuar→critical, crecida/incendio/SAE/alerta→high, preventivo/monitoreo→moderate, else low)"
         }
       ]
     },
-    {
+    "finance": {
       "title": "Finanzas (/api/finance)",
       "strategy": "Merge: itera todas las fuentes y llena indicadores faltantes; se detiene si ya tiene los 5",
-      "items": [
+      "role": "primary",
+      "sources": [
         {
           "name": "mindicador.cl",
           "url": "https://mindicador.cl",
           "role": "primary",
+          "license": "Uso libre — sin licencia explícita",
           "note": "mindicador.cl/api, UF, USD, EUR, IPC, UTM, timeout 8s"
         },
         {
           "name": "Boostr",
           "url": "https://docs.boostr.cl",
           "role": "fallback",
+          "license": "API pública — sin licencia explícita",
           "note": "api.boostr.cl/economy/indicators.json, timeout 8s"
         },
         {
-          "name": "Findic",
+          "name": "findic.cl",
           "url": "https://findic.cl",
           "role": "fallback",
+          "license": "Uso libre — sin licencia explícita",
           "note": "findic.cl/api/, timeout 8s"
         },
         {
-          "name": "SII RSS",
+          "name": "SII",
           "url": "https://zeus.sii.cl",
           "role": "fallback",
+          "license": "Datos públicos del Estado — sin licencia explícita",
           "note": "zeus.sii.cl/admin/rss/sii_ind_rss.xml, timeout 8s"
         },
         {
-          "name": "DolarAPI",
+          "name": "DolarApi",
           "url": "https://cl.dolarapi.com",
           "role": "fallback",
+          "license": "MIT",
           "note": "cl.dolarapi.com/v1/cotizaciones, timeout 8s"
-        },
-        {
-          "name": "Caché stale",
-          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/cache.ts",
-          "role": "final",
-          "note": "→ 502 si todo falla"
         }
       ]
     },
-    {
+    "air-quality": {
+      "title": "Calidad del aire (/api/air-quality)",
+      "strategy": "Fallback secuencial (Boostr y Gael Cloud no exponen calidad del aire)",
+      "role": "primary",
+      "sources": [
+        {
+          "name": "SINCA · MMA",
+          "url": "https://sinca.mma.gob.cl",
+          "role": "primary",
+          "license": "Datos públicos del Estado — sin licencia explícita",
+          "note": "sinca.mma.gob.cl/index.php/json/listadomapa2k19/, ~118 estaciones, timeout 12s"
+        },
+        {
+          "name": "Open-Meteo (CAMS)",
+          "url": "https://open-meteo.com/en/docs/air-quality-api",
+          "role": "fallback",
+          "license": "CC BY 4.0",
+          "note": "air-quality-api.open-meteo.com, modelo CAMS, 18 ciudades, timeout 10s"
+        }
+      ]
+    },
+    "radio": {
       "title": "Radios (/api/radio-stations)",
-      "strategy": "Fallback secuencial",
-      "items": [
+      "strategy": "Fallback secuencial; si ambos fallan usa la lista local del código",
+      "role": "primary",
+      "sources": [
         {
           "name": "radio-browser.info",
           "url": "https://api.radio-browser.info",
           "role": "primary",
+          "license": "API pública — datos comunitarios (código AGPL-3.0)",
           "note": "de1.api.radio-browser.info, timeout 15s"
         },
         {
           "name": "json-teles",
           "url": "https://github.com/Alplox/json-teles",
           "role": "fallback",
+          "license": "Unlicense (dominio público)",
           "note": "raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json, filtro category=music"
+        }
+      ]
+    },
+    "football": {
+      "title": "Fútbol (/api/futbol)",
+      "strategy": "Paths paralelos: ESPN para tabla y partidos, RSS para noticias",
+      "role": "merge",
+      "sources": [
+        {
+          "name": "ESPN (API pública)",
+          "url": "https://site.web.api.espn.com",
+          "role": "single",
+          "license": "Términos de ESPN — sin licencia explícita",
+          "note": "standings + scoreboard chi.1, timeout 8s; sin fallback → tabla/partidos vacíos"
         },
         {
-          "name": "FALLBACK_RADIOS",
-          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/radios.ts",
-          "role": "final",
-          "note": "hardcoded: Cooperativa, Duna, ADN"
+          "name": "Sports RSS (awesome-chilean-rss)",
+          "url": "https://github.com/Alplox/awesome-chilean-rss",
+          "role": "single",
+          "license": "CC0 1.0",
+          "note": "noticias vía /api/futbol; siempre se cargan, independiente de ESPN"
+        }
+      ]
+    },
+    "transport": {
+      "title": "Transporte (/api/transport)",
+      "strategy": "Fuentes individuales",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Metro.cl",
+          "url": "https://www.metro.cl/el-viaje/estado-red",
+          "role": "single",
+          "license": "Datos públicos del operador — sin licencia explícita",
+          "note": "scraping de estado-red, timeout 8s, sin fallback"
         },
         {
-          "name": "CD disc images",
+          "name": "Red.cl",
+          "url": "https://www.red.cl/predictorPlus/prediccion",
+          "role": "single",
+          "license": "Datos públicos del operador — sin licencia explícita",
+          "note": "predictorPlus, timeout 5s"
+        },
+        {
+          "name": "DTPM GTFS",
+          "url": "https://www.dtpm.cl/",
+          "role": "single",
+          "license": "Datos abiertos DTPM — sin licencia explícita",
+          "note": "base de paraderos y recorridos RED (build-time vía update-stops-db.mjs)"
+        }
+      ]
+    },
+    "news": {
+      "title": "Feeds RSS (/api/news)",
+      "strategy": "Local-first: base incluida en el build → GitHub raw → jsDelivr",
+      "role": "primary",
+      "sources": [
+        {
+          "name": "awesome-chilean-rss",
+          "url": "https://github.com/Alplox/awesome-chilean-rss",
+          "role": "primary",
+          "license": "CC0 1.0",
+          "note": "catálogo de medios chilenos; la base se incluye en el build como feeds-database.json, instantánea y siempre disponible"
+        },
+        {
+          "name": "GitHub raw",
+          "url": "https://raw.githubusercontent.com/alplox/awesome-chilean-rss/main/feeds-database.json",
+          "role": "fallback",
+          "license": "CC0 1.0",
+          "note": "actualización fire-and-forget, timeout 15s"
+        },
+        {
+          "name": "jsDelivr",
+          "url": "https://cdn.jsdelivr.net/gh/Alplox/awesome-chilean-rss@main/feeds-database.json",
+          "role": "fallback",
+          "license": "CC0 1.0",
+          "note": "actualización fire-and-forget, timeout 15s"
+        }
+      ]
+    },
+    "power": {
+      "title": "Cortes de luz (/api/power)",
+      "strategy": "Única fuente + snapshot durable",
+      "role": "single",
+      "sources": [
+        {
+          "name": "SEC",
+          "url": "https://apps.sec.cl/INTONLINEv1/index.aspx",
+          "role": "single",
+          "license": "Datos públicos del Estado — sin licencia explícita",
+          "note": "POST ClientesAfectados/{Get,GetClientesNacional,GetPorFecha,GetClientesRegional}; sin alternativa pública. Si cae, sirve el snapshot power:lastgood (6 h) con stale:true"
+        }
+      ]
+    },
+    "tv": {
+      "title": "TV en vivo (/api/channels)",
+      "strategy": "json-teles → iptv-org → mi-iptv",
+      "role": "fallback",
+      "sources": [
+        {
+          "name": "json-teles",
+          "url": "https://github.com/Alplox/json-teles",
+          "role": "primary",
+          "license": "Unlicense (dominio público)",
+          "note": "canales de TV chilenos"
+        },
+        {
+          "name": "iptv-org",
+          "url": "https://github.com/iptv-org/iptv",
+          "role": "fallback",
+          "license": "Unlicense (dominio público)",
+          "note": "canales CL (m3u)"
+        },
+        {
+          "name": "mi-iptv",
+          "url": "https://github.com/fparrav/mi-iptv",
+          "role": "fallback",
+          "license": "Sin licencia explícita",
+          "note": "playlist m3u (fallback jsDelivr)"
+        },
+        {
+          "name": "YouTube (señales en vivo)",
+          "url": "https://www.youtube.com",
+          "role": "single",
+          "license": "Términos de YouTube",
+          "note": "embeds YT Live/VOD de los canales que los exponen"
+        },
+        {
+          "name": "Twitch (señales en vivo)",
+          "url": "https://www.twitch.tv",
+          "role": "single",
+          "license": "Términos de Twitch",
+          "note": "embeds de los canales que transmiten por Twitch"
+        }
+      ]
+    },
+    "youtube-trends": {
+      "title": "YouTube Trends (/api/youtube)",
+      "strategy": "Única fuente",
+      "role": "single",
+      "sources": [
+        {
+          "name": "json-teles",
+          "url": "https://github.com/Alplox/json-teles/blob/main/countries/cl.json",
+          "role": "single",
+          "license": "Unlicense (dominio público)",
+          "note": "lista de canales chilenos (channel_id)"
+        },
+        {
+          "name": "YouTube RSS",
+          "url": "https://www.youtube.com",
+          "role": "single",
+          "license": "Términos de YouTube",
+          "note": "feeds/videos.xml por channel_id"
+        }
+      ]
+    },
+    "google-trends": {
+      "title": "Google Trends (/api/trends)",
+      "strategy": "Única fuente",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Google Trends RSS",
+          "url": "https://trends.google.com/trending?geo=CL",
+          "role": "single",
+          "license": "Contenido de Google — sin licencia explícita",
+          "note": "trending/rss?geo=CL + trendingsearches/daily (fallback)"
+        }
+      ]
+    },
+    "spotify": {
+      "title": "Spotify Chile (/api/spotify)",
+      "strategy": "Única fuente",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Spotify \"Top 50 Chile\" playlist",
+          "url": "https://open.spotify.com/playlist/37i9dQZEVXbL0GavIqMTeb",
+          "role": "single",
+          "license": "Spotify — embed oficial",
+          "note": "reproductor embebido; /api/spotify solo resuelve el oEmbed"
+        }
+      ]
+    },
+    "cyber": {
+      "title": "Ciberseguridad (/api/cyber)",
+      "strategy": "Bloques independientes en paralelo; TTL 15 min (3 min si algún bloque falló)",
+      "role": "merge",
+      "note": "CSIRT Nacional y CISA KEV",
+      "sources": [
+        {
+          "name": "CSIRT Nacional",
+          "url": "https://www.csirt.gob.cl/alertas/",
+          "role": "merge",
+          "license": "Sitio oficial público — sin licencia explícita",
+          "note": "RSS de alertas + severidad"
+        },
+        {
+          "name": "CISA KEV",
+          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+          "role": "merge",
+          "license": "Dominio público (obra del Gobierno de EE. UU.)",
+          "note": "catálogo JSON recortado a 30/90 días"
+        }
+      ]
+    },
+    "holidays": {
+      "title": "Feriados (/api/holidays)",
+      "strategy": "Boostr → Nager.Date",
+      "role": "primary",
+      "sources": [
+        {
+          "name": "Boostr",
+          "url": "https://docs.boostr.cl/reference/holidays",
+          "role": "primary",
+          "license": "API pública — sin licencia explícita",
+          "note": "api.boostr.cl/holidays.json"
+        },
+        {
+          "name": "Nager.Date",
+          "url": "https://date.nager.at",
+          "role": "fallback",
+          "license": "MIT",
+          "note": "api/v3/publicholidays/{year}/CL; el widget también consulta directo"
+        }
+      ]
+    },
+    "jobs": {
+      "title": "Empleos (/api/jobs)",
+      "strategy": "Agregación en paralelo",
+      "role": "merge",
+      "sources": [
+        {
+          "name": "GetOnBrd",
+          "url": "https://www.getonbrd.com",
+          "role": "single",
+          "license": "Contenido del sitio — sin licencia explícita",
+          "note": "API pública v0"
+        },
+        {
+          "name": "WorkAnywhere",
+          "url": "https://workanywhere.pro",
+          "role": "single",
+          "license": "Contenido del sitio — sin licencia explícita",
+          "note": "RSS"
+        },
+        {
+          "name": "Remotive",
+          "url": "https://remotive.com",
+          "role": "single",
+          "license": "Contenido del sitio — API pública",
+          "note": "remote-jobs API"
+        }
+      ]
+    },
+    "maps": {
+      "title": "Mapas y basemaps",
+      "strategy": "Tiles vectoriales sin API key; atribución obligatoria en el mapa",
+      "role": "single",
+      "sources": [
+        {
+          "name": "OpenFreeMap",
+          "url": "https://openfreemap.org",
+          "role": "primary",
+          "license": "MIT (código) · datos ODbL",
+          "note": "tiles.openfreemap.org/styles/{positron,dark}, sin API key"
+        },
+        {
+          "name": "OpenMapTiles",
+          "url": "https://www.openmaptiles.org/",
+          "role": "single",
+          "license": "BSD-3-Clause (código) · datos ODbL",
+          "note": "esquema de teselas del basemap"
+        },
+        {
+          "name": "OpenStreetMap",
+          "url": "https://www.openstreetmap.org/copyright",
+          "role": "single",
+          "license": "ODbL 1.0",
+          "note": "datos base; también teselas raster en el mapa de cortes de luz"
+        }
+      ]
+    },
+    "images": {
+      "title": "Imágenes y assets",
+      "strategy": "Recursos estáticos versionados",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Foto de portada del footer",
+          "url": "https://unsplash.com/es/fotos/manada-de-caballos-en-arbustos-y-pastos-a-traves-de-la-montana-Zf2mL1gtaVg",
+          "role": "single",
+          "license": "Unsplash License",
+          "note": "modernwolo en Unsplash"
+        },
+        {
+          "name": "Imágenes de portada (hero)",
+          "url": "https://www.pexels.com/",
+          "role": "single",
+          "license": "Pexels License",
+          "note": "rotación diaria por día del año (getTodayBg)",
+          "backgrounds": [
+                     {
+              "localPath": "/backgrounds/30342880.webp",
+              "sourceUrl": "https://images.pexels.com/photos/30342880/pexels-photo-30342880.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/impresionante-paisaje-urbano-de-santiago-con-la-cordillera-de-los-andes-30342880/",
+              "author": "Thiago Matos",
+              "focalPoint": "center 60%"
+            },
+            {
+              "localPath": "/backgrounds/17461141.webp",
+              "sourceUrl": "https://images.pexels.com/photos/17461141/pexels-photo-17461141.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/ciudad-paisaje-montanas-panorama-urbano-17461141/",
+              "author": "Luis G",
+              "focalPoint": "center 60%"
+            },
+            {
+              "localPath": "/backgrounds/33606801.webp",
+              "sourceUrl": "https://images.pexels.com/photos/33606801/pexels-photo-33606801.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/vista-panoramica-de-santiago-frente-a-la-cordillera-de-los-andes-33606801/",
+              "author": "Santi Echaire",
+              "focalPoint": "center 70%"
+            },
+            {
+              "localPath": "/backgrounds/33610547.webp",
+              "sourceUrl": "https://images.pexels.com/photos/33610547/pexels-photo-33610547.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/paisaje-urbano-con-la-cordillera-de-los-andes-nevada-al-fondo-33610547/",
+              "author": "Santi Echaire",
+              "focalPoint": "center 90%"
+            },
+            {
+              "localPath": "/backgrounds/37228063.webp",
+              "sourceUrl": "https://images.pexels.com/photos/37228063/pexels-photo-37228063.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/majestuoso-volcan-nevado-con-vistas-a-un-pintoresco-lago-37228063/",
+              "author": "Santi Echaire",
+              "focalPoint": "center 67%"
+            },
+            {
+              "localPath": "/backgrounds/36585246.webp",
+              "sourceUrl": "https://images.pexels.com/photos/36585246/pexels-photo-36585246.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/bandera-chilena-sobre-cielo-azul-simbolo-de-orgullo-nacional-36585246/",
+              "author": "Cláudio Castro",
+              "focalPoint": "center 40%"
+            },
+            {
+              "localPath": "/backgrounds/19821196.webp",
+              "sourceUrl": "https://images.pexels.com/photos/19821196/pexels-photo-19821196.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/ciudad-punto-de-referencia-edificio-rascacielos-19821196/",
+              "author": "Willian Justen de Vasconcellos",
+              "focalPoint": "center 25%"
+            },
+            {
+              "localPath": "/backgrounds/27873926.webp",
+              "sourceUrl": "https://images.pexels.com/photos/27873926/pexels-photo-27873926.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/naturaleza-cielo-punto-de-referencia-arquitectura-27873926/",
+              "author": "Michel Jose",
+              "focalPoint": "center 10%"
+            },
+            {
+              "localPath": "/backgrounds/27873929.webp",
+              "sourceUrl": "https://images.pexels.com/photos/27873929/pexels-photo-27873929.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/27873929/",
+              "author": "Michel Jose",
+              "focalPoint": "center 60%"
+            },
+            {
+              "localPath": "/backgrounds/4665517.webp",
+              "sourceUrl": "https://images.pexels.com/photos/4665517/pexels-photo-4665517.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/mar-agua-oceano-barca-4665517/",
+              "author": "Eduardo Rivas",
+              "focalPoint": "center 55%"
+            },
+            {
+              "localPath": "/backgrounds/27115881.webp",
+              "sourceUrl": "https://images.pexels.com/photos/27115881/pexels-photo-27115881.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/ciudad-panorama-urbano-skyline-viaje-27115881/",
+              "author": "Matheus Pedrosa",
+              "focalPoint": "center 50%"
+            },
+            {
+              "localPath": "/backgrounds/36585242.webp",
+              "sourceUrl": "https://images.pexels.com/photos/36585242/pexels-photo-36585242.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/torre-del-reloj-y-rascacielos-modernos-en-santiago-36585242/",
+              "author": "Cláudio Castro",
+              "focalPoint": "center 50%"
+            },
+            {
+              "localPath": "/backgrounds/25525995.webp",
+              "sourceUrl": "https://images.pexels.com/photos/25525995/pexels-photo-25525995.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/nieve-nevar-paisaje-naturaleza-25525995/",
+              "author": "Athenea Codjambassis Rossitto",
+              "focalPoint": "center 60%"
+            },
+            {
+              "localPath": "/backgrounds/13198296.webp",
+              "sourceUrl": "https://images.pexels.com/photos/13198296/pexels-photo-13198296.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/naturaleza-animal-prado-en-pie-13198296/",
+              "author": "Fermin Rodriguez Penelas",
+              "focalPoint": "center 55%"
+            },
+            {
+              "localPath": "/backgrounds/28602851.webp",
+              "sourceUrl": "https://images.pexels.com/photos/28602851/pexels-photo-28602851.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/vista-panoramica-del-volcan-licancabur-en-el-desierto-de-atacama-28602851/",
+              "author": "Vivi Pascar",
+              "focalPoint": "center 65%"
+            },
+            {
+              "localPath": "/backgrounds/20853000.webp",
+              "sourceUrl": "https://images.pexels.com/photos/20853000/pexels-photo-20853000.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/paisaje-arena-nubes-desierto-20853000/",
+              "author": "Saif",
+              "focalPoint": "center 60%"
+            },
+            {
+              "localPath": "/backgrounds/21533327.webp",
+              "sourceUrl": "https://images.pexels.com/photos/21533327/pexels-photo-21533327.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/paisaje-naturaleza-bosque-colina-21533327/",
+              "author": "William Warby",
+              "focalPoint": "center 70%"
+            },
+            {
+              "localPath": "/backgrounds/7543964.webp",
+              "sourceUrl": "https://images.pexels.com/photos/7543964/pexels-photo-7543964.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/cielo-azul-al-aire-libre-escenico-pintoresco-7543964/",
+              "author": "Belen Capello",
+              "focalPoint": "center 30%"
+            },
+            {
+              "localPath": "/backgrounds/31822186.webp",
+              "sourceUrl": "https://images.pexels.com/photos/31822186/pexels-photo-31822186.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/majestuoso-paisaje-montanoso-en-torres-del-paine-31822186/",
+              "author": "Chris Flxxx",
+              "focalPoint": "center 25%"
+            },
+            {
+              "localPath": "/backgrounds/35957531.webp",
+              "sourceUrl": "https://images.pexels.com/photos/35957531/pexels-photo-35957531.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/35957531/",
+              "author": "Xiang Qi",
+              "focalPoint": "center 40%"
+            },
+            {
+              "localPath": "/backgrounds/34639207.webp",
+              "sourceUrl": "https://images.pexels.com/photos/34639207/pexels-photo-34639207.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/34639207/",
+              "author": "Alex Quezada",
+              "focalPoint": "center 50%"
+            },
+            {
+              "localPath": "/backgrounds/36721823.webp",
+              "sourceUrl": "https://images.pexels.com/photos/36721823/pexels-photo-36721823.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/36721823/",
+              "author": "Kimberly Alves",
+              "focalPoint": "center 70%"
+            },
+            {
+              "localPath": "/backgrounds/40341521.webp",
+              "sourceUrl": "https://images.pexels.com/photos/40341521/pexels-photo-40341521.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/paisaje-urbano-de-santiago-con-rascacielos-modernos-40341521/",
+              "author": "André Sasaki",
+              "focalPoint": "center 80%"
+            },
+            {
+              "localPath": "/backgrounds/22820006.webp",
+              "sourceUrl": "https://images.pexels.com/photos/22820006/pexels-photo-22820006.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/casas-pueblo-cerca-valla-22820006/",
+              "author": "Wycher van Vliet",
+              "focalPoint": "center 5%"
+            },
+            {
+              "localPath": "/backgrounds/15322574.webp",
+              "sourceUrl": "https://images.pexels.com/photos/15322574/pexels-photo-15322574.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/mar-playa-vacaciones-oceano-15322574/",
+              "author": "Gino Matteucci",
+              "focalPoint": "center 50%"
+            },
+            {
+              "localPath": "/backgrounds/14997511.webp",
+              "sourceUrl": "https://images.pexels.com/photos/14997511/pexels-photo-14997511.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/paisaje-montanas-viaje-viajar-14997511/",
+              "author": "Alexis Leandro Jeria Bocca",
+              "focalPoint": "center 80%"
+            },
+            {
+              "localPath": "/backgrounds/20513314.webp",
+              "sourceUrl": "https://images.pexels.com/photos/20513314/pexels-photo-20513314.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/atardecer-osorno-20513314/",
+              "author": "Adrian Rivero",
+              "focalPoint": "center 80%"
+            },
+            {
+              "localPath": "/backgrounds/6792498.webp",
+              "sourceUrl": "https://images.pexels.com/photos/6792498/pexels-photo-6792498.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/ciudad-noche-edificios-tarde-6792498/",
+              "author": "Nair Cristopher Sánchez Muñoz",
+              "focalPoint": "center 50%"
+            },
+            {
+              "localPath": "/backgrounds/13514793.webp",
+              "sourceUrl": "https://images.pexels.com/photos/13514793/pexels-photo-13514793.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
+              "photoUrl": "https://www.pexels.com/es-es/foto/paisaje-montanas-naturaleza-nubes-13514793/",
+              "author": "Mateusz Walendzik",
+              "focalPoint": "center 50%"
+            }
+          ]
+        },
+        {
+          "name": "Discos CD (PNGImg)",
           "url": "https://pngimg.com",
           "role": "single",
-          "note": "PNGImg CC BY-NC 4.0; elegidos al azar por estación en BoomboxDisplay",
+          "license": "CC BY-NC 4.0",
+          "note": "decorativos en el reproductor de radio; elegidos al azar por estación",
           "links": [
             {
               "label": "cd_dvd_PNG9081",
@@ -157,334 +715,165 @@
               "url": "https://pngimg.com/image/9065"
             }
           ]
-        }
-      ]
-    },
-    {
-      "title": "Calidad del aire (/api/air-quality)",
-      "strategy": "Fallback secuencial (Boostr y Gael Cloud no exponen calidad del aire)",
-      "items": [
-        {
-          "name": "SINCA · MMA",
-          "url": "https://sinca.mma.gob.cl",
-          "role": "primary",
-          "note": "sinca.mma.gob.cl/index.php/json/listadomapa2k19/, ~118 estaciones, timeout 12s"
         },
         {
-          "name": "Open-Meteo Air Quality",
-          "url": "https://open-meteo.com",
-          "role": "fallback",
-          "note": "air-quality-api.open-meteo.com, modelo CAMS, 18 ciudades, timeout 10s"
-        },
-        {
-          "name": "Caché stale",
-          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/cache.ts",
-          "role": "final",
-          "note": "CDN edge 30 min stale-while-revalidate"
-        }
-      ]
-    },
-    {
-      "title": "Fútbol (/api/futbol)",
-      "strategy": "Paths paralelos",
-      "items": [
-        {
-          "name": "ESPN Deportes API",
-          "url": "https://site.web.api.espn.com",
-          "role": "primary",
-          "note": "standings + scoreboard chi.1, timeout 8s; sin fallback → standings/matches vacíos"
-        },
-        {
-          "name": "Sports RSS",
-          "url": "https://github.com/Alplox/awesome-chilean-rss",
+          "name": "Logos de radios de respaldo",
+          "url": "https://commons.wikimedia.org/",
           "role": "single",
-          "note": "siempre se carga, independiente de ESPN"
-        }
-      ]
-    },
-    {
-      "title": "Transporte (/api/transport)",
-      "strategy": "Fuentes individuales",
-      "items": [
-        {
-          "name": "Metro.cl",
-          "url": "https://www.metro.cl",
-          "role": "single",
-          "note": "scraping estado-red, timeout 8s, sin fallback"
-        },
-        {
-          "name": "RED (red.cl)",
-          "url": "https://www.red.cl",
-          "role": "single",
-          "note": "predictorPlus, timeout 5s"
-        },
-        {
-          "name": "DTPM GTFS",
-          "url": "https://www.dtpm.cl",
-          "role": "single",
-          "note": "base de paraderos por recorrido (build-time)"
-        }
-      ]
-    },
-    {
-      "title": "Feeds RSS",
-      "strategy": "Local-first",
-      "items": [
-        {
-          "name": "feeds-database.json (local)",
-          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/feeds-database.json",
-          "role": "primary",
-          "note": "build-time, instantáneo, siempre disponible"
-        },
-        {
-          "name": "GitHub raw",
-          "url": "https://raw.githubusercontent.com/alplox/awesome-chilean-rss",
-          "role": "fallback",
-          "note": "fire-and-forget, timeout 15s"
-        },
-        {
-          "name": "jsDelivr CDN",
-          "url": "https://cdn.jsdelivr.net",
-          "role": "fallback",
-          "note": "fire-and-forget, timeout 15s"
-        }
-      ]
-    },
-    {
-      "title": "Cortes de luz (/api/power)",
-      "strategy": "Única fuente + snapshot durable",
-      "items": [
-        {
-          "name": "SEC (apps.sec.cl)",
-          "url": "https://www.sec.cl",
-          "role": "single",
-          "note": "POST ClientesAfectados/{Get,GetClientesNacional,GetPorFecha,GetClientesRegional}; sin alternativa pública"
-        },
-        {
-          "name": "power:lastgood",
-          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/cache.ts",
-          "role": "final",
-          "note": "snapshot durable 6h vía setLastGood; si la SEC cae sirve este con stale:true"
-        }
-      ]
-    },
-    {
-      "title": "TV, YouTube, Trends, Spotify, Jobs, Holidays",
-      "strategy": "Única fuente (sin fallback)",
-      "items": [
-        {
-          "name": "json-teles",
-          "url": "https://github.com/Alplox/json-teles",
-          "role": "single",
-          "note": "canales de TV chilenos"
-        },
-        {
-          "name": "iptv-org",
-          "url": "https://github.com/iptv-org/iptv",
-          "role": "single",
-          "note": "canales CL (m3u)"
-        },
-        {
-          "name": "mi-iptv",
-          "url": "https://github.com/fparrav/mi-iptv",
-          "role": "single",
-          "note": "playlist m3u (fallback jsDelivr)"
-        },
-        {
-          "name": "YouTube RSS",
-          "url": "https://www.youtube.com",
-          "role": "single",
-          "note": "feeds/videos.xml por channel_id"
-        },
-        {
-          "name": "Google Trends RSS",
-          "url": "https://trends.google.com",
-          "role": "single",
-          "note": "trending/rss?geo=CL"
-        },
-        {
-          "name": "Spotify Embed",
-          "url": "https://open.spotify.com",
-          "role": "single",
-          "note": "Top 50 Chile (iframe)"
-        },
-        {
-          "name": "Nager.Date",
-          "url": "https://date.nager.at",
-          "role": "single",
-          "note": "feriados de Chile (con fallback JSON bundled)"
-        },
-        {
-          "name": "Jobs (Getonbrd, Workanywhere, Remotive)",
-          "url": "https://github.com/Alplox/QueOnda/tree/main/src/lib/jobs/sources",
-          "role": "single",
-          "note": ""
-        }
-      ]
-    },
-    {
-      "title": "Mapas y basemaps",
-      "strategy": "Única fuente",
-      "items": [
-        {
-          "name": "OpenFreeMap",
-          "url": "https://openfreemap.org",
-          "role": "single",
-          "note": "tiles.openfreemap.org/styles/{positron,dark}, sin API key"
-        },
-        {
-          "name": "MapLibre GL",
-          "url": "https://maplibre.org",
-          "role": "single",
-          "note": "render del basemap"
-        }
-      ]
-    },
-    {
-      "title": "Otras fuentes (única, sin cadena de respaldo)",
-      "strategy": "Fuente única",
-      "items": [
-        {
-          "name": "Article proxy (cheerio)",
-          "url": "https://cheerio.js.org",
-          "role": "single",
-          "note": "scraping del URL enviado por el cliente; validación SSRF + sanitización HTML"
-        },
-        {
-          "name": "RED routes DB",
-          "url": "https://www.dtpm.cl",
-          "role": "single",
-          "note": "DTPM GTFS, build-time vía update-stops-db.mjs"
-        },
-        {
-          "name": "Weather widget geolocation",
-          "url": "https://open-meteo.com",
-          "role": "single",
-          "note": "Open-Meteo Geocoding (reverse + search)"
-        },
-        {
-          "name": "Weather widget forecast",
-          "url": "https://www.meteochile.gob.cl",
-          "role": "single",
-          "note": "DMC pronostico.js, 5 días para ~60 ciudades"
-        },
-        {
-          "name": "Map basemaps",
-          "url": "https://openfreemap.org",
-          "role": "single",
-          "note": "OpenFreeMap + MapLibre GL, sin API key"
-        }
-      ]
-    },
-    {
-      "title": "Imágenes y assets",
-      "strategy": "Recursos estáticos",
-      "items": [
-        {
-          "name": "Foto de portada del footer",
-          "url": "https://unsplash.com/es/fotos/manada-de-caballos-en-arbustos-y-pastos-a-traves-de-la-montana-Zf2mL1gtaVg",
-          "role": "single",
-          "note": "modernwolo en Unsplash — Licencia Unsplash"
-        },
-        {
-          "name": "Imágenes de portada (hero)",
-          "url": "https://github.com/Alplox/QueOnda/blob/main/src/lib/backgrounds.ts",
-          "role": "single",
-          "note": "rotación diaria por día del año (getTodayBg); Pexels + Unsplash, licencia gratuita",
+          "license": "Marcas de cada emisora; archivos vía Wikimedia Commons",
+          "note": "solo cuando el listado remoto de radios falla",
           "links": [
             {
-              "label": "Thiago Matos",
-              "url": "https://www.pexels.com/es-es/foto/impresionante-paisaje-urbano-de-santiago-con-la-cordillera-de-los-andes-30342880/"
+              "label": "Radio Cooperativa",
+              "url": "https://upload.wikimedia.org/wikipedia/commons/e/ed/Radio_Cooperativa_Logo.svg"
             },
             {
-              "label": "Luis G",
-              "url": "https://www.pexels.com/es-es/foto/ciudad-paisaje-montanas-panorama-urbano-17461141/"
+              "label": "Radio Duna",
+              "url": "https://upload.wikimedia.org/wikipedia/commons/3/38/Radio_Duna_Logo.png"
             },
             {
-              "label": "Santi Echaire",
-              "url": "https://www.pexels.com/es-es/foto/vista-panoramica-de-santiago-frente-a-la-cordillera-de-los-andes-33606801/"
-            },
-            {
-              "label": "Santi Echaire",
-              "url": "https://www.pexels.com/es-es/foto/paisaje-urbano-con-la-cordillera-de-los-andes-nevada-al-fondo-33610547/"
-            },
-            {
-              "label": "Santi Echaire",
-              "url": "https://www.pexels.com/es-es/foto/majestuoso-volcan-nevado-con-vistas-a-un-pintoresco-lago-37228063/"
-            },
-            {
-              "label": "Cláudio Castro",
-              "url": "https://www.pexels.com/es-es/foto/bandera-chilena-sobre-cielo-azul-simbolo-de-orgullo-nacional-36585246/"
-            },
-            {
-              "label": "Willian Justen de Vasconcellos",
-              "url": "https://www.pexels.com/es-es/foto/ciudad-punto-de-referencia-edificio-rascacielos-19821196/"
-            },
-            {
-              "label": "Michel Jose",
-              "url": "https://www.pexels.com/es-es/foto/naturaleza-cielo-punto-de-referencia-arquitectura-27873926/"
-            },
-            {
-              "label": "Michel Jose",
-              "url": "https://www.pexels.com/es-es/foto/27873929/"
-            },
-            {
-              "label": "Eduardo Rivas",
-              "url": "https://www.pexels.com/es-es/foto/mar-agua-oceano-barca-4665517/"
-            },
-            {
-              "label": "Matheus Pedrosa",
-              "url": "https://www.pexels.com/es-es/foto/ciudad-panorama-urbano-skyline-viaje-27115881/"
-            },
-            {
-              "label": "Cláudio Castro",
-              "url": "https://www.pexels.com/es-es/foto/torre-del-reloj-y-rascacielos-modernos-en-santiago-36585242/"
-            },
-            {
-              "label": "Athenea Codjambassis Rossitto",
-              "url": "https://www.pexels.com/es-es/foto/nieve-nevar-paisaje-naturaleza-25525995/"
-            },
-            {
-              "label": "Fermin Rodriguez Penelas",
-              "url": "https://www.pexels.com/es-es/foto/naturaleza-animal-prado-en-pie-13198296/"
-            },
-            {
-              "label": "Vivi Pascar",
-              "url": "https://www.pexels.com/es-es/foto/vista-panoramica-del-volcan-licancabur-en-el-desierto-de-atacama-28602851/"
-            },
-            {
-              "label": "Saif",
-              "url": "https://www.pexels.com/es-es/foto/paisaje-arena-nubes-desierto-20853000/"
-            },
-            {
-              "label": "William Warby",
-              "url": "https://www.pexels.com/es-es/foto/paisaje-naturaleza-bosque-colina-21533327/"
-            },
-            {
-              "label": "Belen Capello",
-              "url": "https://www.pexels.com/es-es/foto/cielo-azul-al-aire-libre-escenico-pintoresco-7543964/"
-            },
-            {
-              "label": "Chris Flxxx",
-              "url": "https://www.pexels.com/es-es/foto/majestuoso-paisaje-montanoso-en-torres-del-paine-31822186/"
-            },
-            {
-              "label": "Xiang Qi",
-              "url": "https://www.pexels.com/es-es/foto/35957531/"
-            },
-            {
-              "label": "Alex Quezada",
-              "url": "https://www.pexels.com/es-es/foto/34639207/"
-            },
-            {
-              "label": "Getty Images",
-              "url": "https://unsplash.com/es/fotos/a-puerto-natales-chile-sur-chile-maravilla-del-mundo-torres-del-paine-AQOBZfOLPXQ"
-            },
-            {
-              "label": "Kimberly Alves",
-              "url": "https://www.pexels.com/es-es/foto/36721823/"
+              "label": "ADN Radio",
+              "url": "https://upload.wikimedia.org/wikipedia/commons/5/55/Logo_ADN_Radio.svg"
             }
           ]
+        },
+        {
+          "name": "Favicons de medios",
+          "url": "https://www.google.com/s2/favicons",
+          "role": "single",
+          "license": "Servicios públicos — sin licencia explícita",
+          "note": "favicon de cada medio en las tarjetas de noticias, con respaldo en cascada",
+          "links": [
+            {
+              "label": "Google",
+              "url": "https://www.google.com/s2/favicons"
+            },
+            {
+              "label": "DuckDuckGo",
+              "url": "https://icons.duckduckgo.com"
+            },
+            {
+              "label": "Icon Horse",
+              "url": "https://icon.horse"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "libraries": [
+    {
+      "license": "MIT",
+      "items": [
+        {
+          "name": "Astro",
+          "url": "https://astro.build"
+        },
+        {
+          "name": "React",
+          "url": "https://react.dev"
+        },
+        {
+          "name": "React DOM",
+          "url": "https://react.dev"
+        },
+        {
+          "name": "Tailwind CSS",
+          "url": "https://tailwindcss.com"
+        },
+        {
+          "name": "@tailwindcss/vite",
+          "url": "https://tailwindcss.com"
+        },
+        {
+          "name": "DaisyUI",
+          "url": "https://daisyui.com"
+        },
+        {
+          "name": "cheerio",
+          "url": "https://cheerio.js.org"
+        },
+        {
+          "name": "Chart.js",
+          "url": "https://www.chartjs.org"
+        },
+        {
+          "name": "fast-xml-parser",
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser"
+        },
+        {
+          "name": "@astrojs/cloudflare",
+          "url": "https://docs.astro.build/en/guides/integrations-guide/cloudflare/"
+        },
+        {
+          "name": "@astrojs/react",
+          "url": "https://docs.astro.build/en/guides/integrations-guide/react/"
+        }
+      ]
+    },
+    {
+      "license": "Apache-2.0",
+      "items": [
+        {
+          "name": "hls.js",
+          "url": "https://github.com/video-dev/hls.js"
+        },
+        {
+          "name": "@mozilla/readability",
+          "url": "https://github.com/mozilla/readability"
+        },
+        {
+          "name": "TypeScript",
+          "url": "https://www.typescriptlang.org"
+        }
+      ]
+    },
+    {
+      "license": "BSD-2-Clause",
+      "items": [
+        {
+          "name": "Leaflet",
+          "url": "https://leafletjs.com"
+        }
+      ]
+    },
+    {
+      "license": "BSD-3-Clause",
+      "items": [
+        {
+          "name": "MapLibre GL",
+          "url": "https://maplibre.org"
+        }
+      ]
+    },
+    {
+      "license": "ISC",
+      "items": [
+        {
+          "name": "@maplibre/maplibre-gl-leaflet",
+          "url": "https://github.com/maplibre/maplibre-gl-leaflet"
+        },
+        {
+          "name": "linkedom",
+          "url": "https://github.com/WebReflection/linkedom"
+        }
+      ]
+    },
+    {
+      "license": "Hippocratic-2.1",
+      "items": [
+        {
+          "name": "react-leaflet",
+          "url": "https://github.com/and-who/react-leaflet"
+        }
+      ]
+    },
+    {
+      "license": "MPL-2.0",
+      "items": [
+        {
+          "name": "hover-tilt",
+          "url": "https://github.com/AdrianGonz97/hover-tilt"
         }
       ]
     }

@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
   ],
   output: 'server',
+  build: {
+    inlineStylesheets: 'always',
+  },
   adapter: cloudflare({ mode: 'directory' }),
   vite: {
     plugins: [

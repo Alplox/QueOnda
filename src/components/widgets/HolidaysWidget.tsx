@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { idbGet, idbSet } from '../../lib/idb-cache';
 import fallbackData from '../../lib/holidays.json';
+import { SectionSources } from '../SectionSources';
 
 const IDB_KEY = 'holidays';
 const IDB_TTL = 365 * 24 * 60 * 60 * 1000; // 1 year — holidays change once a year
@@ -99,20 +100,25 @@ export function HolidaysWidget() {
   }, []);
 
   if (loading) {
+    /* Reserva el alto medido del bloque: 873 px desktop / 901 px móvil. */
     return (
-      <div className="animate-pulse">
-        <div className="rounded-xl bg-base-200 border border-base-300 p-5 mb-4 space-y-2">
-          <div className="h-3 bg-base-300 rounded w-24" />
-          <div className="h-5 bg-base-300 rounded w-48" />
-          <div className="h-3 bg-base-300 rounded w-36" />
-        </div>
-        <div className="space-y-1">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl">
-              <div className="h-3 w-12 bg-base-300 rounded shrink-0" />
-              <div className="h-3 bg-base-300 rounded flex-1" />
-            </div>
-          ))}
+      <div className="flex min-h-[881px] flex-col animate-pulse sm:min-h-[853px]">
+        <p className="sr-only" role="status">Cargando feriados…</p>
+        <div aria-hidden="true" className="flex flex-1 flex-col">
+          <div className="rounded-xl bg-base-200 border border-base-300 p-5 mb-4 space-y-2">
+            <div className="h-3 bg-base-300 rounded w-24" />
+            <div className="h-5 bg-base-300 rounded w-48" />
+            <div className="h-3 bg-base-300 rounded w-36" />
+          </div>
+          <div className="flex flex-1 flex-col gap-1">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="flex flex-1 items-center gap-3 p-2.5 rounded-xl">
+                <div className="h-3 w-12 bg-base-300 rounded shrink-0" />
+                <div className="h-3 bg-base-300 rounded flex-1" />
+                <div className="h-3 w-10 bg-base-300 rounded shrink-0" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -172,14 +178,7 @@ export function HolidaysWidget() {
         })}
       </div>
 
-      <div className="mt-2 text-right text-[11px] text-base-content/70">
-        Fuentes:{' '}
-        <a href="https://docs.boostr.cl/reference/holidays" target="_blank" rel="noopener noreferrer" 
-        className="hover:text-base-content underline underline-offset-2 transition-colors">Boostr</a>
-        {' · '}
-        <a href="https://date.nager.at" target="_blank" rel="noopener noreferrer" 
-        className="hover:text-base-content underline underline-offset-2 transition-colors">Nager.Date</a>
-      </div>
+      <SectionSources section="holidays" />
     </div>
   );
 }

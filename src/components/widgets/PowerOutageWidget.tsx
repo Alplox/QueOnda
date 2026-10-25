@@ -7,6 +7,7 @@ import { idbGet, idbSet } from '@/lib/idb-cache';
 import { regionNsOrder, secRegionSlug } from '@/lib/regions';
 import { useErrorRetry } from '@/lib/retry';
 import { RetryHint } from '@/components/RetryHint';
+import { SectionSources } from '../SectionSources';
 
 interface Comuna {
   region: string;
@@ -350,15 +351,39 @@ export function PowerOutageWidget() {
   }, [data, regionSort]);
 
   if (loading) {
+    /*
+     * Reserva el alto real del bloque (medido: 884 px en desktop, 1157 px en
+     * móvil) y lo llena con las mismas piezas: cifra principal, pestañas de
+     * desglose y listado. Antes eran 136 px y la sección de Emergencia crecía
+     * ~750 px al llegar los datos.
+     */
     return (
-      <div className="mt-4 rounded-xl p-4 border border-base-300 shadow-sm animate-[fadeInUp_0.3s_ease-out]">
-        <div className="flex items-center gap-2 animate-pulse">
-          <div className="h-5 w-5 rounded-full bg-base-300" />
-          <div className="h-4 w-40 bg-base-300 rounded" />
+      <div className="mt-4 flex min-h-[1137px] flex-col rounded-xl p-4 border border-base-300 shadow-sm sm:min-h-[864px]">
+        <p className="sr-only" role="status">Cargando cortes de luz…</p>
+        <div aria-hidden="true" className="flex flex-1 flex-col animate-pulse">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-5 rounded-full bg-base-300" />
+            <div className="h-4 w-40 bg-base-300 rounded" />
+            <div className="ml-auto h-4 w-12 bg-base-300 rounded" />
+          </div>
+          <div className="h-8 w-28 bg-base-300 rounded mt-3" />
+          <div className="h-2.5 bg-base-300 rounded w-full mt-3" />
+          <div className="h-2.5 bg-base-300 rounded w-3/4 mt-1.5" />
+          <div className="flex gap-2 mt-4">
+            <div className="h-8 w-28 rounded-lg bg-base-300/70" />
+            <div className="h-8 w-28 rounded-lg bg-base-300/70" />
+            <div className="ml-auto h-8 w-24 rounded-lg bg-base-300/70" />
+          </div>
+          <div className="flex flex-1 flex-col gap-1.5 mt-3">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 px-3">
+                <div className="h-3 w-24 rounded bg-base-300" />
+                <div className="ml-auto h-3 w-16 rounded bg-base-300" />
+                <div className="h-3 w-10 rounded bg-base-300" />
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="h-8 w-28 bg-base-300 rounded mt-3 animate-pulse" />
-        <div className="h-2.5 bg-base-300 rounded w-full mt-3 animate-pulse" />
-        <div className="h-2.5 bg-base-300 rounded w-3/4 mt-1.5 animate-pulse" />
       </div>
     );
   }
@@ -779,17 +804,7 @@ export function PowerOutageWidget() {
         <span className="max-w-[70%] leading-snug">
           La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada.
         </span>
-        <span className="text-right">
-          Fuente:{' '}
-          <a
-            href="https://apps.sec.cl/INTONLINEv1/index.aspx"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-base-content underline underline-offset-2 transition-colors"
-          >
-            SEC
-          </a>
-        </span>
+        <SectionSources section="power" inline />
       </div>
     </div>
   );

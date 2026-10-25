@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SectionSources } from '../SectionSources';
 
 export function SpotifyChart() {
   const [loaded, setLoaded] = useState(false);
@@ -80,12 +81,7 @@ export function SpotifyChart() {
           </div>
         )}
       </div>
-      <div className="mt-2 text-right text-[11px] text-base-content/70">
-        Fuente:{' '}
-        <a href="https://open.spotify.com/playlist/37i9dQZEVXbL0GavIqMTeb" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">
-          Spotify "Top 50 Chile" playlist
-        </a>
-      </div>
+      <SectionSources section="spotify" />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { TrendingTags } from '../widgets/TrendingTags';
 import { SlotCard } from './SlotCard';
 import { play } from '@/lib/sound';
 import { foldAccents } from '@/lib/sources';
+import { SectionSources } from '../SectionSources';
 
 interface SlotData {
   source: SourceFeed | null;
@@ -93,40 +94,80 @@ function SourceErrorPanel({ sourceResults, onRetry }: { sourceResults: SourceRes
 
 const SKELETON_LINE_WIDTHS = ['w-full', 'w-4/5', 'w-3/4', 'w-5/6', 'w-2/3', 'w-11/12'];
 
-function LoadingSkeleton() {
+/**
+ * Columnas del bloque de noticias según cuántos slots tiene el usuario.
+ * Es la única fuente de verdad: la usan tanto la grilla real como el skeleton,
+ * así no pueden desincronizarse cuando cambia el diseño.
+ */
+function slotGridCols(count: number) {
+  return count <= 2 ? '' : count <= 6 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-3 lg:grid-cols-4';
+}
+
+/** Un bloque de skeleton con las mismas partes y el mismo alto que `SlotCard`. */
+function SlotSkeleton() {
   return (
-    <ResponsiveSkeleton />
+    /*
+     * Alturas medidas sobre el sitio en producción (1440 / 752 / 500 px de ancho,
+     * tarjeta real = 478,5 px):
+     *   header 47   = py-2.5 + borde 1 + 26 de contenido (botón p-1.5 + icono 14)
+     *   cuerpo 400  = alto del scroller de artículos (`max-h-[400px]`)
+     *   footer 29,5 = py-1.5 + borde 1 + línea de 16,5 (`text-[11px]` con leading 1.5)
+     * Si cambian esos paddings en `SlotCard`, cambian estos números con ellos.
+     */
+    <div className="rounded-xl bg-base-200 border border-base-300 overflow-hidden h-full flex flex-col animate-pulse">
+      <div className="px-3 py-2.5 border-b border-base-300 flex items-center gap-1.5 flex-shrink-0">
+        <div className="w-1.5 h-1.5 rounded-full bg-base-300 shrink-0" />
+        <div className="w-3.5 h-3.5 rounded-sm bg-base-300 shrink-0" />
+        <div className="h-3 w-24 bg-base-300 rounded" />
+        <div className="ml-auto flex items-center gap-1">
+          <div className="w-[26px] h-[26px] rounded-md bg-base-300/60" />
+          <div className="w-6 h-6 rounded-md bg-base-300/60" />
+        </div>
+      </div>
+      <div className="h-[400px] p-4 space-y-3 overflow-hidden">
+        {SKELETON_LINE_WIDTHS.map((width, j) => (
+          <div key={j} className={`h-3 bg-base-300 rounded ${width}`} />
+        ))}
+      </div>
+      <div className="px-3 py-1.5 border-t border-base-300">
+        <div className="h-[16.5px] flex items-center">
+          <div className="h-2.5 w-16 rounded bg-base-300" />
+        </div>
+      </div>
+    </div>
   );
 }
 
-function ResponsiveSkeleton() {
-  const [count, setCount] = useState(6);
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth < 640) setCount(1);
-      else if (window.innerWidth < 1024) setCount(2);
-      else setCount(3);
-    };
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+/**
+ * Skeleton con el número real de bloques activos (no con un 6 fijo ni con el
+ * que quepa en pantalla), dentro del mismo contenedor que la grilla real:
+ * carrusel horizontal en móvil, grilla con las columnas de `slotGridCols`.
+ * La toolbar se pinta también aquí para que la grilla no baje 46 px al llegar
+ * los datos.
+ */
+function LoadingSkeleton({ count }: { count: number }) {
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="rounded-xl bg-base-200 border border-base-300 overflow-hidden animate-pulse min-h-[473px]">
-            <div className="px-4 py-3 border-b border-base-300 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-base-300 shrink-0" />
-              <div className="h-3 w-28 bg-base-300 rounded" />
-            </div>
-            <div className="p-4 space-y-3">
-              {SKELETON_LINE_WIDTHS.map((width, j) => (
-                <div key={j} className={`h-3 bg-base-300 rounded ${width}`} />
-              ))}
-            </div>
+    <div className="space-y-8">
+      <p className="sr-only" role="status">Cargando noticias…</p>
+      <div aria-hidden="true">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 animate-pulse">
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-32 rounded bg-base-300" />
+            <div className="h-4 w-8 rounded bg-base-300" />
+            <div className="h-6 w-14 rounded bg-base-300" />
           </div>
-        ))}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="h-[38px] sm:h-[34px] w-full sm:w-[220px] rounded-lg bg-base-300" />
+            <div className="h-[24.5px] w-full sm:w-40 rounded-lg bg-base-300/70" />
+          </div>
+        </div>
+        <div className={`flex gap-3 overflow-x-auto pb-2 sm:grid sm:overflow-visible sm:pb-0 scrollbar-hide-mobile ${slotGridCols(count)}`}>
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className="snap-center shrink-0 w-[80vw] sm:w-auto">
+              <SlotSkeleton />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -222,7 +263,7 @@ export function NewsFeed({
 
   const hasSlotsWithSources = filteredSlots.some(s => s.source && s.articles.length > 0);
 
-  const gridCols = slotCount <= 2 ? '' : slotCount <= 6 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-3 lg:grid-cols-4';
+  const gridCols = slotGridCols(slotCount);
 
   if (inventoryError && !loading) {
     return (
@@ -234,7 +275,7 @@ export function NewsFeed({
   }
 
   if (loading) {
-    return <LoadingSkeleton />;
+    return <LoadingSkeleton count={slotCount} />;
   }
 
   return (
@@ -429,10 +470,7 @@ export function NewsFeed({
         </div>
       )}
 
-      <div className="mt-2 text-right text-[11px] text-base-content/70">
-        Fuente:{' '}
-        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
-      </div>
+      <SectionSources section="news" only={['awesome-chilean-rss']} />
 
       <SourceErrorPanel sourceResults={sourceResults} onRetry={onRetry} />
     </div>

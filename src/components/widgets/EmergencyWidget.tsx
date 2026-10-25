@@ -1,7 +1,7 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { PowerOutageWidget } from './PowerOutageWidget';
-import { EmergencyMap } from './EmergencyMap';
+const PowerOutageWidget = lazy(() => import('./PowerOutageWidget').then(m => ({ default: m.PowerOutageWidget })));
+const EmergencyMap = lazy(() => import('./EmergencyMap').then(m => ({ default: m.EmergencyMap })));
 import { play } from '@/lib/sound';
 import { extractHost } from '@/lib/url';
 import { idbGet, idbSet } from '@/lib/idb-cache';
@@ -9,6 +9,7 @@ import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 import { parseChileLocal } from '@/lib/chile-time';
 import { useErrorRetry } from '@/lib/retry';
 import { RetryHint } from '@/components/RetryHint';
+import { SectionSources } from '../SectionSources';
 import {
   buildEmergencySummary,
   canShareFiles,
@@ -44,15 +45,16 @@ async function fetchEmergency() {
     // Si falla la petición no sabemos nada de NINGUNA fuente: marcar también las
     // alertas como error, si no el bloque diría «sin alertas» cuando en realidad
     // no se pudo consultar (una alerta real quedaría oculta).
-    if (!res.ok) return { items: [], senapred: [], error: true, senapredError: true };
+    if (!res.ok) return { items: [], senapred: [], error: true, senapredError: true, source: null };
     const data = await res.json();
     return {
       items: (data.items || []) as EmergencyItem[],
       senapred: (data.senapred || []) as EmergencyItem[],
       error: !!data.error,
       senapredError: !!data.senapredError,
+      source: (data.source ?? null) as string | null,
     };
-  } catch { return { items: [], senapred: [], error: true, senapredError: true }; }
+  } catch { return { items: [], senapred: [], error: true, senapredError: true, source: null }; }
 }
 
 // Client-side coordinate enrichment. /api/emergency attaches lat/lon from Boostr,
@@ -132,6 +134,7 @@ const SENAPRED_LINKS = [
 
 export function EmergencyWidget() {
   const [items, setItems] = useState<EmergencyItem[]>([]);
+  const [sismosSource, setSismosSource] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<EmergencyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sismosError, setSismosError] = useState(false);
@@ -164,12 +167,13 @@ export function EmergencyWidget() {
     // auto-refresh compartido pueden aterrizar en el mismo segundo.
     if (inflight.current) return inflight.current;
     const run = (async () => {
-      const { items: eqs, senapred, error, senapredError } = await fetchEmergency();
+      const { items: eqs, senapred, error, senapredError, source } = await fetchEmergency();
       if (!error) {
         // Trust a reachable server: a genuinely empty day clears to the placeholder instead of
         // showing stale alerts forever. Only a failed fetch keeps the error state.
         const enriched = await enrichWithBoostr(eqs);
         setItems(enriched);
+        setSismosSource(source);
         setAlerts(senapred);
         if (enriched.length) idbSet(IDB_KEY, enriched, IDB_TTL);
 
@@ -445,25 +449,25 @@ export function EmergencyWidget() {
               ))}
             </ScrollRow>
           )}
-          <div className="mt-1 -mb-1 text-right text-[11px] text-base-content/70">
-            Fuente:{' '}
-            <a href="https://t.me/SenapredChile" target="_blank" rel="noopener noreferrer"
-              className="hover:text-base-content underline underline-offset-2 transition-colors">Telegram SENAPRED</a>
-          </div>
+          <SectionSources section="senapred" />
         </div>
 
         <div className="mt-4 rounded-xl p-4 border border-base-300 shadow bg-base-200 animate-[fadeInUp_0.3s_ease-out]">
           <p className="em-subhead"><span>🌐 Sismos</span></p>
           {loading ? (
-            <div className="flex gap-2 overflow-x-hidden">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="w-[175px] shrink-0 rounded-xl p-3 border border-base-300">
-                  <div className="h-4 w-12 bg-base-300 rounded-full animate-pulse" />
-                  <div className="h-3 bg-base-300 rounded w-full mt-2 animate-pulse" />
-                  <div className="h-2.5 bg-base-300 rounded w-12 mt-1.5 animate-pulse" />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="flex gap-2 overflow-x-hidden" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="w-[200px] sm:w-[230px] shrink-0 rounded-xl p-3 border border-base-300 h-[158px]">
+                    <div className="h-4 w-12 bg-base-300 rounded-full animate-pulse" />
+                    <div className="h-3 bg-base-300 rounded w-full mt-2 animate-pulse" />
+                    <div className="h-2.5 bg-base-300 rounded w-12 mt-1.5 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+              {/* Fila del enlace "Ver mapa de sismos", que la card real siempre pinta */}
+              <div className="mt-3 h-4 w-32 rounded bg-base-300 animate-pulse" aria-hidden="true" />
+            </>
           ) : sismosError ? (
             <LoadErrorBox retrying={retrying} retryIn={retryIn} onRetry={retryNow} />
           ) : items.length === 0 ? (
@@ -543,30 +547,21 @@ export function EmergencyWidget() {
               <div className="overflow-hidden min-h-0">
                 {mapMounted && (
                   <div id="sismos-map" className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
-                    <EmergencyMap items={items} focusId={focusId} />
+                    <Suspense fallback={<div className="h-40 animate-pulse bg-base-300 rounded" />}>
+                      <EmergencyMap items={items} focusId={focusId} />
+                    </Suspense>
                   </div>
                 )}
               </div>
             </div>
             </>
           )}
-          <div className="mt-1 -mb-1 text-right text-[11px] text-base-content/70">
-            Fuentes:{' '}
-            <a href="https://www.csn.uchile.cl/" target="_blank" rel="noopener noreferrer"
-              className="hover:text-base-content underline underline-offset-2 transition-colors">CSN (U. de Chile)</a>
-            {' · '}
-            <a href="https://api.gael.cloud/#sismos" target="_blank" rel="noopener noreferrer"
-              className="hover:text-base-content underline underline-offset-2 transition-colors">Gael Cloud</a>
-            {' · '}
-            <a href="https://docs.boostr.cl/reference/earthquakes" target="_blank" rel="noopener noreferrer"
-              className="hover:text-base-content underline underline-offset-2 transition-colors">Boostr</a>
-            {' · '}
-            <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener noreferrer"
-              className="hover:text-base-content underline underline-offset-2 transition-colors">USGS</a>
-          </div>
+          <SectionSources section="emergency" only={['CSN (U. de Chile)', sismosSource === 'boostr' ? 'Boostr' : sismosSource === 'usgs' ? 'USGS' : 'Gael Cloud']} />
         </div>
 
-        <PowerOutageWidget />
+        <Suspense fallback={<div className="h-24 animate-pulse bg-base-300 rounded" />}>
+          <PowerOutageWidget />
+        </Suspense>
       </section>
     </>
   );

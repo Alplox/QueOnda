@@ -290,7 +290,7 @@ section[id][data-visible] h2 .letter {
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-base-content);
-  opacity: 0.7;
+  opacity: 1;
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: opacity 0.2s ease-out;
@@ -439,7 +439,8 @@ section[id][data-visible] h2 .letter {
   background: linear-gradient(to bottom, rgba(140, 60, 200, 0.85), transparent);
 }
 .emoji-card.legendary .emoji-card__name-overlay {
-  background: linear-gradient(to bottom, rgba(210, 170, 40, 0.9), transparent);
+  /* Acero frío en vez de dorado: acompaña el aro de cromo y no reintroduce el amarillo */
+  background: linear-gradient(to bottom, rgba(56, 68, 84, 0.92), transparent);
 }
 
 /* Center art */
@@ -692,14 +693,73 @@ section[id][data-visible] h2 .letter {
   line-height: 1;
 }
 
-/* Legendary glow pulse */
-.emoji-card.legendary .emoji-card__face {
-  animation: legendaryGlow 3s ease-in-out infinite;
+/* Legendary: aro de cromo líquido en vez del halo amarillo.
+   El ángulo se anima con @property; donde no exista, el aro queda fijo
+   (degradado estático) sin romper nada. */
+@property --emoji-chrome-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
 }
 
-@keyframes legendaryGlow {
-  0%, 100% { box-shadow: inset 0 0 0 3px hsl(45, 75%, 45%), 0 0 12px -2px hsl(45, 100%, 50%); }
-  50% { box-shadow: inset 0 0 0 3px hsl(45, 75%, 45%), 0 0 28px -2px hsl(45, 100%, 50%); }
+.emoji-card.legendary .emoji-card__face {
+  box-shadow:
+    inset 0 0 0 3px var(--color-base-300),
+    0 0 22px -8px color-mix(in oklab, var(--color-base-content) 70%, transparent);
+}
+
+/* El aro vive dentro de la cara (que recorta), así acompaña el tilt del hover:
+   mismo radio, mismos 3px que el borde base, recortado con mask. */
+.emoji-card.legendary .emoji-card__face::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  padding: 3px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--emoji-chrome-angle),
+    #ffffff 0deg,
+    #b9c9dc 34deg,
+    #5d6a7a 62deg,
+    #f3f8ff 96deg,
+    #ffffff 128deg,
+    #8b98a8 168deg,
+    #2e353d 204deg,
+    #d6e2f0 244deg,
+    #f7fbff 288deg,
+    #7e8b9a 322deg,
+    #ffffff 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: chromeRingSpin 7s linear infinite;
+}
+
+@keyframes chromeRingSpin {
+  to { --emoji-chrome-angle: 360deg; }
+}
+
+/* Temas claros: el mismo cromo con más acero y menos blanco, si no el aro se
+   funde con la cara clara de la carta. */
+.light-theme .emoji-card.legendary .emoji-card__face::before {
+  background: conic-gradient(
+    from var(--emoji-chrome-angle),
+    #f2f6fb 0deg,
+    #93a4b7 30deg,
+    #3b4553 60deg,
+    #c9d6e6 92deg,
+    #ffffff 124deg,
+    #6d7b8b 164deg,
+    #232a33 200deg,
+    #aebcd0 240deg,
+    #e9f0f9 284deg,
+    #5f6c7c 320deg,
+    #f2f6fb 360deg
+  );
 }
 
 /* Card flip animation */

@@ -19,6 +19,7 @@ import { JobList } from '../components/widgets/JobList';
 import { EmergencyWidget } from '../components/widgets/EmergencyWidget';
 import { EmergencyTicker } from '../components/widgets/EmergencyTicker';
 import { HolidaysWidget } from '../components/widgets/HolidaysWidget';
+import { CyberWidget } from '../components/widgets/CyberWidget';
 import { ClientNewsFeed } from '../components/news/ClientNewsFeed';
 import { ClientTV } from '../components/tv/ClientTV';
 import { ClientRadios } from '../components/radio/ClientRadios';
@@ -120,8 +121,11 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
             alt=""
             class="w-full h-full object-cover"
             style={`object-position: ${todayBg.focalPoint ?? 'center'}`}
+            width="1280"
+            height="640"
             loading="eager"
             fetchpriority="high"
+            decoding="async"
           />
           <div class="hero-scrim absolute inset-0 bg-gradient-to-b from-base-100/25 via-base-100/30 to-base-100/70" />
         </div>
@@ -276,6 +280,11 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
         <ClientRadios client:idle />
       </Section>
 
+      <!-- Ciberseguridad -->
+      <Section id="ciberseguridad" title="Ciberseguridad" subtitle="Alertas del CSIRT y vulnerabilidades explotadas de la CISA">
+        <CyberWidget client:idle />
+      </Section>
+
       <!-- Finanzas -->
       <Section id="finanzas" title="Finanzas" subtitle="Indicadores económicos">
         <FinanceWidget client:idle />
@@ -385,6 +394,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
           '/api/futbol',
           '/api/jobs',
           '/api/spotify',
+          '/api/cyber',
         ];
         // ponytail: all at rAF — fire-and-forget fetches are negligible, idle scheduling
         // delayed cache warming past the point client:idle widgets hydrate on fast scroll

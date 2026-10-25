@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getCached, setCache, setLastGood, getStaleCached } from '../../lib/cache';
 import { fetchAllSports, deduplicateArticles, pMap, BROWSER_UA } from '../../lib/rss';
 import { fetchChannels } from '../../lib/channels';
+import { buildCyberPayload, isDegraded, CYBER_CACHE_TTL_MS, CYBER_DEGRADED_TTL_MS, CYBER_LAST_GOOD_TTL_MS } from '../../lib/cyber';
 import { XMLParser } from 'fast-xml-parser';
 
 // ponytail: external cron endpoint — call from cron-job.org or GitHub Actions
@@ -158,6 +159,19 @@ export const GET: APIRoute = async ({ request }) => {
       }
     } else { log.push('trends: skipped (cached)'); }
   } catch (e: any) { failed.push('trends'); log.push(`trends: ${e?.message || e}`); }
+
+  // 5. Pre-warm ciberseguridad (CSIRT Nacional + CISA KEV)
+  try {
+    const existing = await getCached('cyber');
+    if (!existing) {
+      const data = await buildCyberPayload();
+      const degraded = isDegraded(data);
+      await setCache('cyber', data, degraded ? CYBER_DEGRADED_TTL_MS : CYBER_CACHE_TTL_MS);
+      if (!degraded) await setLastGood('cyber', data, CYBER_LAST_GOOD_TTL_MS);
+      warmed.push('cyber');
+      log.push(`cyber: ${data.alerts.length} alertas, ${data.kev.items.length} KEV${degraded ? ' (degradado)' : ''}`);
+    } else { log.push('cyber: skipped (cached)'); }
+  } catch (e: any) { failed.push('cyber'); log.push(`cyber: ${e?.message || e}`); }
 
   return new Response(JSON.stringify({ warmed, failed, log, timestamp: new Date().toISOString() }), {
     headers: { 'Content-Type': 'application/json' },

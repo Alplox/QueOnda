@@ -19,9 +19,10 @@ interface FinanceData {
   euro: Indicator;
   ipc: Indicator;
   utm: Indicator;
+  sources?: string[];
 }
 
-type IndicatorKey = keyof FinanceData;
+type IndicatorKey = 'uf' | 'dolar' | 'euro' | 'ipc' | 'utm';
 const ALL_KEYS: IndicatorKey[] = ['uf', 'dolar', 'euro', 'ipc', 'utm'];
 
 async function fetchMindicador(): Promise<Partial<FinanceData>> {
@@ -112,25 +113,38 @@ export const GET: APIRoute = async () => {
   const finance = await dedupeFetch<FinanceData | null>('finance', async () => {
     const merged: Partial<FinanceData> = {};
     let anySuccess = false;
+    const usedSources: string[] = [];
+    const displayNames: Record<string, string> = {
+      fetchMindicador: 'mindicador.cl',
+      fetchBoostr: 'Boostr',
+      fetchFindic: 'findic.cl',
+      fetchSiiRss: 'SII',
+      fetchDolarApi: 'DolarApi',
+    };
     const fetchers = [fetchMindicador, fetchBoostr, fetchFindic, fetchSiiRss, fetchDolarApi];
 
     for (const fetchFn of fetchers) {
       try {
         const data = await fetchFn();
         anySuccess = true;
+        let contributed = false;
         for (const key of ALL_KEYS) {
-          if (!merged[key] && data[key]?.value != null) {
-            merged[key] = data[key] as Indicator;
+          const existing = merged[key] as Indicator | undefined;
+          const incoming = data[key] as Indicator | undefined;
+          if (!existing && incoming?.value != null) {
+            merged[key] = incoming;
+            contributed = true;
           }
         }
-        if (ALL_KEYS.every(k => merged[k]?.value != null)) break;
+        if (contributed) usedSources.push(displayNames[fetchFn.name]);
+        if (ALL_KEYS.every(k => (merged[k] as Indicator | undefined)?.value != null)) break;
       } catch (err) {
         console.error(`Finance: ${fetchFn.name} failed:`, err);
       }
     }
 
-    if (anySuccess && ALL_KEYS.some(k => merged[k]?.value != null)) {
-      return merged as FinanceData;
+    if (anySuccess && ALL_KEYS.some(k => (merged[k] as Indicator | undefined)?.value != null)) {
+      return { ...(merged as FinanceData), sources: usedSources };
     }
     return null;
   });

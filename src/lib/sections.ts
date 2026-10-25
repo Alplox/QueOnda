@@ -1,8 +1,16 @@
-export const SECTIONS = [
+export interface SectionLink {
+  id: string;
+  label: string;
+  /** Etiqueta corta para la barra superior (la larga no cabe en una línea). */
+  navLabel?: string;
+}
+
+export const SECTIONS: SectionLink[] = [
   { id: 'emergencia', label: 'Emergencia' },
   { id: 'noticias', label: 'Noticias' },
   { id: 'tv', label: 'TV' },
   { id: 'radios', label: 'Radios' },
+  { id: 'ciberseguridad', label: 'Ciberseguridad', navLabel: 'Ciber' },
   { id: 'finanzas', label: 'Finanzas' },
   { id: 'youtube', label: 'YouTube' },
   { id: 'spotify', label: 'Spotify' },

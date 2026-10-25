@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { idbGet, idbSet } from '../../lib/idb-cache';
 import { play } from '@/lib/sound';
+import { SectionSources } from '../SectionSources';
 
 const IDB_KEY = 'weather-default';
 const IDB_TTL = 10 * 60 * 1000; // 10 min
@@ -250,7 +251,6 @@ function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, 
                   </div>
                 );
               })}
-              <p className="text-[11px] text-base-content/70 text-right">Fuente: DMC</p>
             </div>
           )}
         </div>
@@ -265,6 +265,7 @@ export function WeatherWidget() {
   const [userCity, setUserCity] = useState<CityWeather | null>(null);
   const [loading, setLoading] = useState(true);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
   const [limit, setLimit] = useState(INITIAL);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -299,6 +300,47 @@ export function WeatherWidget() {
     });
   }
 
+  async function requestUserLocation() {
+    setGeoError(null);
+    setGeoLoading(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, enableHighAccuracy: false });
+      });
+      const { latitude, longitude } = pos.coords;
+      const geoRes = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=es`
+      ).then(r => r.json()).catch(() => null);
+      const place = geoRes?.results?.[0];
+      if (place) {
+        const geo = DEFAULT_CITIES_COORDS.find(c => normalize(c.name) === normalize(place.name));
+        const cities = geo ? [geo] : [{ name: place.name, lat: place.latitude, lon: place.longitude }];
+        const userWeather = await fetchOpenMeteoDirect(cities);
+        if (userWeather) {
+          const matchKey = Object.keys(userWeather).find(k => normalize(k) === normalize(place.name));
+          if (matchKey) setUserCity(userWeather[matchKey]);
+          else setGeoError('no se pudo obtener clima de tu ubicacion');
+        } else {
+          const serverRes = await fetchServerWeather(`cities=${encodeURIComponent(place.name)}`);
+          if (serverRes) {
+            const matchKey = Object.keys(serverRes).find(k => normalize(k) === normalize(place.name));
+            const w = matchKey ? serverRes[matchKey] : null;
+            if (w) setUserCity(w);
+            else setGeoError('no se pudo obtener clima de tu ubicacion');
+          } else {
+            setGeoError('no se pudo obtener clima de tu ubicacion');
+          }
+        }
+      } else {
+        setGeoError('no se pudo obtener tu ubicacion');
+      }
+    } catch {
+      setGeoError('no se pudo obtener tu ubicacion');
+    } finally {
+      setGeoLoading(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     let resolved = false;
@@ -322,37 +364,9 @@ export function WeatherWidget() {
         if (!cancelled && serverWeather) setDefaultMap(serverWeather);
       }
 
-      try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, enableHighAccuracy: false });
-        });
-        const { latitude, longitude } = pos.coords;
-        const geoRes = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=es`
-        ).then(r => r.json()).catch(() => null);
-        const place = geoRes?.results?.[0];
-        if (place && !cancelled) {
-          const geo = DEFAULT_CITIES_COORDS.find(c => normalize(c.name) === normalize(place.name));
-          const cities = geo ? [geo] : [{ name: place.name, lat: place.latitude, lon: place.longitude }];
-          const userWeather = await fetchOpenMeteoDirect(cities);
-          if (cancelled) return;
-          if (userWeather) {
-            const matchKey = Object.keys(userWeather).find(k => normalize(k) === normalize(place.name));
-            if (matchKey) setUserCity(userWeather[matchKey]);
-            else setGeoError('no se pudo obtener clima de tu ubicacion');
-          } else {
-            const serverRes = await fetchServerWeather(`cities=${encodeURIComponent(place.name)}`);
-            if (!cancelled && serverRes) {
-              const matchKey = Object.keys(serverRes).find(k => normalize(k) === normalize(place.name));
-              const w = matchKey ? serverRes[matchKey] : null;
-              if (w) setUserCity(w);
-              else setGeoError('no se pudo obtener clima de tu ubicacion');
-            }
-          }
-        }
-      } catch {
-        if (!cancelled) setGeoError('no se pudo obtener tu ubicacion');
-      }
+      // Geolocation is now opt-in via the "Usar mi ubicación" button (see requestUserLocation).
+      // It is no longer requested automatically on load, so the browser permission prompt
+      // is tied to a user action (PageSpeed best-practice: geolocation-on-start).
 
       if (!cancelled && !resolved) setLoading(false);
       resolved = true;
@@ -507,10 +521,11 @@ export function WeatherWidget() {
   const hasExtra = !filterCity && limit > INITIAL;
 
   if (loading) {
+    /* Reserva el alto medido: 538 px desktop / 707 px móvil (8 ciudades + controles). */
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-base-300 p-4 animate-pulse">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 min-h-[687px] sm:min-h-[518px] animate-pulse" aria-hidden="true">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-base-300 p-4">
             <div className="h-3 bg-base-300 rounded w-20 mb-3" />
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 bg-base-300 rounded" />
@@ -637,10 +652,6 @@ export function WeatherWidget() {
                 </div>
               </div>
             )}
-            <div className="mt-2 text-right text-[11px] text-base-content/70">
-              Fuente:{' '}
-              <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Windy</a>
-            </div>
           </div>
         </div>
       </div>
@@ -663,6 +674,21 @@ export function WeatherWidget() {
           &ldquo;{searchQuery.trim()}&rdquo; no está en la grilla. Presiona Enter para agregarla.
         </p>
       )}
+
+      {/* Opt-in geolocation (no automatic permission prompt on load) */}
+      <div className="mb-3 flex items-center gap-2">
+        <button
+          onClick={requestUserLocation}
+          disabled={geoLoading}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-[color,background-color,transform] active:scale-[0.96] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+          </svg>
+          {geoLoading ? 'Obteniendo ubicación…' : (userCity ? 'Actualizar mi ubicación' : 'Usar mi ubicación')}
+        </button>
+        {geoError && <span className="text-[11px] text-base-content/70">{geoError}</span>}
+      </div>
 
       {/* Weather grid */}
       {filterCity && visibleCities.length === 0 ? (
@@ -711,17 +737,7 @@ export function WeatherWidget() {
 
       {/* Footer */}
       <div className="mt-2 text-right text-[11px] text-base-content/70">
-        {geoError && <><span>{geoError}</span><span className="mx-1">·</span></>}
-        <span>
-          Fuentes:{' '}
-          <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Open-Meteo</a>
-          {' · '}
-          <a href="https://api.gael.cloud/#todos-los-climas" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Gael Cloud</a>
-          {' · '}
-          <a href="https://docs.boostr.cl/reference/weather-code" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Boostr.cl</a>
-          {' · '}
-          <a href="https://www.meteochile.gob.cl/" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">DMC</a>
-        </span>
+        <SectionSources section="weather" />
       </div>
     </div>
   );

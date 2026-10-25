@@ -329,28 +329,33 @@ async function fetchSenapred(): Promise<{ items: EmergencyItem[]; ok: boolean }>
 }
 
 export const GET: APIRoute = async () => {
-  const { items, senapred, error, senapredError } = await dedupeFetch<{
+  const { items, senapred, error, senapredError, source } = await dedupeFetch<{
     items: EmergencyItem[];
     senapred: EmergencyItem[];
     error: boolean;
     senapredError: boolean;
+    source: string | null;
   }>('emergency', async () => {
     // error solo si TODAS las fuentes fallaron (HTTP/parse), no si un feed legítimamente
     // devuelve vacío — eso sería "no hay sismos", no un fallo de carga.
     let result: EmergencyItem[] = [];
     let sourcesOk = false;
+    let source: string | null = null;
     const gael = await fetchGaelCloud();
     result = gael.items;
     sourcesOk = gael.ok;
-    if (result.length === 0) {
+    if (result.length > 0) source = 'gael';
+    else {
       const boostr = await fetchBoostr();
       result = boostr.items;
       sourcesOk = sourcesOk || boostr.ok;
-    }
-    if (result.length === 0) {
-      const usgs = await fetchUSGS();
-      result = usgs.items;
-      sourcesOk = sourcesOk || usgs.ok;
+      if (result.length > 0) source = 'boostr';
+      else {
+        const usgs = await fetchUSGS();
+        result = usgs.items;
+        sourcesOk = sourcesOk || usgs.ok;
+        if (result.length > 0) source = 'usgs';
+      }
     }
     // Most recent first so the latest event is always visible (matches senapred ordering)
     result.sort((a, b) => b.time - a.time);
@@ -360,10 +365,11 @@ export const GET: APIRoute = async () => {
       senapred: senapred.items,
       error: !sourcesOk,
       senapredError: !senapred.ok,
+      source,
     };
   });
 
-  return new Response(JSON.stringify({ items, senapred, error, senapredError }), {
+  return new Response(JSON.stringify({ items, senapred, error, senapredError, source }), {
     headers: edgeCacheHeaders(300),
   });
 };

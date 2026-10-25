@@ -3,6 +3,7 @@ import { ArticleReader } from '../news/ArticleReader';
 import { play } from '@/lib/sound';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 import { subscribeAutoRefresh } from '@/lib/auto-refresh';
+import { SectionSources } from '../SectionSources';
 
 const IDB_KEY_STANDINGS = 'football-standings';
 const IDB_TTL_STANDINGS = 6 * 60 * 60 * 1000; // 6 hours (standings change 1-2x per matchday)
@@ -477,22 +478,24 @@ export function FootballTable() {
       )}
 
       {activeTab === 'standings' && loadingStandings && standings.length === 0 && (
-        <div className="p-4">
-          <div className="animate-pulse space-y-3">
-            {Array.from({ length: 16 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="h-4 w-4 bg-base-300 rounded" />
-                <div className="h-5 w-5 bg-base-300 rounded-full shrink-0" />
-                <div className="h-3 bg-base-300 rounded flex-1" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-3 w-6 bg-base-300 rounded" />
-                <div className="h-4 w-8 bg-base-300 rounded" />
-              </div>
-            ))}
+        /* Misma rejilla que la tabla real: cabecera de 28 px + 16 filas de 41 px
+           = 684.5 px, el alto medido del bloque cargado. */
+        <div className="animate-pulse" aria-hidden="true">
+          <div className="flex h-7 items-center gap-3 border-b border-base-300 bg-base-300/30 px-4">
+            <div className="h-2.5 w-16 bg-base-300 rounded" />
           </div>
+          {Array.from({ length: 16 }).map((_, i) => (
+            <div key={i} className="flex h-[41px] items-center gap-3 border-b border-base-300 px-4">
+              <div className="h-4 w-4 bg-base-300 rounded" />
+              <div className="h-5 w-5 bg-base-300 rounded-full shrink-0" />
+              <div className="h-3 bg-base-300 rounded flex-1" />
+              <div className="h-3 w-6 bg-base-300 rounded" />
+              <div className="h-3 w-6 bg-base-300 rounded" />
+              <div className="h-3 w-6 bg-base-300 rounded" />
+              <div className="h-3 w-6 bg-base-300 rounded" />
+              <div className="h-4 w-8 bg-base-300 rounded" />
+            </div>
+          ))}
         </div>
       )}
 
@@ -681,22 +684,7 @@ export function FootballTable() {
         </>
       )}
     </div>
-    <div className="mt-2 text-right text-[11px] text-base-content/70">
-      {source === 'espn' ? (
-        <>Fuentes:{' '}
-        <a href="https://github.com/pseudo-r/Public-ESPN-API" target="_blank" rel="noopener noreferrer" 
-        className="hover:text-base-content underline underline-offset-2 transition-colors">ESPN (API pública)</a>
-        {' · '}
-        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" 
-        className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
-        </>
-      ) : (
-        <>Fuente:{' '}
-        <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" 
-        className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
-        </>
-      )}
-    </div>
+    <SectionSources section="football" />
     {readerUrl && (
       <ArticleReader url={readerUrl} onClose={() => setReaderUrl(null)} />
     )}

@@ -184,7 +184,7 @@ export function Header() {
                       : 'text-base-content/70 hover:text-base-content hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05]'
                     }`}
                   >
-                    {section.label}
+                    {section.navLabel ?? section.label}
                   </a>
                 ))}
               </nav>

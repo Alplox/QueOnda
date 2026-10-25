@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { idbGet, idbSet } from '../../lib/idb-cache';
+import { SectionSources } from '../SectionSources';
 
 const IDB_KEY = 'finance';
 const IDB_TTL = 30 * 60 * 1000; // 30 min
 
 interface Indicator { value: number; date: string; }
-interface FinanceData { uf: Indicator; dolar: Indicator; euro: Indicator; ipc: Indicator; utm: Indicator; }
-type IndicatorKey = keyof FinanceData;
+interface FinanceData { uf: Indicator; dolar: Indicator; euro: Indicator; ipc: Indicator; utm: Indicator; sources?: string[]; }
+type IndicatorKey = 'uf' | 'dolar' | 'euro' | 'ipc' | 'utm';
 const ALL_KEYS: IndicatorKey[] = ['uf', 'dolar', 'euro', 'ipc', 'utm'];
 
 async function fetchMindicadorClient(): Promise<Partial<FinanceData>> {
@@ -40,11 +41,15 @@ async function fetchFinanceClient(): Promise<Partial<FinanceData> | null> {
   for (const fn of [fetchMindicadorClient, fetchDolarApiClient]) {
     try {
       const data = await fn();
-      for (const key of ALL_KEYS) { if (!merged[key] && data[key]?.value != null) merged[key] = data[key] as Indicator; }
-      if (ALL_KEYS.every(k => merged[k]?.value != null)) break;
+      for (const key of ALL_KEYS) {
+        const existing = merged[key] as Indicator | undefined;
+        const incoming = data[key] as Indicator | undefined;
+        if (!existing && incoming?.value != null) merged[key] = incoming;
+      }
+      if (ALL_KEYS.every(k => (merged[k] as Indicator | undefined)?.value != null)) break;
     } catch {}
   }
-  return ALL_KEYS.some(k => merged[k]?.value != null) ? merged : null;
+  return ALL_KEYS.some(k => (merged[k] as Indicator | undefined)?.value != null) ? merged : null;
 }
 
 async function fetchFinanceServer(): Promise<Partial<FinanceData> | null> {
@@ -154,36 +159,14 @@ function ValueCard({ item, value, date, index }: { item: ItemDef; value: number;
   );
 }
 
-const SOURCES = [
-  { name: 'mindicador.cl', url: 'https://mindicador.cl' },
-  { name: 'Boostr', url: 'https://docs.boostr.cl/reference/economy-info' },
-  { name: 'findic.cl', url: 'https://findic.cl' },
-  { name: 'SII', url: 'https://zeus.sii.cl/admin/rss/sii_ind_rss.xml' },
-  { name: 'DolarApi', url: 'https://dolarapi.com/docs/chile/' },
-];
 
-function SourceAttribution() {
-  return (
-    <div className="mt-2 text-right text-[11px] text-base-content/70">
-      Fuentes:{' '}
-      {SOURCES.map((s, i) => (
-        <span key={s.name}>
-          {i > 0 && <>{' · '}</>}
-          <a href={s.url} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="hover:text-base-content underline underline-offset-2 transition-colors">{s.name}</a>
-        </span>
-      ))}
-    </div>
-  );
-}
 
 export function FinanceWidget() {
   const [data, setData] = useState<Partial<FinanceData> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [stale, setStale] = useState(false);
+  const [usedSources, setUsedSources] = useState<string[]>(['mindicador.cl', 'Boostr', 'findic.cl', 'SII', 'DolarApi']);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,10 +181,18 @@ export function FinanceWidget() {
         hasCache = true;
       }
 
-      const fresh = (await fetchFinanceClient()) ?? (await fetchFinanceServer());
+      const clientFresh = await fetchFinanceClient();
+      let fresh: Partial<FinanceData> | null = clientFresh;
+      let sources: string[] | null = clientFresh ? ['mindicador.cl', 'DolarApi'] : null;
+      if (!fresh) {
+        const serverFresh = await fetchFinanceServer();
+        fresh = serverFresh;
+        sources = serverFresh?.sources ?? null;
+      }
 
       if (!cancelled && fresh) {
         setData(fresh);
+        setUsedSources(sources ?? ['mindicador.cl', 'Boostr', 'findic.cl', 'SII', 'DolarApi']);
         setStale(false);
         idbSet(IDB_KEY, fresh, IDB_TTL);
       }
@@ -221,7 +212,7 @@ export function FinanceWidget() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           {ITEMS.map((item) => <SkeletonCard key={item.key} />)}
         </div>
-        <SourceAttribution />
+        <SectionSources section="finance" only={usedSources} />
       </div>
     );
   }
@@ -230,7 +221,7 @@ export function FinanceWidget() {
     return (
       <div>
         <p className="text-xs text-base-content/70 pb-1">Indicadores no disponibles</p>
-        <SourceAttribution />
+        <SectionSources section="finance" only={usedSources} />
       </div>
     );
   }
@@ -242,12 +233,12 @@ export function FinanceWidget() {
       )}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         {ITEMS.map((item, i) => {
-          const indicator = data?.[item.key];
+          const indicator = data?.[item.key] as Indicator | undefined;
           if (!indicator?.value) return null;
           return <ValueCard key={item.key} item={item} value={indicator.value} date={indicator.date} index={i} />;
         })}
       </div>
-      <SourceAttribution />
+      <SectionSources section="finance" only={usedSources} />
     </div>
   );
 }

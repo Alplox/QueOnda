@@ -10,6 +10,7 @@ import { play } from '@/lib/sound';
 import { navigate } from 'astro:transitions/client';
 import { ChileMap } from './ChileMap';
 import { FaviconImg } from './FaviconImg';
+import { SectionSources } from '../SectionSources';
 
 const CACHE_TTL = 30 * 60 * 1000;
 const CHUNK_SIZE = 40;
@@ -983,10 +984,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
         )}
 
         {/* Attribution */}
-        <div className="mt-4 text-right text-[11px] text-base-content/70">
-          Fuente:{' '}
-          <a href="https://github.com/alplox/awesome-chilean-rss" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">awesome-chilean-rss</a>
-        </div>
+        <SectionSources section="news" only={['awesome-chilean-rss']} />
       </div>
 
       {readerArticle && (

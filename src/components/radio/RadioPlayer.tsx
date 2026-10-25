@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
 import type { RadioStation } from '../../lib/radios';
 import { play } from '@/lib/sound';
+import { SectionSources } from '../SectionSources';
 
 interface Props {
   stations: RadioStation[];
@@ -827,7 +828,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                 <button
                   onClick={() => { play('interaction.tap'); setSortAZ((v) => !v); }}
                   aria-pressed={sortAZ}
-                  aria-label="Orden alfabético"
+                  aria-label={`Orden alfabético ${sortAZ ? 'A-Z' : 'Z-A'}`}
                   className="text-[11px] text-base-content/70 hover:text-base-content px-1.5 transition-colors"
                 >
                   {sortAZ ? 'A-Z' : 'Z-A'}
@@ -858,13 +859,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
       </div>
 
       <div className="mt-1 -mb-1 text-right text-[11px] text-base-content/70">
-        Fuentes:{' '}
-        <a href="https://api.radio-browser.info" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">radio-browser.info</a>
-        {' · '}
-        <a href="https://github.com/Alplox/json-teles" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">json-teles</a>
-        {' · '}
-        <a href="https://github.com/Alplox/QueOnda/blob/main/AGENTS.md#cd-disc-images-radio-player-animation" target="_blank" rel="noopener noreferrer" onClick={() => play('interaction.tap')} className="hover:text-base-content underline underline-offset-2 transition-colors">CD images</a>
-        {' (CC BY-NC 4.0)'}
+        <SectionSources section="radio" inline />
       </div>
 
       {/* Sticky bottom player */}

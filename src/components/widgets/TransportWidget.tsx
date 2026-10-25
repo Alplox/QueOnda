@@ -3,6 +3,7 @@ import { POPULAR_STOPS } from '../../lib/transport';
 import type { StopInfo, PopularStop } from '../../lib/transport';
 import { idbGet, idbSet } from '../../lib/idb-cache';
 import { play } from '@/lib/sound';
+import { SectionSources } from '../SectionSources';
 
 interface MetroLine {
   name: string;
@@ -86,10 +87,7 @@ function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: s
         </div>
       </div>
       <div className="mt-2 text-right text-[11px] text-base-content/70">
-        Fuentes:{' '}
-        <a href="https://www.metro.cl/el-viaje/estado-red" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">
-          Metro.cl
-        </a>
+        <SectionSources section="transport" only={['Metro.cl']} inline />
         {(source && source !== 'metro.cl') && (
           <>
             {' · '}
@@ -640,8 +638,9 @@ export function TransportWidget() {
   }, []);
 
   if (loading) {
+    /* Reserva el alto medido del bloque: 386 px desktop / 476 px móvil. */
     return (
-      <div className="space-y-6 animate-pulse">
+      <div className="space-y-6 animate-pulse min-h-[456px] sm:min-h-[366px]" aria-hidden="true">
         <div className="rounded-xl bg-base-200 border border-base-300 p-4">
           <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
             {Array.from({ length: 7 }).map((_, i) => (
@@ -679,12 +678,7 @@ export function TransportWidget() {
       <StopCombobox />
       <div className="mt-2 text-right text-[11px] text-base-content/70">
         {cachedTimestamp && <p className="mb-0.5">Datos desde las {cachedTimestamp}</p>}
-        Fuentes:{' '}
-        <a href="https://www.red.cl/predictorPlus/prediccion" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Red.cl</a>
-        {' · '}
-        <a href="https://www.metro.cl/el-viaje/estado-red" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">Metro.cl</a>
-        {' · '}
-        <a href="https://www.dtpm.cl/" target="_blank" rel="noopener noreferrer" className="hover:text-base-content underline underline-offset-2 transition-colors">DTPM</a>
+        <SectionSources section="transport" />
       </div>
     </div>
   );
