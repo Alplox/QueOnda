@@ -69,7 +69,7 @@ export function Footer() {
                 onClick={handleToggle}
                 className="flex items-center gap-2 text-sm text-base-content/70 hover:text-base-content transition-colors cursor-pointer md:ml-auto"
                 title={soundOff ? 'Activar sonidos' : 'Silenciar sonidos'}
-                aria-label={soundOff ? 'Activar sonidos' : 'Silenciar sonidos'}
+                aria-label={soundOff ? 'Sonido: activar' : 'Sonido: silenciar'}
               >
                 {soundOff ? (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -46,6 +46,8 @@ interface Props {
   slotCount: number;
   skipToasts: SkipToast[];
   onCancelSkip: (slotIndex: number) => void;
+  /** Hay artículos pero la clustering (code-split) todavía no devolvió temas. */
+  clusteringPending?: boolean;
 }
 
 function SourceErrorPanel({ sourceResults, onRetry }: { sourceResults: SourceResult[]; onRetry: () => void }) {
@@ -149,25 +151,44 @@ function LoadingSkeleton({ count }: { count: number }) {
   return (
     <div className="space-y-8">
       <p className="sr-only" role="status">Cargando noticias…</p>
-      <div aria-hidden="true">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 animate-pulse">
-          <div className="flex items-center gap-2">
-            <div className="h-4 w-32 rounded bg-base-300" />
-            <div className="h-4 w-8 rounded bg-base-300" />
-            <div className="h-6 w-14 rounded bg-base-300" />
-          </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <div className="h-[38px] sm:h-[34px] w-full sm:w-[220px] rounded-lg bg-base-300" />
-            <div className="h-[24.5px] w-full sm:w-40 rounded-lg bg-base-300/70" />
-          </div>
-        </div>
-        <div className={`flex gap-3 overflow-x-auto pb-2 sm:grid sm:overflow-visible sm:pb-0 scrollbar-hide-mobile ${slotGridCols(count)}`}>
-          {Array.from({ length: count }).map((_, i) => (
-            <div key={i} className="snap-center shrink-0 w-[80vw] sm:w-auto">
-              <SlotSkeleton />
-            </div>
+      <div aria-hidden="true" className="space-y-8">
+        {/* Tendencias: una fila fija de 34 px, igual que la tira real */}
+        <div className="flex gap-2 overflow-hidden h-[34px] animate-pulse">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-[34px] w-20 rounded-full bg-base-300 shrink-0" />
           ))}
         </div>
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 animate-pulse">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-32 rounded bg-base-300" />
+              <div className="h-4 w-8 rounded bg-base-300" />
+              <div className="h-6 w-14 rounded bg-base-300" />
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="h-[38px] sm:h-[34px] w-full sm:w-[220px] rounded-lg bg-base-300" />
+              <div className="h-[24.5px] w-full sm:w-40 rounded-lg bg-base-300/70" />
+            </div>
+          </div>
+          <div className={`flex gap-3 overflow-x-auto pb-2 sm:grid sm:overflow-visible sm:pb-0 scrollbar-hide-mobile ${slotGridCols(count)}`}>
+            {Array.from({ length: count }).map((_, i) => (
+              <div key={i} className="snap-center shrink-0 w-[80vw] sm:w-auto">
+                <SlotSkeleton />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Temas agrupados: misma ventana de alto fijo que el bloque real */}
+        <div className="space-y-3">
+          <div className="h-4 w-36 rounded bg-base-300 animate-pulse" />
+          <div className="h-[420px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">
+            {[0, 1, 2].map(i => (
+              <div key={i} className={`rounded-xl border border-base-300 bg-base-200 ${i > 0 ? 'hidden sm:block' : ''}`} />
+            ))}
+          </div>
+        </div>
+        {/* Línea de fuentes: 17 px reales */}
+        <div className="h-[17px]" />
       </div>
     </div>
   );
@@ -179,7 +200,7 @@ export function NewsFeed({
   slots, usedSourceKeys, pinnedSources, triedSources,
   onSourceChange, onRetrySlot, onClearSlot, onTogglePin,
   onAddSlot, onRemoveSlot, slotCount,
-  skipToasts, onCancelSkip,
+  skipToasts, onCancelSkip, clusteringPending = false,
 }: Props) {
   const [clusterLimit, setClusterLimit] = useState(3);
   const [searchQuery, setSearchQuery] = useState('');
@@ -280,9 +301,11 @@ export function NewsFeed({
 
   return (
     <div className="space-y-8">
-      {(trending.length > 0 || activeTag) && (
+      {(trending.length > 0 || activeTag || clusteringPending) && (
         <div>
-          <TrendingTags tags={trending} />
+          {clusteringPending && trending.length === 0 && !activeTag
+            ? <TrendingTags tags={[]} loading />
+            : <TrendingTags tags={trending} />}
         </div>
       )}
 
@@ -421,52 +444,67 @@ export function NewsFeed({
         )}
       </div>
 
-      {(visibleClusters.length > 0 || (clusters.length > 0 && filteredClusters.length === 0 && activeTag)) && (
-        <div className="transition-opacity duration-300 animate-[fadeSlideIn_0.4s_ease-out]">
+      {hasSlotsWithSources && (
+        <div className="transition-opacity duration-300">
           <h3 className="text-xs text-base-content/70 uppercase tracking-wider font-semibold mb-3">
             Agrupadas por tema
           </h3>
-          {visibleClusters.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {visibleClusters.map((cluster, index) => (
-                  <div key={index} className="opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${index * 60}ms` }}>
-                    <NewsClusterCard cluster={cluster} openDirect={openDirect} />
-                  </div>
+          {/* Ventana de alto fijo: los temas llegan después que los artículos
+              (la clustering va en un chunk aparte), así que si el bloque
+              creciera al aparecer empujaría media página hacia abajo. */}
+          <div className="h-[420px] overflow-y-auto rounded-xl">
+            {clusteringPending ? (
+              <div className="h-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse" aria-hidden="true">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className={`rounded-xl border border-base-300 bg-base-200 ${i > 0 ? 'hidden sm:block' : ''}`} />
                 ))}
               </div>
-              <div className="flex justify-center gap-3 mt-4">
-                {hasMoreClusters && (
+            ) : visibleClusters.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {visibleClusters.map((cluster, index) => (
+                    <div key={index} className="animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${index * 60}ms` }}>
+                      <NewsClusterCard cluster={cluster} openDirect={openDirect} />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center gap-3 mt-4">
+                  {hasMoreClusters && (
+                    <button
+                      onClick={() => setClusterLimit(c => c + 3)}
+                      className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.96] cursor-pointer"
+                    >
+                      Cargar más temas
+                    </button>
+                  )}
+                  {clusterLimit > 3 && (
+                    <button
+                      onClick={() => setClusterLimit(3)}
+                      className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.96] cursor-pointer"
+                    >
+                      Mostrar solo 3
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : activeTag ? (
+              <div className="text-center py-12 text-base-content/70 text-sm rounded-xl border border-dashed border-base-300">
+                Sin temas que coincidan con "{activeTag}"
+                <div>
                   <button
-                    onClick={() => setClusterLimit(c => c + 3)}
-                    className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.96] cursor-pointer"
+                    onClick={clearFilters}
+                    className="mt-3 px-3 py-1.5 text-xs font-medium bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 rounded-lg transition-colors cursor-pointer"
                   >
-                    Cargar más temas
+                    Limpiar filtros
                   </button>
-                )}
-                {clusterLimit > 3 && (
-                  <button
-                    onClick={() => setClusterLimit(3)}
-                    className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.96] cursor-pointer"
-                  >
-                    Mostrar solo 3
-                  </button>
-                )}
+                </div>
               </div>
-            </>
-          ) : (
-            <div className="text-center py-12 text-base-content/70 text-sm rounded-xl border border-dashed border-base-300">
-              Sin temas que coincidan con "{activeTag}"
-              <div>
-                <button
-                  onClick={clearFilters}
-                  className="mt-3 px-3 py-1.5 text-xs font-medium bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 rounded-lg transition-colors cursor-pointer"
-                >
-                  Limpiar filtros
-                </button>
+            ) : (
+              <div className="h-full grid place-items-center text-center px-6 text-xs text-base-content/70 rounded-xl border border-dashed border-base-300">
+                Los temas agrupados aparecen cuando varios medios publican la misma noticia.
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 

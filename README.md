@@ -246,8 +246,6 @@ pnpm run sync-credits         # regenera fuentes en AGENTS.md + tabla en README.
 
 <!-- data-sources:end -->
 
-> Para detalle completo (timeouts, criterios de corte), ver [`AGENTS.md`](./AGENTS.md#data-sources--fallback-chains).
-
 ## Licencia
 
 [`AGPL-3.0 license`](./LICENSE). 

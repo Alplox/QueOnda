@@ -500,8 +500,34 @@ export function FootballTable() {
       )}
 
       {activeTab === 'standings' && !loadingStandings && standings.length === 0 && (
-        <div className="p-6 text-center text-sm text-base-content/70">
-          Tabla de posiciones no disponible
+        /*
+         * Conserva el alto de la tabla (cabecera 28 px + 16 filas de 41 px =
+         * 684 px). Antes este estado era un texto de ~60 px: si ESPN no
+         * respondía, el bloque caía 583 px y se llevaba consigo media página
+         * hacia arriba (CLS). El fantasma de filas mantiene la reserva y el
+         * botón deja reintentar sin recargar.
+         */
+        <div className="relative flex min-h-[684px] flex-col items-center justify-center gap-2 p-6 text-center">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex flex-col opacity-20 animate-pulse">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div key={i} className="flex h-[41px] items-center gap-3 border-b border-base-300 px-4">
+                <div className="h-4 w-4 rounded bg-base-300" />
+                <div className="h-5 w-5 shrink-0 rounded-full bg-base-300" />
+                <div className="h-3 flex-1 rounded bg-base-300" />
+                <div className="h-3 w-6 rounded bg-base-300" />
+                <div className="h-3 w-6 rounded bg-base-300" />
+                <div className="h-4 w-8 rounded bg-base-300" />
+              </div>
+            ))}
+          </div>
+          <p className="relative text-sm text-base-content/70">Tabla de posiciones no disponible</p>
+          <button
+            type="button"
+            onClick={handleRefreshActive}
+            className="relative px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-[opacity,transform] cursor-pointer"
+          >
+            Reintentar
+          </button>
         </div>
       )}
 

@@ -44,11 +44,11 @@ export function TrendingTags({ tags, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-hidden h-[34px]">
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="h-8 w-20 rounded-full bg-base-300 animate-pulse"
+            className="h-[34px] w-20 rounded-full bg-base-300 animate-pulse shrink-0"
           />
         ))}
       </div>
@@ -58,36 +58,35 @@ export function TrendingTags({ tags, loading }: Props) {
   if (tags.length === 0 && !activeTag) return null;
 
   return (
-    <div>
-      <div className="flex flex-wrap gap-2">
-        {tags.map((tag, i) => {
-          const isActive = activeTag === tag;
-          return (
-            <button
-              key={i}
-              onClick={() => handleClick(tag)}
-              aria-pressed={isActive}
-              style={{ animationDelay: `${i * 40}ms` }}
-              className={`px-3 py-1.5 rounded-full text-sm border transition-[background-color,border-color,color,transform] cursor-pointer active:scale-[0.96] hover:scale-105 opacity-0 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
-                isActive
-                  ? 'bg-primary border-primary text-primary-content'
-                  : 'bg-base-200 text-base-content/70 border-base-300 hover:border-primary/50 hover:text-base-content'
-              }`}
-            >
-              #{tag}
-            </button>
-          );
-        })}
-        {activeTag && (
+    /* Una sola fila con scroll horizontal: antes las etiquetas hacían wrap y
+       cada fila nueva empujaba toda la página hacia abajo (CLS). */
+    <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {tags.map((tag, i) => {
+        const isActive = activeTag === tag;
+        return (
           <button
-            onClick={() => { play('interaction.confirm'); setTag(null); }}
-            className="px-3 py-1.5 rounded-full text-sm bg-base-200 text-error border border-base-300 hover:border-error/50 hover:text-base-content transition-colors cursor-pointer active:scale-[0.96]"
+            key={i}
+            onClick={() => handleClick(tag)}
+            aria-pressed={isActive}
+            style={{ animationDelay: `${i * 40}ms` }}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-sm border transition-[background-color,border-color,color,transform] cursor-pointer active:scale-[0.96] hover:scale-105 animate-[fadeSlideIn_0.25s_ease-out_forwards] ${
+              isActive
+                ? 'bg-primary border-primary text-primary-content'
+                : 'bg-base-200 text-base-content/70 border-base-300 hover:border-primary/50 hover:text-base-content'
+            }`}
           >
-            Limpiar filtro
+            #{tag}
           </button>
-        )}
-      </div>
-
+        );
+      })}
+      {activeTag && (
+        <button
+          onClick={() => { play('interaction.confirm'); setTag(null); }}
+          className="shrink-0 px-3 py-1.5 rounded-full text-sm bg-base-200 text-error border border-base-300 hover:border-error/50 hover:text-base-content transition-colors cursor-pointer active:scale-[0.96]"
+        >
+          Limpiar filtro
+        </button>
+      )}
     </div>
   );
 }

@@ -635,7 +635,7 @@ export function ClientTV() {
             {s === 'json-teles' ? 'json-teles' : s === 'iptv-org' ? 'iptv-org' : s === 'mi-iptv' ? 'mi-iptv' : 'Lista M3U'}
             {/* El conteo va con la playlist activa, no como badge suelto */}
             {isActive && total > 0 && (
-              <span className="text-[11px] font-mono tabular-nums px-1 py-0.5 rounded bg-primary/20">{total}</span>
+              <span className="text-[11px] font-mono tabular-nums px-1 py-0.5 rounded bg-primary/10">{total}</span>
             )}
           </button>
         );

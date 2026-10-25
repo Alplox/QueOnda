@@ -91,7 +91,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
             type="button"
             onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onDragChannelStart(ch, e); }}
             aria-label="Arrastrar al multiview"
-            className="absolute -top-1 -left-1 z-20 w-5 h-5 flex items-center justify-center rounded-full bg-base-300 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-200 cursor-grab active:cursor-grabbing touch-none transition-colors"
+            className="absolute -top-1.5 -left-1.5 z-20 w-6 h-6 flex items-center justify-center rounded-full bg-base-300 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-200 cursor-grab active:cursor-grabbing touch-none transition-colors"
             style={{ touchAction: 'none' }}
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -105,7 +105,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
           onClick={(e) => { e.stopPropagation(); play('interaction.toggle'); onToggleFavorite(ch.id); }}
           aria-label={isFav ? `Quitar ${ch.name} de favoritos` : `Agregar ${ch.name} a favoritos`}
           aria-pressed={isFav}
-          className={`absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center rounded-full transition-[background-color,color,transform] active:scale-[0.85] ${
+          className={`absolute top-1 right-1 z-10 w-6 h-6 flex items-center justify-center rounded-full transition-[background-color,color,transform] active:scale-[0.85] ${
             isFav
               ? isSelected
                 ? 'bg-base-100 text-primary ring-1 ring-primary'

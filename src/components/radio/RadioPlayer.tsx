@@ -12,6 +12,9 @@ interface Props {
   onToggleFavorite: (id: string) => void;
 }
 
+/** Radios que se pintan de entrada en el listado largo («Todas»). */
+const STATION_BATCH = 40;
+
 const PLAY_ICON = (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
     <path d="M5 3l10 6-10 6V3z" />
@@ -240,11 +243,14 @@ function StationCard({
         type="button"
         onClick={() => onSelect(station)}
         aria-pressed={isActive}
-        aria-label={`Escuchar ${station.name}`}
         className={`flex items-center gap-2 min-w-0 flex-1 text-left rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors ${
           compact ? 'p-1.5' : 'p-2'
         }`}
       >
+        {/* El nombre accesible sale del contenido (sr-only + nombre visible): un
+            aria-label con el verbo "Escuchar" no contenía la inicial del logo de
+            respaldo y axe lo marcaba como label-content-name-mismatch. */}
+        <span className="sr-only">Escuchar </span>
         <div className={[
           'rounded-full overflow-hidden bg-base-100 shrink-0 ring-1 flex items-center justify-center',
           compact ? 'w-8 h-8' : 'w-9 h-9',
@@ -253,7 +259,7 @@ function StationCard({
           {station.logo ? (
             <img src={station.logo} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf2') as HTMLElement)?.classList.remove('hidden'); }} />
           ) : null}
-          <div className={`w-full h-full flex items-center justify-center text-sm font-bold text-base-content rf2 ${station.logo ? 'hidden' : ''}`}>
+          <div className={`w-full h-full flex items-center justify-center text-sm font-bold text-base-content rf2 ${station.logo ? 'hidden' : ''}`} aria-hidden="true">
             {station.name.charAt(0)}
           </div>
         </div>
@@ -308,9 +314,16 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
   const [error, setError] = useState<string | null>(null);
   const [favExpanded, setFavExpanded] = useState(true);
   const [sortAZ, setSortAZ] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(STATION_BATCH);
 
   const stopped = !current || !playing;
   const currentSignal = current?.signals?.[signalIndex] || { type: 'audio' as const, url: current?.streamUrl || '' };
+
+  // Al cambiar el filtro la lista se acorta: volver al primer lote.
+  const filterKey = `${searchQuery}|${activeState}|${activeTags.join(',')}`;
+  useEffect(() => {
+    setVisibleCount(STATION_BATCH);
+  }, [filterKey]);
 
   useEffect(() => {
     if (!current) return;
@@ -535,6 +548,16 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
     const list = filteredStations.filter((s) => !favorites[s.id]);
     return sortAZ ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : [...list].sort((a, b) => b.name.localeCompare(a.name));
   }, [filteredStations, favorites, sortAZ]);
+
+  /* Render por lotes: el catálogo trae ~500 radios y pintarlas todas de una
+     añadía ~5.000 nodos al DOM (el mayor coste de layout de la página).
+     Se cargan 40 y el resto al llegar al final del scroller. */
+  const visibleStations = useMemo(
+    () => otherStations.slice(0, visibleCount),
+    [otherStations, visibleCount]
+  );
+  const hasMoreStations = visibleCount < otherStations.length;
+  const loadMoreStations = () => setVisibleCount(c => c + STATION_BATCH);
 
   const toggleTag = (tag: string) => {
     setActiveTags((prev) =>
@@ -820,7 +843,15 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
             <div className="border-t border-base-300/40 mb-2" />
 
             {/* Scrollable list area */}
-            <div className="flex-1 max-h-[360px] min-h-[360px] overflow-y-auto -mx-1 px-1">
+            <div
+              className="flex-1 max-h-[360px] min-h-[360px] overflow-y-auto -mx-1 px-1"
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                if (hasMoreStations && el.scrollTop + el.clientHeight >= el.scrollHeight - 160) {
+                  loadMoreStations();
+                }
+              }}
+            >
               <div className="sticky top-0 z-10 bg-base-200 pt-0.5 pb-1 flex items-center justify-between">
                 <p className="text-[11px] text-base-content/70 font-semibold uppercase tracking-wider px-1.5">
                   Todas ({otherStations.length})
@@ -836,18 +867,29 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
               </div>
 
               {otherStations.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                  {otherStations.map((station) => (
-                    <StationCard
-                      key={station.id}
-                      station={station}
-                      isActive={station.id === current?.id}
-                      isFav={!!favorites[station.id]}
-                      onSelect={handleSelect}
-                      onToggleFavorite={onToggleFavorite}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                    {visibleStations.map((station) => (
+                      <StationCard
+                        key={station.id}
+                        station={station}
+                        isActive={station.id === current?.id}
+                        isFav={!!favorites[station.id]}
+                        onSelect={handleSelect}
+                        onToggleFavorite={onToggleFavorite}
+                      />
+                    ))}
+                  </div>
+                  {hasMoreStations && (
+                    <button
+                      onClick={() => { play('interaction.tap'); loadMoreStations(); }}
+                      className="mt-1 w-full py-1.5 rounded-lg text-[11px] font-medium text-base-content/70 bg-base-100 border border-base-300 hover:bg-base-300 hover:text-base-content transition-colors cursor-pointer"
+                    >
+                      Mostrar {Math.min(STATION_BATCH, otherStations.length - visibleCount)} radios más
+                      <span className="sr-only"> ({otherStations.length - visibleCount} restantes)</span>
+                    </button>
+                  )}
+                </>
               ) : filteredStations.length === 0 ? (
                 <div className="text-center py-8 text-base-content/70 text-sm">
                   {fallback ? 'Cargando radios...' : 'Sin coincidencias'}

@@ -136,6 +136,7 @@ export function ClientNewsFeed() {
 
   const [clusters, setClusters] = useState<NewsCluster[]>([]);
   const [trending, setTrending] = useState<string[]>([]);
+  const [clusteredFor, setClusteredFor] = useState<string | null>(null);
   const [clusteringMod, setClusteringMod] = useState<{ clusterArticles: typeof clusterArticles; extractTrendingFromArticles: typeof extractTrendingFromArticles } | null>(null);
   const [pinnedSources, setPinnedSources] = useState<Record<number, PinnedSource>>(() => loadJSON<Record<number, PinnedSource>>(STORAGE_KEY_PINS, {}));
   const [skipToasts, setSkipToasts] = useState<SkipToast[]>([]);
@@ -257,6 +258,12 @@ export function ClientNewsFeed() {
     return slots.flatMap(s => s.articles);
   }, [slots]);
 
+  /* Firma del set de artículos: la clustering tarda un tick (chunk dinámico),
+     y NewsFeed necesita saber si los temas ya se calcularon para reservar su
+     espacio en lugar de insertarlo a mitad de carga. */
+  const articlesSignature = `${allArticles.length}:${allArticles[0]?.link ?? ''}`;
+  const clusteringPending = allArticles.length > 0 && clusteredFor !== articlesSignature;
+
   useEffect(() => {
     if (!clusteringMod) return;
     if (allArticles.length > 0) {
@@ -266,6 +273,7 @@ export function ClientNewsFeed() {
       setClusters([]);
       setTrending([]);
     }
+    setClusteredFor(articlesSignature);
   }, [allArticles, clusteringMod]);
 
   // Persist slot keys whenever they change (only when real data exists)
@@ -636,6 +644,7 @@ export function ClientNewsFeed() {
         slotCount={slots.length}
         skipToasts={skipToasts}
         onCancelSkip={handleCancelSkip}
+        clusteringPending={clusteringPending}
       />
     </div>
   );

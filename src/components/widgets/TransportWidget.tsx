@@ -36,6 +36,25 @@ const STATUS_COLORS: Record<string, string> = {
 
 const QUICK_PILLS = ['PA433', 'PA1', 'PA123', 'PA146'];
 
+/**
+ * Texto legible sobre el color oficial de cada línea del Metro.
+ * Blanco sobre el azul de L1 da 2,9:1; negro da 7,2:1, así que se elige el que
+ * pase AA (4,5:1) con el color real de la línea en vez de forzar blanco.
+ */
+function readableTextOn(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+  if (!m) return '#fff';
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const onWhite = 1.05 / (lum + 0.05);
+  const onBlack = (lum + 0.05) / 0.05;
+  return onWhite >= Math.max(onBlack, 4.5) ? '#fff' : '#111';
+}
+
 function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: string | null; updatedAt?: number }) {
   if (lines.length === 0) {
     return (
@@ -73,8 +92,8 @@ function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: s
             return (
               <div key={line.name} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-300">
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]"
-                  style={{ backgroundColor: line.color }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold [text-shadow:0_1px_2px_rgb(0_0_0/0.45)]"
+                  style={{ backgroundColor: line.color, color: readableTextOn(line.color) }}
                 >
                   {line.name.replace('L', '')}
                 </div>

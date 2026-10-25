@@ -1,9 +1,13 @@
 import { useState } from 'react';
 
 const FALLBACKS = [
-  (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=16`,
-  (d: string) => `https://icons.duckduckgo.com/ip3/${d}.ico`,
+  // icon.horse responde 200 (con un ícono genérico si no lo tiene) para todos
+  // los dominios del inventario, así que va primero: si arrancaba por Google,
+  // cada favicon ausente dejaba un error de red en consola (audit
+  // `errors-in-console`) y en el panel Issues de DevTools.
   (d: string) => `https://icon.horse/icon/${d}`,
+  (d: string) => `https://icons.duckduckgo.com/ip3/${d}.ico`,
+  (d: string) => `https://www.google.com/s2/favicons?domain=https://${d}&sz=32`,
 ];
 
 export function FaviconImg({ domain, className }: { domain: string; className?: string }) {

@@ -388,26 +388,64 @@ export function PowerOutageWidget() {
     );
   }
 
+  /*
+   * Sin datos (fallo de la SEC o cero cortes) el bloque CONSERVA el alto del
+   * esqueleto. Antes el error pintaba una cajita de ~150 px y el cero cortes
+   * devolvía `null`: en ambos casos el bloque colapsaba ~1.137 px y volvía a
+   * crecer cuando el reintento traía datos, empujando toda la página dos veces
+   * (CLS ~2,6 medido en Lighthouse). El primer /api/power puede tardar porque
+   * la SEC en frío tarda más que el timeout del cliente; el reintento llega con
+   * la caché caliente, así que ese colapso pasaba en cada carga real.
+   */
   if (!data || data.total === 0) {
-    if (error) {
-      return (
-        <div className="mt-4 rounded-xl p-4 border border-warning/30 bg-warning/10 shadow-sm animate-[fadeInUp_0.3s_ease-out]">
-          <p className="text-xs text-base-content/80">No se pudo cargar el estado eléctrico (SEC no disponible).</p>
-          <p className="mt-1">
-            <RetryHint retrying={retrying} retryIn={retryIn} />
-          </p>
-          <button
-            type="button"
-            onClick={retryNow}
-            disabled={retrying}
-            className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-[opacity,transform] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {retrying ? 'Reintentando…' : 'Reintentar ahora'}
-          </button>
-        </div>
-      );
-    }
-    return null;
+    return (
+      <div
+        className={`mt-4 flex min-h-[1137px] flex-col rounded-xl p-4 border shadow-sm sm:min-h-[864px] animate-[fadeInUp_0.3s_ease-out] ${
+          error ? 'border-warning/30 bg-warning/10' : 'border-base-300'
+        }`}
+      >
+        {error ? (
+          <>
+            <p className="text-xs text-base-content/80">No se pudo cargar el estado eléctrico (SEC no disponible).</p>
+            <p className="mt-1">
+              <RetryHint retrying={retrying} retryIn={retryIn} />
+            </p>
+            <button
+              type="button"
+              onClick={retryNow}
+              disabled={retrying}
+              className="mt-2 self-start px-3 py-1.5 rounded-lg bg-primary text-primary-content text-xs font-semibold hover:opacity-90 active:scale-[0.97] transition-[opacity,transform] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {retrying ? 'Reintentando…' : 'Reintentar ahora'}
+            </button>
+            {/* Fantasma del bloque real: mantiene la reserva sin fingir datos */}
+            <div aria-hidden="true" className="mt-4 flex flex-1 flex-col opacity-20 animate-pulse">
+              <div className="h-8 w-28 rounded bg-base-300" />
+              <div className="mt-3 h-2.5 w-full rounded bg-base-300" />
+              <div className="mt-1.5 h-2.5 w-3/4 rounded bg-base-300" />
+              <div className="mt-3 flex flex-1 flex-col gap-1.5">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 px-3">
+                    <div className="h-3 w-24 rounded bg-base-300" />
+                    <div className="ml-auto h-3 w-16 rounded bg-base-300" />
+                    <div className="h-3 w-10 rounded bg-base-300" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+            <span className="text-3xl" aria-hidden="true">💡</span>
+            <p className="text-2xl font-bold tabular-nums text-base-content">0</p>
+            <p className="text-sm font-medium text-base-content">clientes sin suministro</p>
+            <p className="max-w-[26ch] text-xs text-base-content/70">
+              La SEC no reporta cortes activos en este momento.
+            </p>
+          </div>
+        )}
+      </div>
+    );
   }
 
   const rows = tab === 'regiones' ? sortedRegions : visibleComunas;

@@ -140,7 +140,7 @@ export function GoogleTrendsWidget() {
   }
 
   return (
-    <div>
+    <div className="flex min-h-[1001px] flex-col sm:min-h-[881px]">
       <div className="space-y-1">
       {trends.map((trend, i) => (
         <div key={i} className="relative has-[details[open]]:z-20 opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${i * 50}ms` }}>

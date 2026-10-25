@@ -17,7 +17,6 @@ import {
   downloadBlob,
   shareOrCopy,
 } from '@/lib/share';
-import { renderEmergencyCard } from '@/lib/share-image';
 
 export interface EmergencyItem {
   id: string;
@@ -261,6 +260,10 @@ export function EmergencyWidget() {
         setShareMsg(r === 'copied' ? 'Resumen copiado' : 'No se pudo copiar');
         play(r === 'copied' ? 'interaction.confirm' : 'notification.error');
       } else {
+        // Carga diferida: el lienzo de la tarjeta compartible pesa ~6 KB y sólo
+        // se usa al pulsar «Imagen»; traerlo en el bundle de la isla dejaba
+        // 54 KB de JS sin ejecutar en la ruta crítica de Emergencia.
+        const { renderEmergencyCard } = await import('@/lib/share-image');
         const blob = await renderEmergencyCard(items, alerts, powerCount ?? undefined, powerMeta ?? undefined);
         const d = new Date();
         const pad = (n: number) => String(n).padStart(2, '0');

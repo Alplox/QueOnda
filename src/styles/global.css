@@ -277,8 +277,10 @@ section[id][data-visible] h2 .letter {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--color-base-content);
-  opacity: 0.7;
+  /* El atenuado va en el color, no en `opacity`: la opacidad del padre no se
+     puede deshacer desde los hijos, así que el enlace a la fuente quedaba con
+     el 70% del color y bajaba a 3,63:1 con 11 px (WCAG AA pide 4,5:1). */
+  color: color-mix(in oklch, var(--color-base-content) 82%, transparent);
   border-bottom: 1px solid var(--color-base-300);
   display: flex;
   align-items: baseline;
@@ -290,13 +292,12 @@ section[id][data-visible] h2 .letter {
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-base-content);
-  opacity: 1;
   text-decoration: underline;
   text-underline-offset: 2px;
-  transition: opacity 0.2s ease-out;
+  transition: color 0.2s ease-out;
 }
 .em-subhead a:hover {
-  opacity: 1;
+  color: var(--color-primary);
 }
 
 /* Fading corner ring — color from --curl (defaults primary), per-severity overrides */

@@ -389,9 +389,9 @@ const CELEBRATION_MESSAGES = [
 ];
 
 const PREP_STATUS: { threshold: number; emoji: string; text: string; color: string }[] = [
-  { threshold: 120, emoji: '🧊', text: 'Aún falta bastante', color: 'text-base-content/70' },
-  { threshold: 60, emoji: '🪁', text: 'Ya se empieza a sentir septiembre', color: 'text-base-content/70' },
-  { threshold: 30, emoji: '🥟', text: 'Hora de pensar en las empanadas', color: 'text-base-content/70' },
+  { threshold: 120, emoji: '🧊', text: 'Aún falta bastante', color: 'text-base-content/85' },
+  { threshold: 60, emoji: '🪁', text: 'Ya se empieza a sentir septiembre', color: 'text-base-content/85' },
+  { threshold: 30, emoji: '🥟', text: 'Hora de pensar en las empanadas', color: 'text-base-content/85' },
   { threshold: 15, emoji: '🔥', text: 'Prendan la parrilla', color: 'text-base-content/80' },
   { threshold: 7, emoji: '🍷', text: 'Comprando el terremoto', color: 'text-primary' },
   { threshold: 3, emoji: '💃', text: '¡Ensayando cueca!', color: 'text-primary' },
@@ -442,9 +442,9 @@ const SEASON_MESSAGES: Record<Season, { text: string; emoji: string }[]> = {
 
 const SEASON_STATUS: Record<Exclude<Season, 'pre18'>, { emoji: string; text: string; color: string }> = {
   celebration: { emoji: '🎉', text: '¡Estamos celebrando!', color: 'text-primary' },
-  recovery: { emoji: '😴', text: 'Recuperándose del 18...', color: 'text-base-content/70' },
-  halloween: { emoji: '🎃', text: 'Halloween a la vista, el 18 sigue en la memoria', color: 'text-base-content/70' },
-  christmas: { emoji: '🎄', text: 'Navidad encima, septiembre en el horizonte', color: 'text-base-content/70' },
+  recovery: { emoji: '😴', text: 'Recuperándose del 18...', color: 'text-base-content/85' },
+  halloween: { emoji: '🎃', text: 'Halloween a la vista, el 18 sigue en la memoria', color: 'text-base-content/85' },
+  christmas: { emoji: '🎄', text: 'Navidad encima, septiembre en el horizonte', color: 'text-base-content/85' },
 };
 
 function getProgress(): number {
@@ -673,7 +673,7 @@ export function FiestasCountdown() {
         <p
           key={msgIndex}
           aria-live="polite"
-          className="text-sm text-center text-base-content/70 mb-6 animate-[fadeSlideIn_0.5s_ease-out]"
+          className="text-sm text-center text-base-content/85 mb-6 animate-[fadeSlideIn_0.5s_ease-out]"
         >
           <Emoji emoji={displayMessage.emoji} className="inline-block h-[1em] align-text-bottom" /> {displayMessage.text}
         </p>
@@ -688,7 +688,7 @@ export function FiestasCountdown() {
             <p className="text-5xl sm:text-6xl font-bold text-primary tracking-[-0.02em]">
               ¡VIVA CHILE!
             </p>
-            <p className="text-sm text-base-content/70 mt-3">
+            <p className="text-sm text-base-content/85 mt-3">
               {splitEmojiText('Que no falten 🥟🍹🥩💃🔥').map((part, i) =>
                 part.type === 'emoji' ? <Emoji key={i} emoji={part.emoji} className="inline-block h-[1em] align-text-bottom" /> : part.value
               )}
@@ -699,10 +699,10 @@ export function FiestasCountdown() {
             <div className={`text-6xl sm:text-7xl font-light tabular-nums leading-none tracking-[-0.02em] transition-colors duration-1000 ${colorClass}`} aria-live="off">
               {timeLeft.days}
             </div>
-            <div className="text-[11px] font-semibold text-base-content/70 mt-1 uppercase tracking-[0.2em]">
+            <div className="text-[11px] font-semibold text-base-content/85 mt-1 uppercase tracking-[0.2em]">
               días
             </div>
-            <div className="text-xs sm:text-sm text-base-content/70 mt-3 tabular-nums">
+            <div className="text-xs sm:text-sm text-base-content/85 mt-3 tabular-nums">
               {String(timeLeft.hours)}h <span className="mx-0.5">·</span>{' '}
               {String(timeLeft.minutes).padStart(2, '0')}m{' '}
               <span className="mx-0.5">·</span>{' '}
@@ -711,7 +711,7 @@ export function FiestasCountdown() {
               </span>
             </div>
             {phase === 'after' && (
-              <div className="text-xs text-base-content/70 mt-2">para el 18 de septiembre del próximo año</div>
+              <div className="text-xs text-base-content/85 mt-2">para el 18 de septiembre del próximo año</div>
             )}
           </div>
         ) : timeLeft ? (
@@ -723,16 +723,16 @@ export function FiestasCountdown() {
               <span key={`h-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.hours).padStart(2, '0')}
               </span>
-              <span className="text-3xl sm:text-4xl align-middle text-base-content/70 mx-1">:</span>
+              <span className="text-3xl sm:text-4xl align-middle text-base-content/85 mx-1">:</span>
               <span key={`m-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.minutes).padStart(2, '0')}
               </span>
-              <span className="text-3xl sm:text-4xl align-middle text-base-content/70 mx-1">:</span>
+              <span className="text-3xl sm:text-4xl align-middle text-base-content/85 mx-1">:</span>
               <span key={`s-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
                 {String(timeLeft.seconds).padStart(2, '0')}
               </span>
             </div>
-            <div className="text-xs text-base-content/70 mt-2">
+            <div className="text-xs text-base-content/85 mt-2">
               para el 18 de septiembre
             </div>
           </div>
@@ -740,7 +740,7 @@ export function FiestasCountdown() {
 
         {phase === 'before' && timeLeft && (
           <div className="mt-5">
-            <div className="flex justify-between text-[11px] text-base-content/70 mb-1">
+            <div className="flex justify-between text-[11px] text-base-content/85 mb-1">
               <span>Hoy</span>
               <span>18 de septiembre</span>
             </div>
@@ -764,7 +764,7 @@ export function FiestasCountdown() {
             <EmojiCard card={currentCard} flipping={flipping} revealing={revealing} />
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-base-content/70 tabular-nums">
+            <span className="text-xs text-base-content/85 tabular-nums">
               {cardIndex + 1}/{EMOJI_COLLECTION.length}
             </span>
             <button

@@ -140,7 +140,7 @@ export function EmergencyAlertBar({ items, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Colapsar barra de emergencia"
-            className="shrink-0 flex items-center justify-center h-full w-9 ml-2 text-base-content/70 hover:text-base-content transition-colors"
+            className="shrink-0 flex items-center justify-center h-full w-10 ml-3 text-base-content/70 hover:text-base-content transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />

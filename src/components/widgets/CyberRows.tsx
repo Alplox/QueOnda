@@ -34,12 +34,15 @@ export interface ReadableItem {
 const SEVERITY: Record<CyberSeverity, { label: string; className: string; dot: string }> = {
   critical: {
     label: 'Crítica',
-    className: 'bg-error/15 text-error border-error/30',
+    // El chip vive sobre base-100: con `bg-error/15` el texto quedaba en 4,29:1
+    // a 10 px. Un fondo casi transparente mantiene el código de color y sube
+    // el contraste por encima de 4,5:1 en todos los temas oscuros.
+    className: 'bg-error/5 text-error border-error/35',
     dot: 'bg-error',
   },
   high: {
     label: 'Fraude',
-    className: 'bg-warning/15 text-warning border-warning/30',
+    className: 'bg-warning/5 text-warning border-warning/35',
     dot: 'bg-warning',
   },
   info: {
@@ -135,7 +138,7 @@ export function CyberKevRow({ entry }: { entry: KevEntry }) {
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-mono text-[11px] font-semibold text-primary">{entry.cve}</span>
           {entry.ransomware && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-error/30 bg-error/15 px-1.5 py-px text-[10px] font-semibold text-error">
+            <span className="inline-flex items-center gap-1 rounded-full border border-error/35 bg-error/5 px-1.5 py-px text-[10px] font-semibold text-error">
               <span className="h-1 w-1 rounded-full bg-error" aria-hidden="true" />
               Usada por ransomware
             </span>

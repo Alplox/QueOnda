@@ -135,7 +135,7 @@ export function HolidaysWidget() {
   const next = getNextHoliday(holidays);
 
   return (
-    <div>
+    <div className="flex min-h-[881px] flex-col sm:min-h-[853px]">
       {next && (
         <div className="rounded-xl bg-base-200 border border-base-300 shadow-sm p-5 mb-4 opacity-0 animate-[fadeSlideIn_0.3s_ease-out_forwards]">
           <p className="text-xs text-base-content/70 uppercase tracking-wider mb-1">Próximo feriado</p>

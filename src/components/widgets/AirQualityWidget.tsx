@@ -172,7 +172,7 @@ export function AirQualityWidget() {
       <div className="flex items-center justify-between gap-2">
         <p className="em-subhead !mb-0 !pb-1">
           <span><span className="mr-1.5" role="img" aria-label="nube">🌫️</span>Calidad del aire (MP 2,5)</span>
-          <span className="text-[11px] text-base-content/70">
+          <span className="text-[11px] text-base-content/85">
             {new Date(data.updatedAt).toLocaleString('es-CL', {
               day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
             })}

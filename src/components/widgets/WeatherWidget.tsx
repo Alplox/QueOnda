@@ -162,6 +162,63 @@ function normalize(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+/** Distancia en km (haversine) — para reutilizar el nombre de una ciudad base cercana. */
+function distanceKm(aLat: number, aLon: number, bLat: number, bLon: number) {
+  const R = 6371;
+  const dLat = ((bLat - aLat) * Math.PI) / 180;
+  const dLon = ((bLon - aLon) * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((aLat * Math.PI) / 180) * Math.cos((bLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/** Ubicación elegida por el usuario — se persiste para que sobreviva al reload. */
+const USER_CITY_KEY = 'weather-user-city';
+
+type StoredUserCity = { name: string; lat: number; lon: number; data: CityWeatherData };
+
+function readStoredUserCity(): StoredUserCity | null {
+  try {
+    const raw = localStorage.getItem(USER_CITY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredUserCity;
+    if (!parsed?.name || typeof parsed.lat !== 'number' || typeof parsed.lon !== 'number' || !parsed.data) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveUserCity(name: string, lat: number, lon: number, data: CityWeather) {
+  try {
+    localStorage.setItem(USER_CITY_KEY, JSON.stringify({ name, lat, lon, data }));
+  } catch {
+    /* quota / modo privado: la tarjeta sigue funcionando en esta sesión */
+  }
+}
+
+/**
+ * Nombre del lugar a partir de coordenadas.
+ * Open-Meteo NO tiene geocodificación inversa (`/v1/reverse` devuelve 404), así que
+ * usamos BigDataCloud (gratis, sin key, CORS abierto). Si falla, el clima se pide
+ * igual por coordenadas y la tarjeta se llama "Mi ubicación".
+ */
+async function reverseGeocodeName(lat: number, lon: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const name = data.city || data.locality || data.principalSubdivision;
+    return typeof name === 'string' && name.trim() ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, isExpanded, onToggle }: {
   data: CityWeather;
   isUser?: boolean;
@@ -262,7 +319,7 @@ function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, 
 export function WeatherWidget() {
   const [defaultMap, setDefaultMap] = useState<Record<string, CityWeather | null>>({});
   const [extraMap, setExtraMap] = useState<Record<string, CityWeather | null>>({});
-  const [userCity, setUserCity] = useState<CityWeather | null>(null);
+  const [userCity, setUserCity] = useState<CityWeather | null>(() => readStoredUserCity()?.data ?? null);
   const [loading, setLoading] = useState(true);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -305,37 +362,49 @@ export function WeatherWidget() {
     setGeoLoading(true);
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, enableHighAccuracy: false });
+        // 15 s: el prompt de permiso del navegador cuenta dentro del timeout, así que
+        // 5 s cortaba a quien tardaba en pulsar «Permitir».
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 15000,
+          maximumAge: 5 * 60 * 1000,
+          enableHighAccuracy: false,
+        });
       });
       const { latitude, longitude } = pos.coords;
-      const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=es`
-      ).then(r => r.json()).catch(() => null);
-      const place = geoRes?.results?.[0];
-      if (place) {
-        const geo = DEFAULT_CITIES_COORDS.find(c => normalize(c.name) === normalize(place.name));
-        const cities = geo ? [geo] : [{ name: place.name, lat: place.latitude, lon: place.longitude }];
-        const userWeather = await fetchOpenMeteoDirect(cities);
-        if (userWeather) {
-          const matchKey = Object.keys(userWeather).find(k => normalize(k) === normalize(place.name));
-          if (matchKey) setUserCity(userWeather[matchKey]);
-          else setGeoError('no se pudo obtener clima de tu ubicacion');
-        } else {
-          const serverRes = await fetchServerWeather(`cities=${encodeURIComponent(place.name)}`);
-          if (serverRes) {
-            const matchKey = Object.keys(serverRes).find(k => normalize(k) === normalize(place.name));
-            const w = matchKey ? serverRes[matchKey] : null;
-            if (w) setUserCity(w);
-            else setGeoError('no se pudo obtener clima de tu ubicacion');
-          } else {
-            setGeoError('no se pudo obtener clima de tu ubicacion');
-          }
-        }
-      } else {
-        setGeoError('no se pudo obtener tu ubicacion');
+
+      // Ciudad base cercana (≤25 km) → su nombre, así hereda pronóstico DMC y mapa.
+      const near = DEFAULT_CITIES_COORDS.find(c => distanceKm(c.lat, c.lon, latitude, longitude) <= 25);
+      const name = near?.name ?? (await reverseGeocodeName(latitude, longitude)) ?? 'Mi ubicación';
+      const cities = [{ name, lat: latitude, lon: longitude }];
+
+      const userWeather = await fetchOpenMeteoDirect(cities);
+      const direct = userWeather?.[name];
+      if (direct) {
+        setUserCity(direct);
+        saveUserCity(name, latitude, longitude, direct);
+        return;
       }
-    } catch {
-      setGeoError('no se pudo obtener tu ubicacion');
+
+      // Fallback servidor: geocodifica el nombre y usa su cadena de respaldo.
+      const serverRes = await fetchServerWeather(`q=${encodeURIComponent(name)}`);
+      const fallback = serverRes ? Object.values(serverRes)[0] : null;
+      if (fallback) {
+        const data = { ...fallback, city: name };
+        setUserCity(data);
+        saveUserCity(name, latitude, longitude, data);
+        return;
+      }
+
+      setGeoError('No se pudo obtener el clima de tu ubicación. Reintenta en unos segundos.');
+    } catch (err) {
+      const code = (err as GeolocationPositionError | undefined)?.code;
+      setGeoError(
+        code === 1
+          ? 'Permiso de ubicación bloqueado. Actívalo en el candado de la barra de direcciones y reintenta.'
+          : code === 3
+            ? 'Tu ubicación tardó demasiado en responder. Reintenta.'
+            : 'No se pudo obtener tu ubicación. Reintenta.'
+      );
     } finally {
       setGeoLoading(false);
     }
@@ -375,6 +444,24 @@ export function WeatherWidget() {
     load();
     return () => { cancelled = true; };
   }, [reloadKey]);
+
+  // La ciudad del usuario se pinta desde localStorage (arriba, en el estado inicial)
+  // y se refresca en segundo plano: sin esto, al recargar se quedaba con el clima
+  // del día en que se pulsó el botón, o desaparecía si el usuario limpiaba el sitio.
+  useEffect(() => {
+    const stored = readStoredUserCity();
+    if (!stored) return;
+    let cancelled = false;
+    (async () => {
+      const fresh = await fetchOpenMeteoDirect([{ name: stored.name, lat: stored.lat, lon: stored.lon }]);
+      const w = fresh?.[stored.name];
+      if (!cancelled && w) {
+        setUserCity(w);
+        saveUserCity(stored.name, stored.lat, stored.lon, w);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Load DMC forecast data
   useEffect(() => {
@@ -521,23 +608,27 @@ export function WeatherWidget() {
   const hasExtra = !filterCity && limit > INITIAL;
 
   if (loading) {
-    /* Reserva el alto medido: 538 px desktop / 707 px móvil (8 ciudades + controles). */
+    /* Reserva el alto medido: 538 px desktop / 707 px móvil (8 ciudades + controles).
+       La raíz mantiene el MISMO className que el estado cargado (flex + min-h):
+       si cambia, Chrome registra un layout shift de ~0,77 al llegar los datos. */
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 min-h-[687px] sm:min-h-[518px] animate-pulse" aria-hidden="true">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-base-300 p-4">
-            <div className="h-3 bg-base-300 rounded w-20 mb-3" />
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 bg-base-300 rounded" />
-              <div className="h-8 w-12 bg-base-300 rounded" />
+      <div className="flex min-h-[687px] flex-col sm:min-h-[518px]" aria-hidden="true">
+        <div className="grid animate-pulse grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-base-300 p-4">
+              <div className="h-3 bg-base-300 rounded w-20 mb-3" />
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 bg-base-300 rounded" />
+                <div className="h-8 w-12 bg-base-300 rounded" />
+              </div>
+              <div className="h-3 bg-base-300 rounded w-24 mb-2" />
+              <div className="flex gap-3">
+                <div className="h-2.5 bg-base-300 rounded w-16" />
+                <div className="h-2.5 bg-base-300 rounded w-20" />
+              </div>
             </div>
-            <div className="h-3 bg-base-300 rounded w-24 mb-2" />
-            <div className="flex gap-3">
-              <div className="h-2.5 bg-base-300 rounded w-16" />
-              <div className="h-2.5 bg-base-300 rounded w-20" />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }
@@ -567,7 +658,7 @@ export function WeatherWidget() {
   const mapLon = mapCenter?.lon ?? -70.67;
 
   return (
-    <div>
+    <div className="flex min-h-[687px] flex-col sm:min-h-[518px]">
       {/* Search / Filter bar */}
       <form onSubmit={handleSearch} className="flex gap-2 mb-3">
         <input
@@ -687,8 +778,28 @@ export function WeatherWidget() {
           </svg>
           {geoLoading ? 'Obteniendo ubicación…' : (userCity ? 'Actualizar mi ubicación' : 'Usar mi ubicación')}
         </button>
-        {geoError && <span className="text-[11px] text-base-content/70">{geoError}</span>}
       </div>
+
+      {geoError && (
+        <div
+          role="alert"
+          className="mb-3 flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-[11px] leading-relaxed text-base-content"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-error" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" /><path d="M12 8v4m0 3v.01" />
+          </svg>
+          <p className="flex-1">{geoError}</p>
+          <button
+            onClick={() => setGeoError(null)}
+            className="-mr-1 -mt-1 flex min-w-[24px] min-h-[24px] items-center justify-center rounded text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
+            aria-label="Ocultar aviso"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Weather grid */}
       {filterCity && visibleCities.length === 0 ? (

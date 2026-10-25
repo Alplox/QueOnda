@@ -627,7 +627,7 @@ export function BottomNav() {
             }}
             aria-haspopup="dialog"
             aria-expanded={sheetOpen}
-            aria-label="Todas las secciones"
+            aria-label="Más: todas las secciones"
             style={{ animationDelay: `${dock.length * 45}ms` }}
             className="min-w-0 flex-1 flex flex-col items-center justify-center gap-0.5 pt-1.5 pb-1 rounded-xl text-[11px] font-medium text-base-content/70 hover:text-base-content opacity-0 animate-[fadeInUp_0.35s_ease-out_forwards] transition-transform active:scale-[0.96]"
           >
