@@ -684,7 +684,7 @@ export function WeatherWidget() {
       <button
         onClick={() => { play('interaction.toggle'); setShowMap(s => !s); if (!showMap) { setMapLoaded(false); setMapFailed(false); setMapRetryKey(k => k + 1); } }}
         aria-expanded={showMap}
-        className="mb-3 flex items-center gap-1.5 text-xs font-medium text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+        className="mb-3 flex items-center gap-1.5 text-xs font-medium text-primary hover:text-base-content transition-colors cursor-pointer"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
           className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
