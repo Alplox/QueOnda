@@ -146,8 +146,24 @@ Se ejecutan en el Worker de Cloudflare o en build-time:
 | `fast-xml-parser` | MIT | Amit Gupta |
 | `astro` / `@astrojs/*` | MIT | Astro contributors |
 | `tailwindcss` / `@tailwindcss/vite` | MIT | Tailwind Labs |
+| `yauzl` / `adm-zip` | MIT | Josh Wolfe / Another-D-Mention Software (solo `pnpm run update-stops`, build-time) |
 
 ## Otros recursos (no npm)
+
+### Twemoji — CC-BY 4.0
+
+Los SVG de emoji de `public/emoji/*.svg` (cartas de Fiestas Patrias) provienen de
+[Twemoji](https://github.com/jdecked/twemoji) y se distribuyen bajo
+[CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/). Copyright (c)
+Twitter, Inc and other contributors. La atribución visible está en `/creditos`.
+
+### Simple Icons — CC0 1.0 Universal
+
+Los trazos de marca incrustados en `GoogleTrendsWidget.tsx` (Google, DuckDuckGo,
+Brave, Bing y el resto de buscadores) provienen de
+[Simple Icons](https://simpleicons.org) (CC0 1.0, sin obligación de atribución).
+La CC0 cubre el archivo SVG, no las marcas: se usan sólo de forma nominativa,
+sin alterar el logotipo ni sugerir respaldo.
 
 ### Google Fonts — SIL Open Font License 1.1
 
@@ -165,6 +181,16 @@ https://openfontlicense.org/
   - [cd_dvd_PNG9075](https://pngimg.com/image/9075)
   - [cd_dvd_PNG9080](https://pngimg.com/image/9080)
   - [cd_dvd_PNG9065](https://pngimg.com/image/9065)
+
+### Fotografías — Pexels License y Unsplash License
+
+- `public/backgrounds/*.webp` (hero, rotación diaria) — [Pexels](https://www.pexels.com/license/);
+  autor y enlace de cada foto en `src/lib/data-sources.json` → `sections.images`.
+- `public/img-footer.webp` (portada del footer) — [Unsplash](https://unsplash.com/license),
+  foto de [modernwolo](https://unsplash.com/es/fotos/manada-de-caballos-en-arbustos-y-pastos-a-traves-de-la-montana-Zf2mL1gtaVg).
+
+Ambas licencias permiten uso comercial sin atribución; la atribución se publica
+igualmente en `/creditos` desde `data-sources.json`.
 
 ### Basemap y datos — OpenFreeMap, OpenMapTiles & OpenStreetMap
 

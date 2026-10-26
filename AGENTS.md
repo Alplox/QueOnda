@@ -24,6 +24,8 @@ pnpm run sync-credits            # Regenerate AGENTS.md "Data Sources & Fallback
 src/
   pages/
     index.astro              # Main one-page layout
+    todas-las-fuentes.astro  # /todas-las-fuentes — página de selección de fuentes + resultados (isla AllSourcesPage)
+    creditos.astro           # /creditos — fuentes y licencias renderizadas desde data-sources.json
     api/
       news/
         index.ts             # GET /api/news?mode=inventory — OPML source list (server-cached 15 min)
@@ -56,7 +58,7 @@ src/
       SideIndex.tsx          # Side navigation index (client:load)
       BottomNav.tsx          # Mobile-only floating dock tab bar (<lg) with 4 quick sections + "Más" bottom sheet (all sections grid, focus-trapped dialog, grabber supports tap-to-close + swipe-down/fling to dismiss); auto-hides on scroll-down / reappears on scroll-up with 24px hysteresis (inert + parked invisible while hidden); anchored via a 1px bottom sentinel that measures Fenix's stale fixed-anchor (dynamic toolbar) and rides the real screen bottom; hide transform self-measures after slide-out and pushes any remainder off-screen; opens on pointerup (click suppressed via preventDefault on pointerdown) so eaten/retargeted synthesized clicks can't break it; broadcasts `dock:visibility` for fixed siblings; lifts above sticky radio player; BackToTop lifts above it. Debug overlay behind ?dockdebug=1 (src/lib/dock-debug.ts)
       ShareButton.tsx        # Header share button — native share on touch, clipboard copy on desktop (client:load)
-      SectionShareHandler.tsx  # Single delegated client:isidle island wiring every [data-section-share] button to share its section anchor (no per-section hydration)
+      SectionShareHandler.tsx  # Single delegated client:idle island wiring every [data-section-share] button to share its section anchor (no per-section hydration)
       Footer.tsx             # pb reserves space so the floating dock never covers the footer credits
       Section.tsx            # Reusable section wrapper — renders header + a "Compartir sección" button (data-section-share) per section
       BackToTop.tsx          # Appears after 500px scroll; lifts above dock/sheet/radio miniplayer using the nav sentinel bottom + dock's rendered rect incl. its lift transform (parsed from inline style); reacts to `dock:visibility`
@@ -70,13 +72,17 @@ src/
       ChileMap.tsx            # Chile region map for source filtering
       AllSourcesPage.tsx      # Página /todas-las-fuentes (elegir fuentes → cargar → resultados). Al elegir lista las ~2400 fuentes con los feeds de cada medio agrupados y en A-Z por defecto, con los mismos dos filtros del selector de noticias (claves compartidas `news-main-only` y `news-sort`). En resultados ordena los cards por medio A-Z por defecto: el API ya fusiona los feeds de un mismo medio en un solo card, así que ahí no hay "un feed por sitio" que filtrar
       chile-outline.ts        # Chile SVG outline data for ChileMap
+    ChileFlag.tsx             # Root-level static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
     Emoji.tsx                 # Root-level emoji rendering component
     RetryHint.tsx             # Aviso compartido «Reintento automático en Xs» (cuenta atrás en aria-live="off" + número en caja fija de 2ch) para los bloques en error
+    SectionSources.tsx        # Atribución compartida: lee `sections.<id>.sources` de data-sources.json y pinta «Fuente(s): …» con enlaces (`only` filtra nombres, `inline` para versiones en línea). Reemplaza el bloque «Fuente» copiado a mano en cada widget
     tv/
-      ClientTV.tsx            # TV orchestrator (state management, client:idle)
+      ClientTV.tsx            # TV orchestrator (state management, single + multiview, client:idle)
       ChannelSelector.tsx     # Category filter bar
       ChannelGrid.tsx         # Channel grid with hover/selected states
       UnifiedPlayer.tsx       # Single player for both inline + PiP modes (hls.js loaded per-play)
+      MultiviewGrid.tsx       # Cuadrícula multipantalla (2–9 slots): layouts 1x1…3x3 (`tv-multiview-layout`), slots persistidos en `tv-multiview-slots`, hls.js por celda
+      MultiviewCell.tsx       # Celda individual del multiview: su propio <video>/hls.js, selector de señal, mute salvo el slot enfocado, loading/error por celda
     radio/
       ClientRadios.tsx        # Client wrapper (client:idle)
       RadioPlayer.tsx         # Boombox-style radio player (hls.js loaded per-play); sticky miniplayer only mounts when a station is selected/current (empty shell peeked through FF Android's dynamic toolbar). El listado «Todas» (~500 emisoras) se pinta por lotes de 40 (`STATION_BATCH`) al llegar al final del scroller, con botón «Mostrar N radios más» para teclado: renderizar las 500 de una añadía ~5.000 nodos al DOM
@@ -109,12 +115,13 @@ src/
       CyberRows.tsx           # Filas presentacionales de CyberWidget (alerta, KEV) + formato relativo. Cada fila es un contenedor con dos acciones hermanas: el `<a target="_blank">` que abre el sitio original (clic normal) y el botón de libro que abre el modal — mismo contrato que `SlotCard`
       RouteMap.tsx             # Transit route map component (Leaflet + OpenFreeMap, client:idle)
       openfreemap-layer.ts     # Shared lazy MapLibre/OpenFreeMap basemap + theme switching for Leaflet maps
-      ChileFlag.tsx            # Static Chile flag SVG (also available as /emoji/1f1e8-1f1f1.svg)
+  types.ts                    # Tipos compartidos Channel / Article / NewsCluster / SourceResult
+  env.d.ts                    # Tipos de Astro + declaración del web component <hover-tilt> para JSX
   lib/
     cache.ts                 # Two-tier server cache: L1 in-memory Map + L2 Cloudflare Cache API (caches.default), plus dedupeFetch. Exports edgeCacheHeaders(ttlSeconds) for CDN-level edge caching with stale-while-revalidate, noStoreHeaders() for never-cached error responses, and setLastGood(key, data, ttlMs)/getStaleCached() for the durable "last known good" snapshot used by routes with no fallback chain (power)
     data-sources.json        # @canonical lista de fuentes de datos, cadenas de fallback y licencias. Renderizada en /creditos y en la sección "Data Sources & Fallback Chains" de este archivo (regenerar con `pnpm run sync-credits`)
     channels.ts              # Channel fetch + cache logic
-    feeds-database.json      # @generated local fallback of ~2056 active/verified RSS feeds (regenerate via `pnpm run update-feeds`)
+    feeds-database.json      # @generated local fallback of ~2600 feeds (news 895 + regional 1508 + sports 221; regenerate via `pnpm run update-feeds`)
     stops-database.json      # @generated RED bus routes + stops from DTPM GTFS (regenerate via `pnpm run update-stops`)
     holidays.json            # @generated Chilean holidays fallback from nager.at (regenerate via `pnpm run update-holidays`)
     rss.ts                   # RSS parser + feeds DB loader (local-first fallback: feeds-database.json → async GitHub raw → CDN)
@@ -126,6 +133,7 @@ src/
     comunas-coords.ts        # Comuna → [lat, lon] table (monitor-sinluz + supplements) + comunaCoords() matcher
     power.ts                 # Snapshot SEC compartido por /api/power y /api/cron: serie horaria + desglose regional + base de clientes por región (GetClientesRegional, cache 7 días con fallback compilado) → `pct` por región
     cyber.ts                 # Ciberseguridad: CSIRT Nacional + catálogo CISA KEV (recorte a 30/90 días + ventana de ransomware de 180 días + conteo por vendor), severidad CSIRT, bloques independientes y TTL degradado (compartido por /api/cyber y /api/cron)
+    dock-debug.ts            # Overlay de depuración del dock móvil, solo con `?dockdebug=1` (lo importa BottomNav)
     ua.ts                    # BROWSER_UA constant (shared by rss.ts + radios.ts, client-safe)
     backgrounds.ts            # Rotación diaria del hero (getTodayBg); las fotos viven en data-sources.json → sections.images
     emoji.ts                  # Emoji-to-SVG-path helper + text splitter
@@ -157,6 +165,8 @@ src/
     update-stops-db.mjs      # Downloads DTPM GTFS and regenerates src/lib/stops-database.json
     update-holidays-db.mjs   # Fetches nager.at API and regenerates src/lib/holidays.json
     download-emoji-svgs.mjs  # Downloads Twemoji SVGs for FiestasCountdown (card collection + mensajes por temporada). Ojo: reescribe todos los SVG sin width/height, conviene revisar el diff tras correrlo
+    sync-data-sources.mjs    # Regenera desde data-sources.json la sección "Data Sources & Fallback Chains" de AGENTS.md y la tabla del README (`pnpm run sync-credits`)
+    post-build-pages.mjs     # Reestructura dist/ para Cloudflare Pages (`_worker.js/index.js` + merge de public/ en dist/)
   styles/
     global.css               # Tailwind + DaisyUI base styles + scrollbar
 ```
@@ -174,31 +184,31 @@ All routes return JSON. CORS is not needed (same-origin).
 | `GET /api/youtube`                    | 60 min | `{ videos, channelStatuses }` — YouTube Chile trending via RSS                                                          |
 | `GET /api/youtube/source?channelId=&name=` | 5 min | `{ videos, status }` — retry single channel                                                                        |
 | `GET /api/trends`                     | 30 min | `{ trends }` — Google Trends Chile RSS                                                                                  |
-| `GET /api/weather?city=`              | 10 min | `{ weather }` — **fallback only** (WeatherWidget fetches Open-Meteo directly, server for Gael/Boostr)                  |
+| `GET /api/weather?q=<ciudad>` o `?cities=a,b` (sin parámetros = ciudades por defecto; `q` y `cities` son excluyentes) | 10 min | `{ weather }` — **fallback only** (WeatherWidget fetches Open-Meteo directly; servidor: Open-Meteo → Gael Cloud → Boostr, y `weather: null` con `no-store` si todo falla) |
 | `GET /api/transport?city=&stop=`      | 5 min  | `{ city, metro, stations, stopInfo }` — Metro lines + estaciones + llegada de buses RED                                 |
 | `GET /api/transport?city=&route=`     | 5 min  | `{ routeStops }` — Paraderos de un recorrido (ej: route=506)                                                            |
 | `GET /api/transport?mode=route-names` | 1 hour | `{ routes }` — Lista de todos los números de recorrido RED                              |
 | `GET /api/air-quality`               | 30 min | `{ source, stations }` — SINCA estaciones (PM2.5/PM10 + estado ICAP) o fallback Open-Meteo ciudades |
-| `GET /api/sports`                     | 30 min | `{ articles, sourceResults }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
-| `GET /api/futbol`                     | 10 min | `{ standings, matches, articles, source }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly) |
+| `GET /api/sports`                     | 30 min | `{ articles, sourceResults, totalSources, displayedSources }` — Sports RSS from OPML ⚽ Deportes category + keyword-matched feeds across all categories |
+| `GET /api/futbol`                     | 10 min | `{ articles, sourceResults, totalSources, displayedSources }` — **RSS articles only** (FootballTable fetches ESPN standings/matches directly; ESPN no tiene fallback) |
 | `GET /api/emergency`                  | 5 min  | `{ items, senapred }` — items: Gael Cloud → Boostr → USGS fallback chain (coords attached from Boostr); senapred: 🚨 SAE alerts via Telegram (rendered separately from the sismos chain — Telegram is the official live SAE feed; the CREF events page requires AWS AppSync Cognito/SigV4, fragile to reimplement). If Boostr is unreachable from the Worker, EmergencyWidget re-enriches `lat/lon` client-side from Boostr (API is CORS-open) so sismo pins always render |
-| `GET /api/power` (+ `?fresh=1` bypass con rate-limit 1/2min por IP) | 15 min | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria). Cada región trae `{ region, affected, total, pct }`: `total` = clientes de esa región (`GetClientesRegional`, cacheado 7 días + tabla compilada de respaldo) y `pct` = % de su base sin suministro. Payload construido por `src/lib/power.ts`, compartido con `/api/cron`. **Única fuente, sin cadena de fallback**: si la SEC falla sirve el snapshot durable `power:lastgood` (6 h) con `stale: true`; solo si tampoco existe devuelve 502 `SEC no disponible`, y ese error va con `no-store` (nunca se cachea en el edge) |
+| `GET /api/power` (+ `?fresh=1` bypass con rate-limit 1/2min por IP) | 15 min interno / 5 min edge (60 s con `?fresh=1`) | `{ affected, total, pct, updatedAt, regions, comunas, series }` — SEC clientes sin suministro (POST proxy, edge-cached; comunas con lat/lon vía `comunas-coords.ts`, series horaria). Cada región trae `{ region, affected, total, pct }`: `total` = clientes de esa región (`GetClientesRegional`, cacheado 7 días + tabla compilada de respaldo) y `pct` = % de su base sin suministro. Payload construido por `src/lib/power.ts`, compartido con `/api/cron`. **Única fuente, sin cadena de fallback**: si la SEC falla sirve el snapshot durable `power:lastgood` (6 h) con `stale: true`; solo si tampoco existe devuelve 502 `SEC no disponible`, y ese error va con `no-store` (nunca se cachea en el edge) |
 | `GET /api/cyber` | 15 min (3 min si un bloque falló) | `{ alerts, kev, blocks, updatedAt }` — CSIRT Nacional (alertas + severidad) y CISA KEV recortado a 30/90 días + ventana de ransomware de 180 días y conteo por vendor. Bloques independientes: si uno falla viaja con `blocks.*.ok=false` y el otro se sirve igual; snapshot durable `cyber:lastgood` (6 h) con `stale:true` si todo falla |
-| `GET /api/holidays`                   | 30 min | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback)                         |
+| `GET /api/holidays`                   | 24 hours | `{ holidays }` — **fallback only** (HolidaysWidget fetches nager.at directly, bundled fallback). Cadena Boostr → Nager → `holidays.json`                        |
 | `GET /api/article?url=`               | 60 min | `{ title, body, bodyHtml, author, ... }` — Article content proxy via cheerio                                            |
-| `GET /api/radio-stations`             | 1 hour | `{ stations }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits)                              |
-| `GET /api/jobs`                       | 1 hour | `{ jobs }` — Job listings from multiple sources                                                                         |
-| `GET /api/spotify`                    | 30 min | `{ tracks }` — Spotify Chile top tracks                                                                                 |
+| `GET /api/radio-stations`             | 1 hour | `{ stations, tags, states, stateCounts, total }` — **used by ClientRadios** (server endpoint avoids CORS + subrequest limits) |
+| `GET /api/jobs?source=getonbrd\|workanywhere\|remotive` | 1 hour | `{ jobs, sources, sourcesMeta }` — Job listings from multiple sources (sin `source` = todas en paralelo) |
+| `GET /api/spotify`                    | 1 hour | `{ title, thumbnailUrl }` — oEmbed de la playlist «Top 50 Chile» (metadatos de la card; el chart es un iframe embed)     |
 | `GET /api/forecast`                   | 1 hour | `{ forecasts }` — DMC pronóstico 5 días from pronostico.js (parsed client-side by WeatherWidget)                          |
-| `GET /api/cron`                       | —      | Cache pre-warming (sports, youtube, trends) — Bearer auth via `CRON_SECRET`                                              |
+| `GET /api/cron`                       | —      | Cache pre-warming (sports, youtube, power, trends, cyber) — Bearer auth via `CRON_SECRET`                                |
 
 ## Architecture & Conventions
 
 ### Hydration strategy
 
 - Components use Astro `client:*` directives for partial hydration
-- **Above-fold** (load eagerly): `Header`, `SideIndex`, `EmergencyTicker`, `EmergencyWidget` — `client:load`
-- **Mid/below-fold** (load at idle): `ClientNewsFeed`, `ClientTV`, `ClientRadios`, `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `FiestasCountdown` — all `client:idle` (hydrate via `requestIdleCallback` when browser is free, regardless of scroll). This preloads content in the background so sections are rendered before the user scrolls to them; on reload the IDB Phase-0 render makes skeletons invisible
+- **Above-fold** (load eagerly): `Header`, `SideIndex`, `BottomNav`, `EmergencyTicker`, `EmergencyWidget` (que monta `PowerOutageWidget`) y `BackToTop` — `client:load`
+- **Mid/below-fold** (load at idle): `ClientNewsFeed`, `ClientTV`, `ClientRadios`, `CyberWidget`, `FinanceWidget`, `YouTubeTrends`, `SpotifyChart`, `GoogleTrendsWidget`, `WeatherWidget`, `AirQualityWidget`, `TransportWidget`, `FootballTable`, `JobList`, `HolidaysWidget`, `FiestasCountdown`, `Footer` y `SectionShareHandler` — all `client:idle` (hydrate via `requestIdleCallback` when browser is free, regardless of scroll). This preloads content in the background so sections are rendered before the user scrolls to them; on reload the IDB Phase-0 render makes skeletons invisible
 - **hls.js** is loaded lazily via `import('hls.js')` only when a user plays an m3u8 stream, not at hydration time
 - **clustering.ts** is code-split via dynamic `import()` in ClientNewsFeed (not in main bundle)
 
@@ -241,6 +251,7 @@ All routes return JSON. CORS is not needed (same-origin).
 - La fila de categorías (`ChannelSelector`) sigue siendo un scroller horizontal, pero **"Todos" es un pill partido**: la etiqueta filtra por todas y el chevron abre un desplegable (portal a body, `role="dialog"` + `aria-modal`, `aria-haspopup`/`aria-expanded` en el trigger) con el **listado completo A-Z + conteos y buscador accent-insensitive** (`foldAccents`), así se llega a cualquier categoría sin sumar alto al body. Escape y click-fuera cierran (Escape devuelve el foco al trigger), Tab queda atrapado en el panel y el chip de la categoría elegida se auto-desplaza a la vista (`data-cat-chip`)
 - Los controles que cambian **la vista del reproductor** no viven en la card de filtros ni viajan con el bloque de video: `mediaBar` es una **barra fija arriba de la sección** (siempre en el mismo sitio) de **dos filas**: arriba las **playlists** (fuente de los canales, con el conteo en la activa) y abajo `Cuadrícula` + su disposición junto a la derecha el toggle de placeholder compacto + `PlacementPicker`. Reposicionar no mueve los controles
 - `Cuadrícula` es un **control segmentado**: el toggle (antes `Multi`) y las opciones de disposición (`1x1`…`3x3`) comparten superficie `bg-primary/15` cuando está activo, con la opción elegida en `bg-primary text-primary-content`; desactivado sólo queda el toggle. Las opciones llevan `aria-pressed` y el grupo `aria-label="Disposición de la cuadrícula"`
+- **Multiview** (`MultiviewGrid` + `MultiviewCell`): 1–9 streams a la vez, cada celda con su propio `<video>`/hls.js, selector de señal, mute salvo el slot enfocado y botón de quitar. Estado en `localStorage`: `tv-view-mode` (`single`/`multiview`), `tv-multiview-layout` (`1x1`, `1x2`, `1x3`, `2x2`, `2x3`, `3x3`) y `tv-multiview-slots`; al encoger el layout se truncan los slots sobrantes
 - Ubicación del reproductor (`localStorage['tv-player-placement']`): `below` (default), `above`, `left` y `right` (los laterales solo `≥lg`: dos columnas con el reproductor `lg:sticky lg:top-[88px]` en el lado elegido y el toolbar + grilla en el otro; en móvil caen a `below`). El valor antiguo `side` se migra a `left`. En los laterales el `ChannelGrid` cambia a `variant="wrap"` (grilla vertical de 3 columnas con scroll propio)
 - El bloque de video y el bloque filtros+grilla **nunca se desmontan al reposicionar**: ambos quedan montados en el mismo contenedor (media primero, filtros+grilla después) y sólo cambian de `order` (`mediaOrder`); el contenedor pasa de `flex flex-col` a `lg:grid` en los laterales. Así el `<video>` conserva el stream al cambiar de ubicación. Tras cada cambio, `.tv-media-land` (global.css) pinta un anillo `outline` que se desvanece en ~480 ms — no anima ni toca el contenido del player, y respeta `prefers-reduced-motion`
 - El placeholder sin canal es **completo por defecto** (`aspect-video` con ícono y texto); el usuario puede pasarlo a barra compacta con el toggle de la media bar (`localStorage['tv-placeholder-compact']`, `false` por defecto)
@@ -286,7 +297,7 @@ All routes return JSON. CORS is not needed (same-origin).
 
 ### News clustering (client-side)
 
-1. Fetches RSS feeds only from the 6 selected sources (not all ~200)
+1. Fetches RSS feeds only from the 6 selected sources (not all ~2400 in the inventory)
 2. Extracts keywords from titles (removes stopwords, produces unigrams + bigrams + trigrams) — shared `src/lib/clustering.ts`
 3. Calculates similarity between article keyword sets (Jaccard index > 0.25 = same cluster)
 4. Returns clusters sorted by score (article count × source diversity)
@@ -322,7 +333,7 @@ Accessibility is treated as part of the component craft, not a compliance pass. 
 ### Theme system
 
 - **DaisyUI v5** handles all theme colors natively via `daisyui` plugin
-- 35 themes configured in `src/styles/global.css` under `@plugin "daisyui" { themes: ... }`; `dark --default` is default
+- 35 themes configured in `src/styles/global.css` under `@plugin "daisyui" { themes: ... }`; `dark` es el `--default` de CSS, pero la app arranca en **`halloween`** (`data-theme="halloween"` en `index.astro`/`creditos.astro` y `useState('halloween')` en `ThemeSwitcher`) cuando no hay `localStorage.theme`
 - Components use DaisyUI's semantic classes: `bg-base-100`, `bg-base-200`, `bg-base-300`, `text-base-content`, `text-base-content/70`, `border-base-300`, `bg-primary`, `text-primary`, `border-primary`
 - Text contrast hierarchy: `text-base-content` (primary), `text-base-content/70` (secondary), `text-base-content/50` or lower **never used** for readable text (fails WCAG AA at small sizes on many themes)
 - **`accent` is never used** — only `primary` for UI emphasis (guaranteed high contrast on all 35 themes)
@@ -375,25 +386,19 @@ Cada skeleton reserva el alto real de su bloque para que la sección no salte al
 
 ### Source attribution convention
 
-Every widget/section must include a right-aligned source attribution at the bottom using the pattern:
+Every widget/section must include a right-aligned source attribution at the bottom. It is **not** written by hand: use the shared `SectionSources` component (`src/components/SectionSources.tsx`), which reads `sections.<id>.sources` from `src/lib/data-sources.json` — the single source of truth for sources, fallback chains and licenses.
 
-```html
-<div className="mt-2 text-right text-[10px] text-base-content/50">
-  Fuente:{' '}
-  <a
-    href="..."
-    target="_blank"
-    rel="noopener noreferrer"
-    className="hover:text-base-content underline underline-offset-2 transition-colors"
-    >Name</a
-  >
-</div>
+```tsx
+<SectionSources section="weather" />
+<SectionSources section="emergency" only={['CSN (U. de Chile)', sismosSource === 'usgs' ? 'USGS' : '...']} />
+<SectionSources section="news" inline />   {/* span en línea, no bloque inferior */}
 ```
 
-- Use `Fuente:` (singular) or `Fuentes:` (plural) prefix
-- Always include actual hyperlinks to data origins (prefer primary source, list fallbacks with `{' · '}` separator)
-- Every section must have attribution — no hidden or missing sources
-- All sections aligned `text-right`, never `text-center` or `text-left`
+- Renders `Fuente:` (1 source) or `Fuentes:` (varios), each name hyperlinked to its origin, with extra links after a `·` separator.
+- `only` keeps just the sources actually used in this render (p. ej. el sismo muestra USGS sólo si esa fue la fuente servida); `inline` devuelve un `<span>` en vez del bloque inferior.
+- Styling lives in the component (`mt-2 text-right text-[11px] text-base-content/70`): all sections aligned `text-right`, never `text-center` or `text-left`.
+- Every section must have attribution — no hidden or missing sources, including error/empty states.
+- Si una sección nueva necesita fuentes, agrégalas en `data-sources.json` (y corre `pnpm run sync-credits`) en vez de escribir los enlaces a mano. `ClientJobList` mantiene su bloque manual porque cambia de fuentes por pestaña.
 
 ## Data Sources & Fallback Chains
 
@@ -423,11 +428,10 @@ Module-level singleton using raw Web Audio API (no library). Exports `play(role)
 ## Performance
 
 - **Google Fonts** loaded non-blocking via `media="print" onload="this.media='all'"` (`index.astro`)
-- **Static asset caching**: `public/_headers` sets immutable cache for `/_astro/*`, `/emoji/*`, `/cd-disc-*.webp` (1 year) and 86400 for favicons/og-image
-- **Pre-warm**: On page load, an inline script fires `fetch()` to all API endpoints via `requestIdleCallback` so server cache is hot before widgets hydrate
-  - Critical (rAF): `/api/emergency`
-  - Deferred (idle): `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/channels?source=mi-iptv`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/air-quality`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`, `/api/cyber`
-  - Scheduled: `/api/cron` (external cron job for persistent cache warming)
+- **Static asset caching**: `public/_headers` sets immutable cache for `/_astro/*`, `/emoji/*`, `/cd-disc-*.webp`, `/backgrounds/*` e `/img-footer.webp` (1 year) and 86400 for favicons, `/og-image.webp` y `/chile-flag.svg`
+- **Pre-warm**: On page load, an inline script fires `fetch()` (fire-and-forget) to every API endpoint in a single batch inside one `requestAnimationFrame` so the server cache is hot before widgets hydrate. No `requestIdleCallback` split: idle scheduling delayed the warming past the point `client:idle` widgets began fetching on fast scroll
+  - Endpoints: `/api/emergency`, `/api/power`, `/api/news?mode=inventory`, `/api/channels?source=json-teles`, `/api/channels?source=iptv-org`, `/api/channels?source=mi-iptv`, `/api/radio-stations`, `/api/youtube`, `/api/trends`, `/api/transport`, `/api/air-quality`, `/api/sports`, `/api/futbol`, `/api/jobs`, `/api/spotify`, `/api/cyber`
+  - Scheduled: `/api/cron` (external cron job for persistent cache warming: sports, youtube, power, trends, cyber)
 - **Code-splitting**: `clustering.ts` is dynamically imported in `ClientNewsFeed` (separate 2.8 KB chunk, not in main bundle)
 - **Map rendering**: Leaflet stays lazy; MapLibre GL/OpenFreeMap and its worker load only when a map is first opened, then are shared across map widgets
 - **ClientNewsFeed** hydrates at idle (`client:idle`) instead of eagerly (`client:load`)

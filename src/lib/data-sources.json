@@ -860,15 +860,6 @@
       ]
     },
     {
-      "license": "Hippocratic-2.1",
-      "items": [
-        {
-          "name": "react-leaflet",
-          "url": "https://github.com/and-who/react-leaflet"
-        }
-      ]
-    },
-    {
       "license": "MPL-2.0",
       "items": [
         {

@@ -31,11 +31,12 @@ pnpm run sync-credits         # regenera fuentes en AGENTS.md + tabla en README.
 
 - **Emergencia**: sismos vía Gael Cloud → Boostr → USGS + alertas SAE de SENAPRED (Telegram) + cortes de luz por región/comuna vía SEC (apps.sec.cl), con mapa y evolución horaria
 - **Noticias**: RSS feeds de fuentes chilenas, clustering client-side por palabras clave, IDB cache (10 min)
-- **TV en vivo**: canales chilenos con HLS/iframe, modo PiP automático, fetch client-side con CDN fallbacks + IDB cache (24h)
+- **TV en vivo**: canales chilenos con HLS/iframe, modo PiP automático, multiview de 1–9 señales, fetch client-side con CDN fallbacks + IDB cache (24h)
 - **Radio**: streaming de radios chilenas vía HLS, fetch client-side con IDB cache (24h)
+- **Ciberseguridad**: alertas del CSIRT Nacional + vulnerabilidades CISA KEV, con búsqueda, filtros y lectura en modal
 - **Finanzas**: UF, USD, EUR, IPC, UTM vía mindicador.cl + dolarapi.com client-side, server fallback, IDB cache (30 min)
 - **YouTube**: últimos videos de canales chilenos vía RSS (reintento automático por canal)
-- **Spotify**: Top 50 Chile vía proxy server-side
+- **Spotify**: Top 50 Chile (iframe embed) con metadatos vía oEmbed server-side
 - **Google Trends**: tendencias Chile
 - **Clima**: Open-Meteo directo client-side + Gael Cloud/Boostr server fallback, IDB cache (10 min)
 - **Aire**: estaciones SINCA (MP2.5/PM10 + estado ICAP) con mapas Leaflet/OpenFreeMap, fallback Open-Meteo CAMS, IDB cache (30 min)

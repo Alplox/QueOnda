@@ -1,118 +1,161 @@
 # ¿Qué Onda?
 
-Chilean news aggregator + live TV/radio streaming in a single-page, ad-free dashboard.
+Chilean news aggregator + live TV/radio streaming in a single-page, ad-free dashboard. Spanish UI, AGPL-3.0.
+
+Sections (nav order): Emergencia · Noticias · TV · Radios · Ciberseguridad · Finanzas · YouTube · Spotify · Tendencias · Clima · Aire · Transporte · Deportes · Trabajos · Feriados · Fiestas Patrias.
 
 ## Stack
 
-- Astro 7 (SSR) + React 19 + TypeScript + Tailwind CSS 4 + DaisyUI v5
-- Font: `Figtree` (body) + `Lora` (headings), loaded non-blocking via Google Fonts `<link>`.
+- Astro 7 (SSR) + React 19 + TypeScript + Tailwind CSS 4 + DaisyUI v5.
+- Fonts: `Figtree` (body) + `Lora` (headings), loaded non-blocking via Google Fonts `<link>`.
 - Icons: inline SVGs (no icon library). No animation library — CSS transitions + `active:scale` only.
 - Sound: Web Audio API singleton (`src/lib/sound.ts`) — triangle wave + bandpass noise, lazy AudioContext.
+- Maps: Leaflet (widget maps) + MapLibre GL via OpenFreeMap (lazy, shared basemap).
 - Deploy: Cloudflare Pages Functions (SSR), `nodejs_compat`, `@astrojs/cloudflare` v14+ `mode: 'directory'` + `scripts/post-build-pages.mjs` post-build hook.
-- Build: `pnpm build && node scripts/post-build-pages.mjs`. Dev `pnpm dev`. Regenerators: `pnpm update-feeds` | `update-stops` | `update-holidays`.
+- Commands: `pnpm dev`, `pnpm build` (build + post-build restructure), `pnpm preview`. Regenerators: `pnpm run update-feeds` | `update-stops` | `update-holidays` | `sync-credits`.
 
 ## Key Files
 
 ```
 src/
-  pages/index.astro          # Main page shell (no SSR data — all client-fetched); pre-warm inline script
-  pages/api/                 # JSON endpoints (news, channels, weather, transport, emergency, power, sports, futbol, finance, youtube, trends, spotify, radio-stations, article, jobs, holidays, transport, cron)
-  components/layout/         # Header, Footer, SideIndex, ShareButton, Section, SectionShareHandler, BackToTop
-  components/news/            # ClientNewsFeed, NewsFeed, NewsClusterCard, SlotCard, ArticleReader, ChileMap, AllSourcesPage
-  components/tv/              # ClientTV, ChannelSelector, ChannelGrid, UnifiedPlayer (single <video>+hls.js, inline/PiP FLIP)
-  components/radio/           # ClientRadios, RadioPlayer (boombox, HLS via hls.js)
-  components/widgets/         # Finance, Weather, Transport, YouTubeTrends, SpotifyChart, GoogleTrends, FootballTable, Emergency*, PowerOutage*, Holidays, FiestasCountdown, TrendingTags, etc.
-  lib/                        # cache (L1 in-memory + L2 Cloudflare Cache API + dedupeFetch), rss, clustering, sound, transport, radios, idb-cache, auto-refresh, share, share-image, comunas-coords, holidays-db, stops-db, feeds-db, ua, chile-time, rate-limit, sections, storage, url, url-validator, backgrounds, emoji, festivities
-  scripts/                    # update-feeds-db, update-stops-db, update-holidays-db, download-emoji-svgs, post-build-pages
-  styles/global.css           # DaisyUI 35 themes (dark default, never accent), Tailwind v4, custom keyframes
+  pages/index.astro            # Main dashboard shell (no SSR data); hero script + pre-warm batch
+  pages/todas-las-fuentes.astro # /todas-las-fuentes (AllSourcesPage: pick sources → results)
+  pages/creditos.astro         # /creditos (renders data-sources.json)
+  pages/api/                   # JSON endpoints (news, news/batch, channels, weather, forecast, transport,
+                               #   emergency, power, cyber, air-quality, sports, futbol, finance, youtube,
+                               #   youtube/source, trends, spotify, radio-stations, article, jobs, holidays, cron)
+  components/layout/           # Header, SideIndex, BottomNav (mobile dock), Footer, Section, SectionShareHandler,
+                               #   ShareButton, BackToTop
+  components/news/             # ClientNewsFeed, NewsFeed, NewsClusterCard, SlotCard, ArticleReader, ChileMap,
+                               #   AllSourcesPage, FaviconImg, chile-outline
+  components/tv/               # ClientTV, ChannelSelector, ChannelGrid, UnifiedPlayer, MultiviewGrid, MultiviewCell
+  components/radio/            # ClientRadios, RadioPlayer (boombox, HLS via hls.js)
+  components/widgets/          # Finance, Weather, Transport, AirQuality(+Map), YouTubeTrends, VideoModal, SpotifyChart,
+                               #   GoogleTrends, FootballTable, Emergency*(+Map/Ticker/AlertBar), PowerOutage*(+Map/Chart),
+                               #   Cyber(+Rows), Holidays, FiestasCountdown, EmojiCard, TrendingTags, JobList, ClientJobList,
+                               #   RouteMap, openfreemap-layer
+  components/                  # SectionSources (shared attribution), RetryHint, Emoji, ChileFlag
+  lib/                         # cache (L1 Map + L2 Cache API + dedupeFetch + lastgood), rss, clustering, sound, transport,
+                               #   radios, power, cyber, air-quality, comunas-coords, regions, idb-cache, auto-refresh, retry,
+                               #   share, share-image, sanitize-html, url-validator, ua, chile-time, rate-limit, sections,
+                               #   storage, url, backgrounds, emoji, festivities, confetti, dock-debug, data-sources.json
+  scripts/                     # update-feeds-db, update-stops-db, update-holidays-db, download-emoji-svgs,
+                               #   sync-data-sources, post-build-pages
+  styles/global.css            # DaisyUI 35 themes (--default: dark; app boots on halloween), Tailwind v4, keyframes
 ```
+
+Repo root also holds `AGENTS.md` (architecture reference), `README.md`, `THIRD-PARTY-NOTICES.md` and `scripts/`.
 
 ## Architecture Notes
 
 - Astro SSR serves only the shell — every widget fetches client-side via `fetch('/api/...')` or directly from CORS-enabled external APIs.
-- **Two-tier cache**: server-side edge cache (`Cache-Control` + Cloudflare Cache API via `caches.default` + dedupe) + client IDB (instant reload). Server pre-warming via inline `requestIdleCallback` script on page load.
-- **IDB pattern** (per widget): render from IDB → background fetch → update IDB → server cache hit.
+- **Two-tier server cache**: in-memory `Map` (L1) + Cloudflare Cache API `caches.default` (L2) + `dedupeFetch`; `edgeCacheHeaders(ttl)` for CDN caching, `noStoreHeaders()` for errors, `setLastGood`/`getStaleCached` for durable snapshots (power, cyber).
+- **Pre-warm**: one inline `fetch()` batch inside a single `requestAnimationFrame` on load (emergency, power, news inventory, channels ×3, radios, youtube, trends, transport, air-quality, sports, futbol, jobs, spotify, cyber). No idle split.
+- **Client IDB pattern** per widget: render from IndexedDB → background fetch → update IDB → server cache hit.
 - Hydration tiers:
-  - `client:load`: Header, SideIndex, EmergencyTicker, EmergencyWidget, Footer.
-  - `client:idle`: ClientNewsFeed, ClientTV, ClientRadios, FinanceWidget, YouTubeTrends, SpotifyChart, GoogleTrendsWidget, WeatherWidget, TransportWidget, FootballTable, JobList, HolidaysWidget, FiestasCountdown.
-- `client:isidle` deferred single delegated share handler: `SectionShareHandler` wires every `[data-section-share]` button to the section anchor share + status toast (one island, zero per-section hydration).
-- `clustering.ts` code-split via dynamic `import()` in ClientNewsFeed (separate ~2.8 KB chunk); shared by server-side clustering in the article reader.
-- `hls.js` dynamically imported only on user play for m3u8 streams (TV + radio); iframes used for YT/Twitch.
+  - `client:load` (above fold): Header, SideIndex, BottomNav, EmergencyTicker, EmergencyWidget (mounts PowerOutageWidget), BackToTop.
+  - `client:idle` (everything else): ClientNewsFeed, ClientTV, ClientRadios, CyberWidget, FinanceWidget, YouTubeTrends, SpotifyChart, GoogleTrendsWidget, WeatherWidget, AirQualityWidget, TransportWidget, FootballTable, JobList, HolidaysWidget, FiestasCountdown, Footer, SectionShareHandler.
+- `clustering.ts` code-split via dynamic `import()` in ClientNewsFeed (shared with the article reader).
+- `hls.js` dynamically imported only on user play for m3u8 streams (TV + radio); iframes for YT/Twitch channels.
+- Cron: GitHub Action `*/30 * * * *` hits `/api/cron` with `Authorization: Bearer $CRON_SECRET` (sports, youtube, power, trends, cyber). Missing secret ⇒ 503.
 
 ## Theme System
 
-- 35 DaisyUI v5 themes in `src/styles/global.css` (`dark --default` default). `data-theme` on `<html>` set by init script + `ThemeSwitcher`, persisted in `localStorage.theme`.
-- Semantic DaisyUI classes (`bg-base-100..300`, `text-base-content[/70/50]`, `text-primary`, `bg-primary`, `text-primary-content`).
-- `accent` is never used. Translucent primary = `bg-primary/*` + `text-primary`. `.light-theme` class (not `@media color-scheme`) for light-theme CSS.
+- 35 DaisyUI v5 themes in `src/styles/global.css`. `data-theme` on `<html>` set by init script + `ThemeSwitcher`, persisted in `localStorage.theme`; fresh visitors start on `halloween` (CSS `--default` is `dark`).
+- Semantic classes only: `bg-base-100..300`, `text-base-content[/70]`, `text-primary`, `bg-primary`, `text-primary-content`, `border-base-300`.
+- `accent` is never used. Solid primary = `bg-primary text-primary-content`; translucent = `bg-primary/*` + `text-primary`. `.light-theme` class (not `@media color-scheme`) for light-theme CSS.
 
 ## Accessibility
 
-Native elements first, visible `focus-visible` rings (`outline-2 outline-offset-2 outline-primary`), keyboard operable, skip link (`href="#main"`), `aria-live="polite"` for auto-updating emergency, `prefers-reduced-motion` respected on marquee/pulse. Modal/overlay a11y: `role="dialog"` + `aria-modal` + focus trap + restore.
+Native elements first (`button`/`a`, never `div onClick`), visible `focus-visible` rings (`outline-2 outline-offset-2 outline-primary`), keyboard operable, skip link (`href="#main"`), `aria-live="polite"` for auto-updating emergency, `prefers-reduced-motion` respected on marquee/pulse/confetti. Overlays/modals: `role="dialog"` + `aria-modal` + focus trap + focus restore, `inert`/`aria-hidden` when visually hidden. No controls revealed only on hover.
 
-## API Endpoints (all JSON, 15-min default unless noted; per-source where noted)
+## API Endpoints
 
-- `GET /api/news?mode=inventory` — OPML source list (server 15 min)
-- `POST /api/news/batch` — per-source RSS (server `rss:{url}` 15 min; IDB 10 min)
-- `GET /api/channels?category=&source=json-teles|iptv-org` — TV channels (server 1 h; IDB 24 h). Used by ClientTV (CORS-free).
-- `GET /api/finance` — UF/USD/EUR/IPC/UTM merge chain: mindicador → Boostr → Findic → SII RSS → DolarAPI (server 30 min). FinanceWidget also fetches dolarapi/mindicador client-side as primary.
-- `GET /api/youtube` — YouTube Chile RSS via channel feeds (server 60 min); `GET /api/youtube/source` retries a single channel (server 5 min)
-- `GET /api/trends` — Google Trends Chile RSS (server 30 min)
-- `GET /api/weather?city=|city=&cities=&q=` — Open-Meteo → Gael Cloud → Boostr → stale cache fallback chain (server 10 min). WeatherWidget also fetches Open-Meteo directly as primary + DMC forecast.
-- `GET /api/transport?city=&stop=|route=|mode=route-names` — Metro.cl status + RED bus predictions + stops from DTPM GTFS `stops-database.json` (server 5 min)
-- `GET /api/sports` — sports RSS (OPML sports category + keyword-matched) (server 30 min)
-- `GET /api/futbol` — standings+maches via ESPN client-side; RSS articles via server (server 10 min articles)
-- `GET /api/emergency` — sismos: Gael Cloud → Boostr → USGS (|mag≥5.0) (server 5 min); `senapred[]` = official Telegram SAE alerts (parsed, client-side coord enrichment from Boostr if server-side unreachable)
-- `GET /api/power` — POST proxy to SEC clientes sin suministro (single source, no fallback chain); comunas via `comunas-coords.ts`; hourly series (server 15 min). On SEC failure it serves the durable `power:lastgood` snapshot (6 h) with `stale: true`; the terminal 502 `SEC no disponible` is `no-store` so a blip is never edge-cached
-- `GET /api/holidays` — nager.at (server 30 min; bundled fallback `holidays.json` from `update-holidays-db`)
-- `GET /api/radio-stations` — radio-browser.info → json-teles → FALLBACK_RADIOS (server 1 h; IDB 24 h)
-- `GET /api/article?url=` — cheerio content proxy (server 60 min per URL)
-- `GET /api/jobs` — getonbrd/Remotive/workanywhere (server 1 h)
-- `GET /api/spotify` — Spotify Top 50 Chile iframe source (server 30 min)
-- `GET /api/forecast` — DMC pronóstico.js 5-day parse (server 1 h)
-- `GET /api/cron` — Bearer-auth cache pre-warming (sports, youtube, trends)
+All JSON, same-origin. TTLs are server cache values unless noted.
 
-### Data Source fallback chains
+- `GET /api/news?mode=inventory` — OPML source list (~2400 feeds), 15 min.
+- `POST /api/news/batch` — body `{ sources: string[] }` (max 40, canonicalized against inventory); per-source `rss:{url}` 15 min + batch cache; client IDB 10 min.
+- `GET /api/channels?source=json-teles|iptv-org|mi-iptv&category=` — TV channels, 1 h (IDB 24 h). Used by ClientTV (CORS-free).
+- `GET /api/finance` — UF/USD/EUR/IPC/UTM merge: mindicador → Boostr → findic → SII RSS → DolarAPI, 30 min. Fallback only; FinanceWidget fetches mindicador/dolarapi client-side first.
+- `GET /api/youtube` — YouTube Chile trending via channel RSS, 60 min; `GET /api/youtube/source?channelId=&name=` retries one channel, 5 min.
+- `GET /api/trends` — Google Trends Chile RSS, 30 min.
+- `GET /api/weather?q=<ciudad>` or `?cities=a,b` (no params = default cities; `q`/`cities` mutually exclusive) — Open-Meteo → Gael Cloud → Boostr, 10 min; `{ weather: null }` with `no-store` when everything fails. WeatherWidget fetches Open-Meteo directly first; `/api/forecast` serves DMC 5-day forecast (1 h).
+- `GET /api/transport?city=&stop=|route=|mode=route-names` — Metro.cl + Red.cl + DTPM GTFS stops (`stops-database.json`), 5 min (route-names 1 h).
+- `GET /api/air-quality` — SINCA stations (PM2.5/PM10 + ICAP status) → Open-Meteo CAMS fallback, 30 min.
+- `GET /api/sports` — sports RSS (OPML Deportes category + keyword-matched feeds), 30 min.
+- `GET /api/futbol` — RSS articles only (`{ articles, sourceResults, totalSources, displayedSources }`), 10 min; FootballTable fetches ESPN standings/matches directly client-side.
+- `GET /api/emergency` — `{ items, senapred }`; sismos: Gael Cloud → Boostr → USGS (mag ≥ 5.0), 5 min; `senapred` = SAE alerts scraped from the official Telegram channel.
+- `GET /api/power` (+ `?fresh=1`, rate-limited 1 per 2 min per IP) — SEC clients without supply: totals, regions, comunas, hourly series. 15 min internal / 5 min edge. Single source, no fallback chain: on failure serves `power:lastgood` (6 h) with `stale: true`; if none, 502 `SEC no disponible` with `no-store`.
+- `GET /api/cyber` — `{ alerts, kev, blocks, updatedAt }`; CSIRT Nacional alerts + CISA KEV (trimmed to 30/90 days, ransomware window 180 days), 15 min (3 min if a block failed); `cyber:lastgood` (6 h) with `stale: true` if both fail.
+- `GET /api/holidays` — Boostr → Nager.Date → bundled `holidays.json`, 24 h. Fallback only; HolidaysWidget fetches nager.at directly.
+- `GET /api/article?url=` — cheerio content proxy (redirect validation + `sanitizeArticleHtml`), 60 min per URL.
+- `GET /api/radio-stations` — `{ stations, tags, states, stateCounts, total }`; radio-browser.info → json-teles → `FALLBACK_RADIOS`, 1 h (IDB 24 h).
+- `GET /api/jobs?source=getonbrd|workanywhere|remotive` — `{ jobs, sources, sourcesMeta }` (no `source` = all in parallel), 1 h.
+- `GET /api/spotify` — `{ title, thumbnailUrl }` oEmbed metadata for the "Top 50 Chile" card (chart is an iframe embed), 1 h.
+- `GET /api/cron` — Bearer auth via `CRON_SECRET`; warms sports, youtube, power, trends, cyber.
 
-Weather: Open-Meteo → Gael Cloud → Boostr → stale cache → null.
-Emergency: Gael Cloud → Boostr → USGS (≥5.0). SENAPRED SAE: official Telegram feed (separate).
-Finance: merge across mindicador → Boostr → Findic → SII RSS → DolarAPI.
-Radio: radio-browser.info → json-teles(cl music only) → FALLBACK_RADIOS.
-Feeds DB: `feeds-database.json` (build-time) → GitHub raw → jsDelivr (fire-and-forget background refresh in `loadFeedsDatabase`).
-TV: json-teles → jsDelivr; YouTube: channel RSS from json-teles; Holidays: nager.at → bundled JSON.
+### Data source fallback chains
+
+Weather: Open-Meteo → Gael Cloud → Boostr (plus Open-Meteo Geocoding, DMC forecast, Windy radar).
+Sismos: Gael Cloud → Boostr → USGS (≥ 5.0); SENAPRED SAE: official Telegram feed (separate block).
+Finance: merge across mindicador → Boostr → findic → SII RSS → DolarAPI.
+Air quality: SINCA (MMA) → Open-Meteo CAMS.
+Radio: radio-browser.info → json-teles (Chilean music) → `FALLBACK_RADIOS`.
+News feeds DB: `feeds-database.json` (bundled) → GitHub raw → jsDelivr.
+TV: json-teles → iptv-org → mi-iptv (+ YouTube/Twitch live signals).
+YouTube trending: json-teles → YouTube RSS. Holidays: Boostr → Nager.Date → bundled JSON.
+Football: ESPN (client) → Sports RSS. Jobs: GetOnBrd → WorkAnywhere → Remotive.
+Maps: OpenFreeMap → OpenMapTiles → OpenStreetMap.
 
 ## News System
 
-- 6 default slots; persisted to `localStorage['news-slots']` (sourceKeys). Pinned sources `localStorage['news-pins']` (`Record<slotIndex, {sourceKey,name,url}>`, sourceKey only one slot at a time).
+- 6 slots, persisted to `localStorage['news-slots']` (sourceKeys). Pins in `localStorage['news-pins']` (`Record<number, { sourceKey, name, url }>`; a source can only be pinned to one slot and wins on reload).
+- Default slots: Ciper Chile · Contrapoder Chile · ADN Radio · BioBioChile · La Tercera - Nacional · FastCheckCL.
+- Source dropdown per slot (in-use sources disabled elsewhere), accent-insensitive search, A-Z/Z-A (`news-sort`), and "Solo principales por sitio" (`news-main-only`), both shared with `/todas-las-fuentes`. Dropdown groups all feeds of an outlet together, flagship feed first.
 - No "Phase 3": clustering + trending computed client-side from the 6 active sources.
-- Source dropdown per slot; in-use sources disabled elsewhere. `?tag=` URL param filters clusters + slots; "Limpiar filtro" always available when a tag is active (TrendingTags renders even when tag list is empty).
-- Clustering: keyword unigrams/bigrams/trigrams (stopwords removed) + Jaccard similarity (>0.25 = same cluster), sorted by count × source diversity.
-- Trending tags clickable → sets `?tag=` + scrolls to news.
-- Server per-source cache `rss:{url}` (15 min); client batch cache `news-batch:{keys}` (IDB 10 min); per-source `news-source:{key}` (IDB).
+- `?tag=` URL param filters clusters + slots; "Limpiar" clears it.
+- Clustering: keyword unigrams/bigrams/trigrams (stopwords removed) + Jaccard similarity (> 0.25 = same cluster), sorted by article count × source diversity.
+- Caches: server per-source `rss:{url}` 15 min; client batch `news-batch:{keys}` (IDB 10 min); per-source `news-source:{key}` (IDB).
 
 ## TV & Radio Systems
 
-TV: single `<video>` + one hls.js instance shared by inline and PiP; FLIP on mode switch; auto-PiP via IntersectionObserver; search + localStorage favorites; signal selector HD/WEB/YT/Twitch.
-Radio: boombox layout, hidden `<video>` + hls.js for HLS, `<audio>` for direct; CD-disc visuals.
-Both fetch channel/station lists via server endpoints (CORS-free); IDB 24 h fallback to hardcoded lists.
+TV: single `<video>` + one hls.js instance shared by inline and PiP; FLIP on mode switch; auto-PiP via IntersectionObserver; search, favorites, signal selector (HD/WEB/YT/Twitch); grid density 1–5 rows (`tv-grid-rows`), sort A-Z/Z-A (`tv-sort`), player placement `below|above|left|right` (`tv-player-placement`).
+Multiview: 1–9 streams (`tv-view-mode`, `tv-multiview-layout` `1x1`…`3x3`, `tv-multiview-slots`), each cell with its own `<video>`/hls.js and signal selector.
+Radio: boombox layout (player + list), hidden `<video>` + hls.js for HLS, `<audio>` for direct streams; ~500 stations rendered in batches of 40; sticky miniplayer; CD-disc visuals.
+Both fetch channel/station lists via server endpoints (CORS-free) with IDB 24 h cache and hardcoded fallbacks.
+
+## Widget Highlights
+
+- **Emergency**: sismos + SENAPRED alerts + power outages; maps (sismos by magnitude, comunas), auto-refresh every 5 min + on tab focus, shared error box with auto-retry backoff (5/10/20/30/60 s).
+- **Power**: SEC snapshot, region/comuna breakdown (collapsible, `power-breakdown`), % mode with zoom/real scale (`power-scale`), hourly evolution chart (24 h/48 h/72 h/7 d).
+- **Cyber**: CSIRT alerts tab + CISA KEV tab, per-tab filters ("Solo críticas" / "Solo ransomware"), accent-insensitive search, batch rendering in a fixed-height window, `ArticleReader` for alerts.
+- **Weather**: multi-city cards, opt-in geolocation, DMC 5-day forecast, Windy radar, IDB cache; chosen city in `weather-user-city`.
+- **Air quality**: SINCA stations, ICAP band colors, region/comuna filters, Leaflet map.
+- **Transport**: Metro lines/stations status + RED bus predictions, popular stops, route stops and route map.
+- **Football**: ESPN standings + matches client-side, news tab with 25 RSS articles in a fixed-height window.
+- **YouTube**: trending grid + channel feeds, batch rendering, in-page `VideoModal` player (modifier-click opens YouTube).
+- **Fiestas Patrias**: countdown with seasonal messages and a daily card reveal (legendary card bursts confetti).
 
 ## Sound System
 
-`src/lib/sound.ts` singleton: `play(role)`, `toggleMuted()`/`isMuted()`, `setVolume()`/`getConfig()`, `setMuted()`, `cleanup()`. 20 roles (interaction.*, navigation.*, notification.*, overlay.*, media.*, hero.*). Footer sound toggle persists via module state. Mute defaults from `localStorage` (footer button writes it).
+`src/lib/sound.ts` singleton: `play(role)`, `toggleMuted()`/`isMuted()`, `setVolume()`/`getConfig()`, `setMuted()`, `cleanup()`. 20 roles (`interaction.*`, `navigation.*`, `notification.*`, `overlay.*`, `media.*`, `hero.*`). Footer sound toggle persists via module state; mute preference in `localStorage`.
 
 ## Layout & Shared Components
 
-- `Header` (fixed, hides on down-scroll), `SideIndex` (vertical section index), `Footer` (image credit + sound toggle), `Section` (letter-by-letter animated title + inline icon share button), `SectionShareHandler` (delegated section-anchor share), `BackToTop` (fixed, lifts above footer credits when near bottom), `ShareButton` (navbar: native share on touch / clipboard on desktop), `Emoji.tsx`.
-- Section attribution: right-aligned `Fuente:` / `Fuentes:` with links to primary + fallbacks (e.g. emergency = Gael → Boostr → USGS).
+- `Header` (fixed, hides on scroll down), `SideIndex` (right-side section index), `BottomNav` (mobile dock, auto-hides on scroll, "Más" sheet), `Footer` (photo credit + sound toggle + credits link), `Section` (letter-by-letter title + "Compartir sección" button), `SectionShareHandler` (one delegated island for all section shares), `BackToTop` (appears after 500 px, lifts above dock/sheet/player), `ShareButton` (native share on touch / clipboard on desktop).
+- Section attribution: `SectionSources` reads `sections.<id>.sources` from `src/lib/data-sources.json` and renders right-aligned `Fuente:` / `Fuentes:` links (1 source ⇒ "Fuente"). Never hardcode attributions.
 
-## Links
+## URLs
 
 - [Home](https://queonda.pages.dev/)
 - [All sources](https://queonda.pages.dev/todas-las-fuentes)
 - [Credits](https://queonda.pages.dev/creditos)
-- [Sitemap](https://queonda.pages.dev/sitemap.xml)
+- [llm.txt](https://queonda.pages.dev/llm.txt) (alias `/llms.txt`)
+- [Sitemap](https://queonda.pages.dev/sitemap.xml) · [robots.txt](https://queonda.pages.dev/robots.txt) (AI crawlers allowed)
 
 ## Conventions
 
 - Named React exports, `.tsx`, Tailwind classes. `client:*` directives respected.
-- Every section renders source attribution bottom-right (`Fuente:` with links).
-- `ponytail:` comments mark deliberate simplifications (e.g., cacheGet no-TTL stale-first, 3 s IDB race guard).
+- Every section renders source attribution bottom-right via `SectionSources` (from `data-sources.json`).
+- Loading skeletons reserve the real block height (no layout shift); error/empty states keep the same reservation.
+- `ponytail:` comments mark deliberate simplifications.
