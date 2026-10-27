@@ -31,6 +31,12 @@ const ICONS: Record<string, ReactNode> = {
       <path d="m8 2 4 4 4-4" />
     </>
   ),
+  ciberseguridad: (
+    <>
+      <path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5Z" />
+      <path d="m9 12 2 2 4-4" />
+    </>
+  ),
   radios: (
     <>
       <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
