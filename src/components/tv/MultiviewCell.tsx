@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { Channel } from '../../types';
 import { play } from '@/lib/sound';
+import { SignalSelect } from './SignalSelect';
 
 const SIGNAL_LABEL: Record<string, string> = {
   m3u8: 'HD', iframe: 'WEB', youtube: 'YT Live', 'youtube-vod': 'YT VOD', twitch: 'Twitch',
@@ -172,13 +173,13 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
       onMouseLeave={handleMouseLeave}
     >
       {/* Header */}
-      <div className={`absolute top-0 left-0 right-0 z-20 flex items-center gap-1.5 px-2 py-1.5 bg-gradient-to-b from-neutral/95 to-transparent transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`absolute top-0 left-0 right-0 z-20 flex items-center gap-1.5 px-2 py-1.5 bg-gradient-to-b from-neutral/95 to-transparent transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'} ${isEmbedType ? 'pointer-events-none' : ''}`}>
         {channel.logo && (
           <img src={channel.logo} alt="" className="w-4 h-4 rounded object-contain shrink-0" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         )}
         <span className="text-[11px] text-white font-medium truncate flex-1 min-w-0">{channel.name}</span>
         {focused && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
-        <button onClick={handleClose} className="min-w-[24px] min-h-[24px] flex items-center justify-center p-0.5 rounded text-white/60 hover:text-white hover:bg-white/15 transition-colors shrink-0" title="Quitar del multiview">
+        <button onClick={handleClose} className="min-w-[24px] min-h-[24px] flex items-center justify-center p-0.5 rounded text-white/60 hover:text-white hover:bg-white/15 transition-colors shrink-0 pointer-events-auto" title="Quitar del multiview">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
       </div>
@@ -217,47 +218,66 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
         )}
       </div>
 
-      {/* Bottom controls */}
-      <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/95 via-neutral/50 to-transparent px-1.5 pb-1 pt-6 transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'} ${!isHlsType ? 'pointer-events-none' : ''}`}>
-        <div className="flex items-center justify-between gap-1">
-          <div className="flex items-center gap-0.5 pointer-events-auto">
-            {isHlsType && (
-              <>
-                <button onClick={(e) => { e.stopPropagation(); togglePlay(e); }}
-                  className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title={playing ? 'Pausar' : 'Reproducir'}>
-                  {playing
-                    ? <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                    : <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                  }
-                </button>
-                <button onClick={toggleMute}
-                  className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title={muted ? 'Activar sonido' : 'Silenciar'}>
-                  {muted
-                    ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-                    : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-                  }
-                </button>
-              </>
-            )}
-            <button onClick={handleFullscreen}
-              className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title="Pantalla completa">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
-            </button>
-          </div>
-          {hasMultipleSignals && (
-            <div className="flex items-center gap-0.5 pointer-events-auto">
-              {signals.map((s, i) => (
-                <button key={i} onClick={(e) => { e.stopPropagation(); play('interaction.tap'); onSignalChange(i); }}
-                  className={`text-[7px] px-1 py-0.5 rounded transition-colors cursor-pointer ${
-                    i === signalIndex ? 'bg-primary text-primary-content' : 'text-white/50 hover:text-white hover:bg-white/15'
-                  }`}>
-                  {SIGNAL_LABEL[s.type] ?? s.type}
-                </button>
-              ))}
+      {/* Bottom controls — sólo HLS. En embeds (YouTube/Twitch/iframe) esa banda
+          es la barra del player ajeno: el overlay nuestro tapaba su mute (caía
+          sobre nuestro botón de pantalla completa) y su configuración. Ahí no se
+          pinta nada, ni siquiera el degradado; el selector de señal vive arriba. */}
+      {isHlsType && (
+        <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/95 via-neutral/50 to-transparent px-1.5 pb-1 pt-6 transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex items-center justify-between gap-1">
+            <div className="flex items-center gap-0.5">
+              <button onClick={(e) => { e.stopPropagation(); togglePlay(e); }}
+                className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title={playing ? 'Pausar' : 'Reproducir'}>
+                {playing
+                  ? <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                  : <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                }
+              </button>
+              <button onClick={toggleMute}
+                className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title={muted ? 'Activar sonido' : 'Silenciar'}>
+                {muted
+                  ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+                  : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                }
+              </button>
+              <button onClick={handleFullscreen}
+                className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title="Pantalla completa">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
+              </button>
             </div>
-          )}
+            {hasMultipleSignals && (
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-white/70">Señales</span>
+                <SignalSelect
+                  signals={signals}
+                  signalIndex={signalIndex}
+                  onChange={onSignalChange}
+                  className="bg-white/15 text-white border-white/15"
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+      {/* Embeds: sin barra de controles propia (el pie es la barra de YouTube).
+          El selector de señal va abajo a la derecha, como control flotante, con
+          pointer-events sólo sobre él; el resto del degradado deja pasar los
+          clics a la barra de YouTube (mute/volumen/configuración). */}
+      {isEmbedType && hasMultipleSignals && (
+        <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/95 via-neutral/50 to-transparent px-1.5 pb-1 pt-6 transition-opacity pointer-events-none ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex justify-end">
+            <div className="flex items-center gap-1 pointer-events-auto">
+              <span className="text-[9px] text-white/70">Señales</span>
+              <SignalSelect
+                signals={signals}
+                signalIndex={signalIndex}
+                onChange={onSignalChange}
+                className="bg-white/15 text-white border-white/15"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

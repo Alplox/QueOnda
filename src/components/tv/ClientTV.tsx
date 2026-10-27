@@ -1003,8 +1003,12 @@ export function ClientTV() {
         <>
           {/* Barra fija de controles: siempre en el mismo sitio de la sección. */}
           {mediaBar}
+          {/* El multiview no lleva superficie propia (son celdas sueltas), así que
+              con el gap de 6 px del reproductor su borde inferior quedaba pegado a
+              la card de filtros. Un poco más de aire sólo en ese modo. */}
           <div className={
-            'flex flex-col gap-1.5 ' +
+            'flex flex-col ' +
+            (viewMode === 'multiview' ? 'gap-3 ' : 'gap-1.5 ') +
             (sideActive
               ? `lg:grid lg:items-start ${
                   mediaSide === 'left'

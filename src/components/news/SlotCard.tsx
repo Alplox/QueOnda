@@ -7,7 +7,7 @@ import { play } from '@/lib/sound';
 import { extractHost } from '@/lib/url';
 import { REGION_LABELS, REGION_SLUGS_NS } from '@/lib/regions';
 import { loadJSON, saveJSON } from '@/lib/storage';
-import { foldAccents, isBetterMainFeed, orderByOutlet, outletKey } from '@/lib/sources';
+import { foldAccents, orderByOutlet, outletKey, flagshipFeeds } from '@/lib/sources';
 
 const MAIN_ONLY_KEY = 'news-main-only';
 const SORT_KEY = 'news-sort';
@@ -199,15 +199,10 @@ export const SlotCard = memo(function SlotCard({
   }, [dropdownOpen]);
 
   // One "principal" feed per outlet (grouped by the base name derived from feed names)
-  const mainSourceKeys = useMemo(() => {
-    const best = new Map<string, SourceFeed>();
-    for (const s of allSources) {
-      const groupKey = outletKey(s);
-      const current = best.get(groupKey);
-      if (!current || isBetterMainFeed(s, current)) best.set(groupKey, s);
-    }
-    return new Set([...best.values()].map(s => s.sourceKey));
-  }, [allSources]);
+  const mainSourceKeys = useMemo(
+    () => new Set(flagshipFeeds(allSources).map(s => s.sourceKey)),
+    [allSources]
+  );
 
   const availableSources = allSources.filter(s => {
     if (selectedSource && s.sourceKey === selectedSource.sourceKey) return true;
@@ -234,14 +229,32 @@ export const SlotCard = memo(function SlotCard({
       })
     : regionFilteredSources;
 
+  /*
+   * «Cargar siguiente» usaba el inventario crudo, así que con «Solo principales
+   * por sitio» cargaba un subfeed («La Tercera - Deportes») que el selector
+   * esconde. Ahora elige del mismo pool que el desplegable: un feed principal
+   * por medio, evitando los medios que ya ocupan otro bloque y los feeds ya
+   * intentados en este slot. Si no hay libre, se permite repetir medio.
+   */
   const nextAvailable = useMemo(() => {
-    const tried = triedSources[slotIndex] || [];
-    return allSources.find(s =>
+    const tried = triedSources[slotIndex] ?? [];
+    const usedOutlets = new Set<string>();
+    for (const s of allSources) {
+      if (usedSourceKeys.has(s.sourceKey)) usedOutlets.add(outletKey(s));
+    }
+
+    const isFree = (s: SourceFeed, avoidUsedOutlets: boolean) =>
       !usedSourceKeys.has(s.sourceKey) &&
       s.sourceKey !== selectedSource?.sourceKey &&
-      !tried.includes(s.sourceKey)
+      !tried.includes(s.sourceKey) &&
+      !(avoidUsedOutlets && usedOutlets.has(outletKey(s)));
+
+    const pool = allSources.filter(
+      s => !tried.includes(s.sourceKey) && (!mainOnly || mainSourceKeys.has(s.sourceKey))
     );
-  }, [allSources, usedSourceKeys, selectedSource?.sourceKey, triedSources, slotIndex]);
+
+    return pool.find(s => isFree(s, true)) ?? pool.find(s => isFree(s, false));
+  }, [allSources, mainOnly, mainSourceKeys, usedSourceKeys, selectedSource?.sourceKey, triedSources, slotIndex]);
 
   function handleSelect(source: SourceFeed) {
     play('interaction.tap');

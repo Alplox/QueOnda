@@ -139,8 +139,12 @@ export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, o
   }
 
   if (layout === '1x2') {
+    /* Filas por contenido: las celdas ya son 16:9, así que la de arriba mide el
+       triple que las de abajo. Con `2fr 1fr` la fila inferior se estiraba a 2×
+       su contenido (en 1x3 sobraba una franja muerta antes de la card de
+       filtros, porque el `fr` se reparte sobre el alto máximo de la fila). */
     return wrapper(
-      <div className="grid grid-rows-[2fr_1fr] gap-2">
+      <div className="grid gap-2">
         <div data-slot-index={0}>{renderCell(0)}</div>
         <div className="grid grid-cols-2 gap-2">
           {[1, 2].map((i) => (
@@ -152,8 +156,9 @@ export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, o
   }
 
   if (layout === '1x3') {
+    /* Mismo criterio que 1x2: alto por contenido, no `2fr 1fr`. */
     return wrapper(
-      <div className="grid grid-rows-[2fr_1fr] gap-2">
+      <div className="grid gap-2">
         <div data-slot-index={0}>{renderCell(0)}</div>
         <div className="grid grid-cols-3 gap-2">
           {[1, 2, 3].map((i) => (

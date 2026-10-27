@@ -64,11 +64,16 @@ const STAR_EMPTY = (
   </svg>
 );
 
-function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; playing: boolean; loading: boolean }) {
+function BoomboxDisplay({ station, playing, loading, isFav, onToggleFavorite }: { station: RadioStation; playing: boolean; loading: boolean; isFav?: boolean; onToggleFavorite?: () => void }) {
   const cdRef = useRef<HTMLDivElement>(null);
   const rotRef = useRef({ angle: 0, speed: 0, aid: 0, did: 0 });
+  const [favPulse, setFavPulse] = useState(false);
   const CDs = ['/cd-disc-1.webp', '/cd-disc-2.webp', '/cd-disc-3.webp', '/cd-disc-4.webp', '/cd-disc-5.webp'];
-  const cdSrc = useMemo(() => CDs[Math.floor(Math.random() * CDs.length)], [station.id]);
+  const cdSrc = useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < station.id.length; i++) h = (h * 31 + station.id.charCodeAt(i)) >>> 0;
+    return CDs[h % CDs.length];
+  }, [station.id]);
 
   useEffect(() => {
     const r = rotRef.current;
@@ -92,8 +97,8 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
   }, [playing]);
 
   return (
-    <div className="flex flex-row md:flex-col items-center justify-center flex-1 w-full gap-3 px-4 md:px-6">
-      <div className="relative w-24 h-24 max-md:w-14 max-md:h-14 shrink-0">
+    <div className="flex flex-row md:flex-col items-center justify-center flex-1 w-full gap-4 px-4 md:px-6">
+      <div className="relative w-24 h-24 max-md:w-16 max-md:h-16 shrink-0 flex items-center justify-center">
         {/* CD disc — expands from logo when playing, spins via JS */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -112,7 +117,7 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
         </div>
         {/* Loading spinner — between CD and logo */}
         {loading && (
-          <div className="absolute -inset-1.5 z-[5] rounded-full border-[3px] border-base-content/10 border-t-primary animate-spin pointer-events-none" />
+          <div className="absolute -inset-1.5 z-[5] rounded-full border-[3px] border-base-content/10 border-t-primary animate-spin pointer-events-none transition-opacity duration-150" />
         )}
         {/* Station logo (on top) */}
         <div className={[
@@ -127,24 +132,39 @@ function BoomboxDisplay({ station, playing, loading }: { station: RadioStation; 
           </div>
         </div>
       </div>
-      <div className="min-w-0 flex flex-col items-center justify-center gap-1 max-md:items-start md:mt-4">
-        <h3 className="text-lg font-semibold text-base-content text-center max-md:text-left max-md:text-sm max-md:line-clamp-2 md:text-balance">{station.name}</h3>
-        {station.website && (
-          <a
-            href={station.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => play('interaction.tap')}
-            className="flex items-center gap-1 text-[11px] text-base-content/70 hover:text-base-content underline-offset-2 underline transition-colors"
-          >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-            <span>Sitio web</span>
-          </a>
-        )}
+      <div className="min-w-0 flex flex-col items-center justify-center gap-2 max-md:items-start md:mt-4">
+        <h3 className="text-lg font-semibold text-base-content text-center max-md:text-left max-md:text-base max-md:line-clamp-2 md:text-balance">{station.name}</h3>
+        <div className="flex items-center gap-3 max-md:justify-start flex-wrap mt-1">
+          {onToggleFavorite && (
+            <button
+              onClick={() => { play('interaction.toggle'); setFavPulse(true); setTimeout(() => setFavPulse(false), 150); onToggleFavorite?.(); }}
+              aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+              aria-pressed={isFav}
+              className={`flex items-center gap-1 text-[11px] transition-colors ${isFav ? 'text-primary' : 'text-base-content/70 hover:text-base-content'} ${favPulse ? 'scale-125' : ''}`}
+              style={{ transition: 'transform 160ms ease-out, color 160ms ease-out' }}
+              title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+            >
+              {isFav ? STAR_FILLED : STAR_EMPTY}
+              <span>{isFav ? 'Guardada' : 'Guardar'}</span>
+            </button>
+          )}
+          {station.website && (
+            <a
+              href={station.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => play('interaction.tap')}
+              className="flex items-center gap-1 text-[11px] text-base-content/70 hover:text-base-content underline-offset-2 underline transition-colors"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+              <span>Sitio web</span>
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -159,6 +179,10 @@ function BoomboxControls({
   onStop,
   onMute,
   onVolumeChange,
+  onPrev,
+  onNext,
+  onToggleFavorite,
+  isFav,
 }: {
   playing: boolean;
   stopped: boolean;
@@ -168,11 +192,27 @@ function BoomboxControls({
   onStop: () => void;
   onMute: () => void;
   onVolumeChange: (v: number) => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  onToggleFavorite?: () => void;
+  isFav?: boolean;
 }) {
   return (
     <div className="w-full px-4 pb-3 md:px-6 md:pb-4 mt-2 md:mt-0">
       <div className="flex items-center gap-3 md:flex-col md:gap-3">
         <div className="flex items-center gap-2.5 shrink-0 md:w-full md:justify-center">
+          {onPrev && (
+            <button
+              onClick={onPrev}
+              className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-[background-color,transform] active:scale-[0.96]"
+              title="Estación anterior"
+              aria-label="Estación anterior"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={onPlayPause}
             className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center hover:bg-primary/90 transition-[background-color,transform] active:scale-[0.96] shadow-lg"
@@ -180,6 +220,18 @@ function BoomboxControls({
           >
             {playing ? PAUSE_ICON : PLAY_ICON}
           </button>
+          {onNext && (
+            <button
+              onClick={onNext}
+              className="w-9 h-9 rounded-full bg-base-content/10 text-base-content flex items-center justify-center hover:bg-base-content/20 transition-[background-color,transform] active:scale-[0.96]"
+              title="Estación siguiente"
+              aria-label="Estación siguiente"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={onStop}
             disabled={stopped}
@@ -188,6 +240,21 @@ function BoomboxControls({
           >
             {STOP_ICON}
           </button>
+          {onToggleFavorite && (
+            <button
+              onClick={onToggleFavorite}
+              aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+              aria-pressed={isFav}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-[background-color,transform] active:scale-[0.96] ${
+                isFav
+                  ? 'bg-primary/15 text-primary'
+                  : 'bg-base-content/10 text-base-content/70 hover:bg-base-content/20 hover:text-base-content'
+              }`}
+              title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+            >
+              {isFav ? STAR_FILLED : STAR_EMPTY}
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-1 min-w-0 md:w-full">
@@ -292,6 +359,52 @@ function StationCard({
   );
 }
 
+
+function MiniRadioCd({ playing, seed, size = 32 }: { playing: boolean; seed: string; size?: number }) {
+  const cdRef = useRef<HTMLDivElement>(null);
+  const rotRef = useRef({ angle: 0, speed: 0, aid: 0, did: 0 });
+  const CDs = ['/cd-disc-1.webp', '/cd-disc-2.webp', '/cd-disc-3.webp', '/cd-disc-4.webp', '/cd-disc-5.webp'];
+  const cdSrc = useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    return CDs[h % CDs.length];
+  }, [seed]);
+
+  useEffect(() => {
+    const r = rotRef.current;
+    clearInterval(r.aid);
+    clearInterval(r.did);
+    if (playing) {
+      r.aid = window.setInterval(() => {
+        r.speed += (0.5 - r.speed) * 0.05;
+        r.angle += r.speed;
+        if (cdRef.current) cdRef.current.style.transform = `rotate(${r.angle}deg)`;
+      }, 16);
+    } else {
+      r.did = window.setInterval(() => {
+        r.speed *= 0.95;
+        if (r.speed < 0.01) { r.speed = 0; clearInterval(r.did); return; }
+        r.angle += r.speed;
+        if (cdRef.current) cdRef.current.style.transform = `rotate(${r.angle}deg)`;
+      }, 16);
+    }
+    return () => { clearInterval(r.aid); clearInterval(r.did); };
+  }, [playing]);
+
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        transform: playing ? 'scale(1.35)' : 'scale(1)',
+        transition: 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)',
+      }}
+    >
+      <div ref={cdRef} className="w-full h-full">
+        <img src={cdSrc} alt="" className="w-full h-full object-contain" />
+      </div>
+    </div>
+  );
+}
 
 export function RadioPlayer({ stations, tags, states, stateCounts, favorites, onToggleFavorite }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -621,6 +734,31 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
     setTimeout(() => setCurrent(station), 50);
   };
 
+  const handlePrev = () => {
+    const pool = filteredStations.length > 0 ? filteredStations : stations;
+    if (pool.length === 0 || !current) return;
+    const idx = pool.findIndex((s) => s.id === current.id);
+    const next = pool[(idx - 1 + pool.length) % pool.length];
+    play('interaction.tap');
+    handleSelect(next);
+  };
+  const handleNext = () => {
+    const pool = filteredStations.length > 0 ? filteredStations : stations;
+    if (pool.length === 0 || !current) return;
+    const idx = pool.findIndex((s) => s.id === current.id);
+    const next = pool[(idx + 1) % pool.length];
+    play('interaction.tap');
+    handleSelect(next);
+  };
+
+  const handleRandomPlay = () => {
+    const pool = filteredStations.length > 0 ? filteredStations : stations;
+    if (pool.length === 0) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    play('interaction.confirm');
+    handleSelect(pick);
+  };
+
   const hasStations = stations.length > 0;
   const fallback = !hasStations;
 
@@ -636,7 +774,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
       ].join(' ')}>
         <div className="flex flex-col md:flex-row">
           {/* Boombox player panel */}
-          <div className="relative md:w-72 lg:w-80 shrink-0 flex flex-col items-center py-3 md:py-8 border-b md:border-b-0 md:border-r border-base-300 min-h-0 md:min-h-[320px]">
+          <div className="relative md:w-72 lg:w-80 shrink-0 flex flex-col items-center py-4 md:py-8 border-b md:border-b-0 md:border-r border-base-300 min-h-[220px] md:min-h-[320px]">
             {/* Ambient glow — no layout shift */}
             <div
               className="absolute inset-0 pointer-events-none z-0"
@@ -647,10 +785,11 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                 filter: 'blur(200px)',
               }}
             />
-            {current ? (
-              <>
+            <div key={current?.id ?? 'empty'} className={`flex flex-col flex-1 w-full ${current ? 'animate-[radioIn_200ms_cubic-bezier(0.22,1,0.36,1)] motion-reduce:animate-none' : ''}`}>
+              {current ? (
+                <>
                 {error && (
-                  <div className="mx-4 md:mx-6 mb-3 w-full flex items-start gap-2 bg-error/10 border border-error/20 rounded-xl px-3 py-2">
+                  <div className="mx-4 md:mx-6 mb-3 w-full flex items-start gap-2 bg-error/10 border border-error/20 rounded-xl px-3 py-2 animate-[radioIn_150ms_ease-out] motion-reduce:animate-none">
                     <span className="text-error shrink-0 mt-0.5 text-xs">⚠</span>
                     <p className="text-[11px] text-error leading-snug flex-1">{error}</p>
                     <button
@@ -664,7 +803,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                     </button>
                   </div>
                 )}
-                <BoomboxDisplay station={current} playing={playing} loading={loading} />
+                <BoomboxDisplay station={current} playing={playing} loading={loading} isFav={!!favorites[current.id]} onToggleFavorite={() => { play('interaction.toggle'); onToggleFavorite(current.id); }} />
                 
                 {/* Signal selector - shown if multiple signals available */}
                 {current.signals && current.signals.length > 1 && (
@@ -709,6 +848,7 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                 )}
               </div>
             )}
+            </div>
 
             {current && (
               <BoomboxControls
@@ -720,6 +860,10 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                 onStop={handleStop}
                 onMute={() => { play('interaction.toggle'); setMuted((m) => !m); }}
                 onVolumeChange={setVolume}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                onToggleFavorite={() => { play('interaction.toggle'); onToggleFavorite(current.id); }}
+                isFav={!!favorites[current.id]}
               />
             )}
           </div>
@@ -729,6 +873,22 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
             {/* Search + filter bar */}
             <div className="shrink-0 mb-3">
               <div className="flex gap-2">
+                <button
+                  onClick={handleRandomPlay}
+                  disabled={filteredStations.length === 0 && stations.length === 0}
+                  className="shrink-0 flex items-center gap-1.5 text-sm bg-primary text-primary-content rounded-xl px-3 py-2 hover:bg-primary/90 transition-colors active:scale-[0.96] disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Reproducir una radio al azar"
+                  aria-label="Reproducir una radio al azar"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="16 3 21 3 21 8" />
+                    <line x1="4" y1="20" x2="21" y2="3" />
+                    <polyline points="21 16 21 21 16 21" />
+                    <line x1="15" y1="15" x2="21" y2="21" />
+                    <line x1="4" y1="4" x2="9" y2="9" />
+                  </svg>
+                  <span className="hidden sm:inline">Aleatoria</span>
+                </button>
                 <div className="relative flex-1 min-w-0">
                   <input
                     type="text"
@@ -815,8 +975,10 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
-              {favExpanded && (
-                <div className="mt-1 max-h-40 overflow-y-auto rounded-lg">
+              <div className={`grid transition-[grid-template-rows] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${favExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                <div className="overflow-hidden">
+                  {favExpanded && (
+                    <div className="mt-1 max-h-40 overflow-y-auto rounded-lg">
                   {favoriteStations.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                       {favoriteStations.map((station) => (
@@ -838,6 +1000,8 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                   )}
                 </div>
               )}
+                </div>
+              </div>
             </div>
 
             <div className="border-t border-base-300/40 mb-2" />
@@ -914,12 +1078,15 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
       >
         {current && (
           <>
-          <div className="w-8 h-8 rounded-full overflow-hidden bg-base-100 ring-1 ring-primary/30 shrink-0">
-            {current.logo ? (
-              <img src={current.logo} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf3') as HTMLElement)?.classList.remove('hidden'); }} />
-            ) : null}
-            <div className={`w-full h-full flex items-center justify-center text-sm font-bold text-base-content rf3 ${current.logo ? 'hidden' : ''}`}>
-              {current.name.charAt(0)}
+          <div className="relative w-8 h-8 shrink-0">
+            {current && <MiniRadioCd playing={playing} seed={current.id} size={32} />}
+            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-base-100 ring-1 ring-primary/30 z-10">
+              {current.logo ? (
+                <img src={current.logo} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement && (t.parentElement.querySelector('.rf3') as HTMLElement)?.classList.remove('hidden'); }} />
+              ) : null}
+              <div className={`w-full h-full flex items-center justify-center text-sm font-bold text-base-content rf3 ${current.logo ? 'hidden' : ''}`}>
+                {current.name.charAt(0)}
+              </div>
             </div>
           </div>
           <div className="flex-1 min-w-0">

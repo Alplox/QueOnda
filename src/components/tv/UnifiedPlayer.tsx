@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { Channel } from '../../types';
 import { play } from '@/lib/sound';
+import { SignalSelect } from './SignalSelect';
 
 interface Props {
   channel: Channel;
@@ -409,10 +410,20 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
     dragRef.current = null;
   }, []);
 
-  // Hide controls on pip mount
+  // PiP: keep the miniplayer inside the viewport when the window is resized
+  // (otherwise it can end up completely off-screen after a resize).
   useEffect(() => {
-    if (mode === 'pip' && !animating) setShowControls(false);
-  }, [mode, animating]);
+    if (mode !== 'pip') return;
+    const clamp = () => {
+      setPipPos((prev) => ({
+        x: Math.max(0, Math.min(prev.x, window.innerWidth - PIP_WIDTH)),
+        y: Math.max(0, Math.min(prev.y, window.innerHeight - PIP_HEIGHT)),
+      }));
+    };
+    window.addEventListener('resize', clamp);
+    clamp();
+    return () => window.removeEventListener('resize', clamp);
+  }, [mode]);
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
@@ -458,7 +469,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
       >
         {/* --- HEADER / TITLE BAR (hidden in fullscreen) --- */}
         {!(mode === 'inline' && isFullscreen) && (
-        <div className={`${mode === 'pip' ? 'absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-neutral/70 to-transparent h-9' : 'bg-base-100/95 backdrop-blur-sm border-b border-base-300 rounded-t-xl'}`}>
+        <div className={`${mode === 'pip' ? 'absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-neutral/70 to-transparent h-9 pointer-events-none' : 'bg-base-100/95 backdrop-blur-sm border-b border-base-300 rounded-t-xl'}`}>
           {mode === 'inline' ? (
             <>
               <div className="flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-2">
@@ -475,14 +486,14 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                 <div className="flex items-center gap-0.5 shrink-0">
                   {channel.website && (
                     <a href={channel.website} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-0.5 p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-300 transition-[background-color,transform] active:scale-[0.9] shrink-0"
-                      onClick={(e) => { play('interaction.tap'); e.stopPropagation(); }} title="Sitio web">
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md bg-primary text-primary-content hover:opacity-90 transition-[opacity,transform] active:scale-[0.96] shrink-0"
+                      onClick={(e) => { play('interaction.tap'); e.stopPropagation(); }} title="Sitio web oficial">
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                         <polyline points="15 3 21 3 21 9" />
                         <line x1="10" y1="14" x2="21" y2="3" />
                       </svg>
-                      <span className="hidden sm:inline text-[11px]">Sitio web</span>
+                      <span className="hidden sm:inline text-[11px]">Sitio web oficial</span>
                     </a>
                   )}
                   {onToggleAutoPip && (
@@ -510,7 +521,8 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                 </div>
               </div>
               {hasMultipleSignals && (
-                <div className="flex flex-wrap items-center gap-1 px-2 sm:px-3 pb-2 pt-1.5 border-t border-base-300/50">
+                <div className="flex flex-wrap items-center gap-1.5 px-2 sm:px-3 pb-2 pt-1.5 border-t border-base-300/50">
+                  <span className="text-[10px] font-medium text-base-content/70 self-center">Señales</span>
                   {signals.map((s, i) => (
                     <button key={i} onClick={() => { play('interaction.tap'); onSignalChange(i); }}
                       className={`text-[8px] px-1.5 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
@@ -640,18 +652,34 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
             </div>
           )}
 
-          {/* Bottom signal selector (pip mode, hidden during error to avoid duplication with error overlay) */}
+          {/* Signal selector (pip mode, hidden during error to avoid duplication with error overlay).
+              Con embeds sube bajo la cabecera y va como `select` compacto: el pie
+              lo ocupa la barra del player ajeno (YouTube) y la fila de chips le
+              robaba clics al progreso/mute. */}
           {mode === 'pip' && hasMultipleSignals && !error && (
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-neutral/70 rounded-lg px-1.5 py-0.5">
-              {signals.map((s, i) => (
-                <button key={i} onClick={(e) => { e.stopPropagation(); play('interaction.tap'); onSignalChange(i); }}
-                  className={`text-[7px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
-                    i === signalIndex ? 'bg-primary text-primary-content' : 'text-white/60 hover:text-white hover:bg-white/15'
-                  }`}>
-                  {SIGNAL_LABEL[s.type] ?? s.type}
-                </button>
-              ))}
-            </div>
+            isEmbedType ? (
+              <div className="absolute bottom-1 right-1 z-10 flex items-center gap-1 pointer-events-none">
+                <span className="text-[9px] text-white/70 pointer-events-none">Señales</span>
+                <SignalSelect
+                  signals={signals}
+                  signalIndex={signalIndex}
+                  onChange={onSignalChange}
+                  className="bg-neutral/80 text-white border-white/15 pointer-events-auto"
+                />
+              </div>
+            ) : (
+              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-neutral/70 rounded-lg px-1.5 py-0.5">
+                {signals.map((s, i) => (
+                  <button key={i} onClick={(e) => { e.stopPropagation(); play('interaction.tap'); onSignalChange(i); }}
+                    aria-pressed={i === signalIndex}
+                    className={`text-[7px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
+                      i === signalIndex ? 'bg-primary text-primary-content' : 'text-white/60 hover:text-white hover:bg-white/15'
+                    }`}>
+                    {SIGNAL_LABEL[s.type] ?? s.type}
+                  </button>
+                ))}
+              </div>
+            )
           )}
 
           {/* Controls overlay — inline mode only */}

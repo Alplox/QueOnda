@@ -195,8 +195,8 @@
           "note": "standings + scoreboard chi.1, timeout 8s; sin fallback → tabla/partidos vacíos"
         },
         {
-          "name": "Sports RSS (awesome-chilean-rss)",
-          "url": "https://github.com/Alplox/awesome-chilean-rss",
+          "name": "awesome-chilean-rss",
+          "url": "https://github.com/Alplox/awesome-chilean-rss/blob/main/dist/readme/categories/sports.md",
           "role": "single",
           "license": "CC0 1.0",
           "note": "noticias vía /api/futbol; siempre se cargan, independiente de ESPN"

@@ -84,6 +84,21 @@ export function orderByOutlet(sources: SourceFeed[], direction: 'az' | 'za'): So
   return direction === 'za' ? flat.reverse() : flat;
 }
 
+/**
+ * One feed per outlet: the «principal» of each one (the same pick the
+ * «Solo principales por sitio» toggle keeps). Used by the auto-skip, the `+`
+ * button and «Cargar siguiente» so no path can load a subfeed by accident.
+ */
+export function flagshipFeeds(sources: SourceFeed[]): SourceFeed[] {
+  const best = new Map<string, SourceFeed>();
+  for (const s of sources) {
+    const key = outletKey(s);
+    const current = best.get(key);
+    if (!current || isBetterMainFeed(s, current)) best.set(key, s);
+  }
+  return [...best.values()];
+}
+
 /** Best feed of the outlet named `alias` — used to resolve the default slots. */
 export function resolveOutlet(sources: SourceFeed[], alias: string): SourceFeed | null {
   const token = foldKey(alias);

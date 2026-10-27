@@ -206,6 +206,11 @@ h1, h2, h3, h4 {
 .queonda-toast { animation: statusPop 1.6s ease-out forwards; }
 .queonda-toast-long { animation: statusPop 2.6s ease-out forwards; }
 
+@keyframes radioIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 @keyframes loadingSlide {
   0% { transform: translateX(-100%); }
   50% { transform: translateX(200%); }
@@ -369,6 +374,15 @@ section[id][data-visible] h2 .letter {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+/* Sliders con riel propio de progreso: el scrollbar nativo duplicaría la señal. */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Timing scale */

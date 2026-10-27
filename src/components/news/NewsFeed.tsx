@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { NewsCluster, Article, SourceResult, FeedSource, SourceFeed, PinnedSource } from '../../types';
 import { NewsClusterCard } from './NewsClusterCard';
 import { TrendingTags } from '../widgets/TrendingTags';
@@ -96,6 +96,9 @@ function SourceErrorPanel({ sourceResults, onRetry }: { sourceResults: SourceRes
 
 const SKELETON_LINE_WIDTHS = ['w-full', 'w-4/5', 'w-3/4', 'w-5/6', 'w-2/3', 'w-11/12'];
 
+/** Temas que se añaden al DOM por tanda al deslizar hacia el final. */
+const CLUSTER_BATCH = 6;
+
 /**
  * Columnas del bloque de noticias según cuántos slots tiene el usuario.
  * Es la única fuente de verdad: la usan tanto la grilla real como el skeleton,
@@ -178,10 +181,10 @@ function LoadingSkeleton({ count }: { count: number }) {
             ))}
           </div>
         </div>
-        {/* Temas agrupados: misma ventana de alto fijo que el bloque real */}
+        {/* Temas agrupados: mismo alto reservado que el slider real */}
         <div className="space-y-3">
           <div className="h-4 w-36 rounded bg-base-300 animate-pulse" />
-          <div className="h-[420px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">
+          <div className="h-[360px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">
             {[0, 1, 2].map(i => (
               <div key={i} className={`rounded-xl border border-base-300 bg-base-200 ${i > 0 ? 'hidden sm:block' : ''}`} />
             ))}
@@ -202,7 +205,7 @@ export function NewsFeed({
   onAddSlot, onRemoveSlot, slotCount,
   skipToasts, onCancelSkip, clusteringPending = false,
 }: Props) {
-  const [clusterLimit, setClusterLimit] = useState(3);
+  const [visibleClusterCount, setVisibleClusterCount] = useState(CLUSTER_BATCH);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | '3d' | 'week'>('all');
@@ -243,8 +246,61 @@ export function NewsFeed({
     );
   }, [clusters, activeTag]);
 
-  const visibleClusters = filteredClusters.slice(0, clusterLimit);
-  const hasMoreClusters = clusterLimit < filteredClusters.length;
+  // Slider horizontal: la lista se pinta por tandas y crece al acercarse al
+  // final, así el DOM no acumula decenas de cards de una sola vez (mismo
+  // criterio que el carrusel de noticias en móvil).
+  useEffect(() => {
+    setVisibleClusterCount(CLUSTER_BATCH);
+  }, [filteredClusters]);
+
+  const loadMoreClusters = useCallback(() => {
+    setVisibleClusterCount(c =>
+      c >= filteredClusters.length ? c : Math.min(c + CLUSTER_BATCH, filteredClusters.length)
+    );
+  }, [filteredClusters.length]);
+
+  const clusterScrollerRef = useRef<HTMLDivElement>(null);
+  const [clusterEdges, setClusterEdges] = useState({ start: false, end: false, ratio: 0, progress: 0 });
+
+  const measureClusterScroll = useCallback(() => {
+    const el = clusterScrollerRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    // 8 px de holgura: el snap puede dejar el scroller a ~6 px del borde y no
+    // queremos que eso encienda la flecha "anterior" sin haber deslizado.
+    const start = el.scrollLeft > 8;
+    const end = max > 0 && el.scrollLeft < max - 8;
+    const ratio = el.scrollWidth > 0 ? Math.min(1, el.clientWidth / el.scrollWidth) : 0;
+    const progress = max > 0 ? Math.min(1, Math.max(0, el.scrollLeft / max)) : 0;
+    setClusterEdges(prev =>
+      prev.start === start && prev.end === end && prev.ratio === ratio && prev.progress === progress
+        ? prev
+        : { start, end, ratio, progress }
+    );
+
+    if (max <= 8) {
+      // Sin desborde no hay gesto que dispare la siguiente tanda: se pide otra
+      // (el tope lo pone `filteredClusters.length`).
+      loadMoreClusters();
+    } else if (el.scrollLeft >= max - 320) {
+      loadMoreClusters();
+    }
+  }, [loadMoreClusters]);
+
+  useEffect(() => {
+    measureClusterScroll();
+    window.addEventListener('resize', measureClusterScroll);
+    return () => window.removeEventListener('resize', measureClusterScroll);
+  }, [measureClusterScroll, visibleClusterCount, filteredClusters]);
+
+  const slideClusters = useCallback((dir: number) => {
+    const el = clusterScrollerRef.current;
+    if (!el) return;
+    play('interaction.subtle');
+    el.scrollBy({ left: dir * Math.max(el.clientWidth * 0.9, 240), behavior: 'smooth' });
+  }, []);
+
+  const visibleClusters = filteredClusters.slice(0, visibleClusterCount);
 
   const dateCutoff = useMemo(() => {
     if (dateFilter === 'all') return 0;
@@ -446,49 +502,88 @@ export function NewsFeed({
 
       {hasSlotsWithSources && (
         <div className="transition-opacity duration-300">
-          <h3 className="text-xs text-base-content/70 uppercase tracking-wider font-semibold mb-3">
-            Agrupadas por tema
-          </h3>
-          {/* Ventana de alto fijo: los temas llegan después que los artículos
-              (la clustering va en un chunk aparte), así que si el bloque
-              creciera al aparecer empujaría media página hacia abajo. */}
-          <div className="h-[420px] overflow-y-auto rounded-xl">
-            {clusteringPending ? (
-              <div className="h-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse" aria-hidden="true">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className={`rounded-xl border border-base-300 bg-base-200 ${i > 0 ? 'hidden sm:block' : ''}`} />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <h3 className="text-xs text-base-content/70 uppercase tracking-wider font-semibold">
+                Agrupadas por tema
+              </h3>
+              {!clusteringPending && filteredClusters.length > 0 && (
+                <span className="text-[11px] text-base-content/70 tabular-nums">
+                  {filteredClusters.length} {filteredClusters.length === 1 ? 'tema' : 'temas'}
+                </span>
+              )}
+            </div>
+            {visibleClusters.length > 0 && (clusterEdges.start || clusterEdges.end) && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => slideClusters(-1)}
+                  disabled={!clusterEdges.start}
+                  aria-label="Temas anteriores"
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-base-300 bg-base-200 text-base-content/70 transition-colors hover:bg-base-300 hover:text-base-content disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-base-200 disabled:hover:text-base-content/70 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                </button>
+                <button
+                  onClick={() => slideClusters(1)}
+                  disabled={!clusterEdges.end}
+                  aria-label="Temas siguientes"
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-base-300 bg-base-200 text-base-content/70 transition-colors hover:bg-base-300 hover:text-base-content disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-base-200 disabled:hover:text-base-content/70 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                </button>
+              </div>
+            )}
+          </div>
+          {/*
+            Slider horizontal (no una ventana con scroll vertical propio):
+            la tarjeta siguiente asoma y las flechas muestran que hay más, sin
+            secuestrar la rueda del sitio. Los temas llegan después que los
+            artículos (la clustering va en un chunk aparte), así que el alto se
+            reserva con `min-h` igual que en el skeleton.
+          */}
+          {clusteringPending ? (
+            <div className="min-h-[360px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse" aria-hidden="true">
+              {[0, 1, 2].map(i => (
+                <div key={i} className={`rounded-xl border border-base-300 bg-base-200 ${i > 0 ? 'hidden sm:block' : ''}`} />
+              ))}
+            </div>
+          ) : visibleClusters.length > 0 ? (
+            <div className="relative">
+              <div
+                ref={clusterScrollerRef}
+                role="group"
+                aria-label="Temas agrupados"
+                tabIndex={0}
+                onScroll={measureClusterScroll}
+                className="flex items-stretch gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 scrollbar-hide min-h-[360px] rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+              >
+                {visibleClusters.map((cluster, index) => (
+                  <div
+                    key={index}
+                    // Sin animación de entrada: `fadeSlideIn` escala las cards
+                    // (0.97 → 1) y, con el stagger, los 12 px de gap se veían
+                    // distintos en cada par (13/15/17) durante medio segundo.
+                    className="snap-start shrink-0 flex w-[85vw] sm:w-[calc(50%_-_0.375rem)] lg:w-[calc(33.333%_-_0.5rem)]"
+                  >
+                    <NewsClusterCard cluster={cluster} openDirect={openDirect} />
+                  </div>
                 ))}
               </div>
-            ) : visibleClusters.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {visibleClusters.map((cluster, index) => (
-                    <div key={index} className="animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${index * 60}ms` }}>
-                      <NewsClusterCard cluster={cluster} openDirect={openDirect} />
-                    </div>
-                  ))}
+              {clusterEdges.ratio > 0 && clusterEdges.ratio < 1 && (
+                <div aria-hidden="true" className="relative mt-2 h-1 overflow-hidden rounded-full bg-base-300/70">
+                  <div
+                    className="absolute inset-y-0 rounded-full bg-primary/60 transition-[left] duration-150 ease-out"
+                    style={{
+                      width: `${clusterEdges.ratio * 100}%`,
+                      left: `${clusterEdges.progress * (1 - clusterEdges.ratio) * 100}%`,
+                    }}
+                  />
                 </div>
-                <div className="flex justify-center gap-3 mt-4">
-                  {hasMoreClusters && (
-                    <button
-                      onClick={() => setClusterLimit(c => c + 3)}
-                      className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.96] cursor-pointer"
-                    >
-                      Cargar más temas
-                    </button>
-                  )}
-                  {clusterLimit > 3 && (
-                    <button
-                      onClick={() => setClusterLimit(3)}
-                      className="px-5 py-2 text-xs font-medium text-base-content bg-base-200 border border-base-300 rounded-lg hover:bg-base-300 hover:border-primary hover:ring-1 hover:ring-inset hover:ring-base-content/[0.04] transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.96] cursor-pointer"
-                    >
-                      Mostrar solo 3
-                    </button>
-                  )}
-                </div>
-              </>
-            ) : activeTag ? (
-              <div className="text-center py-12 text-base-content/70 text-sm rounded-xl border border-dashed border-base-300">
+              )}
+            </div>
+          ) : activeTag ? (
+            <div className="min-h-[360px] grid place-items-center text-center py-12 text-base-content/70 text-sm rounded-xl border border-dashed border-base-300">
+              <div>
                 Sin temas que coincidan con "{activeTag}"
                 <div>
                   <button
@@ -499,12 +594,12 @@ export function NewsFeed({
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="h-full grid place-items-center text-center px-6 text-xs text-base-content/70 rounded-xl border border-dashed border-base-300">
-                Los temas agrupados aparecen cuando varios medios publican la misma noticia.
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="min-h-[360px] grid place-items-center text-center px-6 text-xs text-base-content/70 rounded-xl border border-dashed border-base-300">
+              Los temas agrupados aparecen cuando varios medios publican la misma noticia.
+            </div>
+          )}
         </div>
       )}
 

@@ -4,7 +4,7 @@ import { NewsFeed } from './NewsFeed';
 import type { clusterArticles, extractTrendingFromArticles } from '../../lib/clustering';
 import { idbGet, idbSet, cacheGet, cacheSet } from '../../lib/idb-cache';
 import { loadJSON, saveJSON } from '../../lib/storage';
-import { resolveOutlet } from '../../lib/sources';
+import { resolveOutlet, isBetterMainFeed, outletKey, orderByOutlet, flagshipFeeds } from '../../lib/sources';
 
 interface SlotData {
   source: SourceFeed | null;
@@ -371,13 +371,33 @@ export function ClientNewsFeed() {
 
   function getReplacements(failedIndices: number[], currentSlots: SlotData[], availableSources: SourceFeed[]): Map<number, SourceFeed> {
     const usedKeys = new Set(currentSlots.filter(s => s.source).map(s => s.source!.sourceKey));
+    const usedOutlets = new Set(currentSlots.filter(s => s.source).map(s => outletKey(s.source!)));
+    const mainOnly = loadJSON<boolean>('news-main-only', false);
+
+    /*
+     * Con «Solo principales por sitio» el reemplazo también tiene que ser el
+     * feed principal de su medio: el inventario crudo devolvía un subfeed
+     * ("La Tercera - Deportes", "BioBioChile - Ñuble") porque el orden del
+     * inventario no es el del selector. Se arma el mismo pool que ve el
+     * usuario — un feed por medio, A-Z por medio — para elegir de ahí.
+     */
+    const pool = mainOnly
+      ? orderByOutlet(flagshipFeeds(availableSources), 'az')
+      : availableSources;
+
     const replacements = new Map<number, SourceFeed>();
     for (const idx of failedIndices) {
-      const next = availableSources.find(s => !usedKeys.has(s.sourceKey) && ![...replacements.values()].some(r => r.sourceKey === s.sourceKey));
-      if (next) {
-        usedKeys.add(next.sourceKey);
-        replacements.set(idx, next);
-      }
+      const isFree = (s: SourceFeed, avoidUsedOutlets: boolean) =>
+        !usedKeys.has(s.sourceKey) &&
+        !(avoidUsedOutlets && usedOutlets.has(outletKey(s)));
+
+      // Primero un medio distinto a los que ya ocupan un bloque; si no queda
+      // ninguno, se acepta repetir medio antes que dejar el bloque vacío.
+      const next = pool.find(s => isFree(s, true)) ?? pool.find(s => isFree(s, false));
+      if (!next) continue;
+      usedKeys.add(next.sourceKey);
+      usedOutlets.add(outletKey(next));
+      replacements.set(idx, next);
     }
     return replacements;
   }
@@ -503,7 +523,15 @@ export function ClientNewsFeed() {
     }
     if (!newSource) {
       const seen = new Set(slots.map(s => s.source?.sourceKey).filter(Boolean));
-      newSource = allSources.find(s => !seen.has(s.sourceKey)) ?? null;
+      const usedOutlets = new Set(slots.filter(s => s.source).map(s => outletKey(s.source!)));
+      // Mismo contrato que el selector: con «Solo principales por sitio» un
+      // bloque nuevo tampoco puede arrancar en un subfeed.
+      const mainOnly = loadJSON<boolean>('news-main-only', false);
+      const pool = mainOnly ? orderByOutlet(flagshipFeeds(allSources), 'az') : allSources;
+      newSource =
+        pool.find(s => !seen.has(s.sourceKey) && !(mainOnly && usedOutlets.has(outletKey(s)))) ??
+        pool.find(s => !seen.has(s.sourceKey)) ??
+        null;
     }
 
     setSlots(prev => [...prev, { source: newSource, articles: [], loading: !!newSource, error: null, isFallback }]);
