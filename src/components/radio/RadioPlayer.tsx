@@ -199,8 +199,8 @@ function BoomboxControls({
 }) {
   return (
     <div className="w-full px-4 pb-3 md:px-6 md:pb-4 mt-2 md:mt-0">
-      <div className="flex items-center gap-3 md:flex-col md:gap-3">
-        <div className="flex items-center gap-2.5 shrink-0 md:w-full md:justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex items-center gap-2.5 w-full justify-center">
           {onPrev && (
             <button
               onClick={onPrev}
@@ -257,7 +257,7 @@ function BoomboxControls({
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-1 min-w-0 md:w-full">
+        <div className="flex items-center gap-2 w-full">
           <button
             onClick={onMute}
             aria-label={muted ? 'Activar sonido' : 'Silenciar'}
