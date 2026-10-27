@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { play } from '@/lib/sound';
 import { SectionSources } from '../SectionSources';
 
@@ -76,6 +76,19 @@ export function GoogleTrendsWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retryKey, setRetryKey] = useState(0);
+  const [openSearch, setOpenSearch] = useState<number | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (openSearch === null) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (target && rootRef.current?.contains(target)) return;
+      setOpenSearch(null);
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [openSearch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,10 +153,10 @@ export function GoogleTrendsWidget() {
   }
 
   return (
-    <div className="flex min-h-[1001px] flex-col sm:min-h-[881px]">
+    <div ref={rootRef} className="flex min-h-[1001px] flex-col sm:min-h-[881px]">
       <div className="space-y-1">
       {trends.map((trend, i) => (
-        <div key={i} className="relative has-[details[open]]:z-20 opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${i * 50}ms` }}>
+        <div key={i} className={`relative opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards] ${openSearch === i ? 'z-20' : ''}`} style={{ animationDelay: `${i * 50}ms` }}>
         <div
           className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] transition-colors"
         >
@@ -164,9 +177,10 @@ export function GoogleTrendsWidget() {
               <p className="text-[11px] text-base-content/70 line-clamp-1 mt-0.5" title={trend.snippet}>{trend.snippet}</p>
             )}
             <div className="mt-1.5">
-              <details className="relative md:hidden">
-                <summary
-                  onClick={() => play('interaction.tap')}
+              <div className="relative md:hidden">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setOpenSearch(openSearch === i ? null : i); }}
                   className="flex min-h-11 w-fit cursor-pointer select-none items-center gap-2 rounded-lg border border-base-300 bg-base-200 px-3 text-xs font-medium text-base-content hover:bg-base-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -174,27 +188,29 @@ export function GoogleTrendsWidget() {
                     <path d="m16 16 4 4" />
                   </svg>
                   Buscar
-                </summary>
-                <div className="absolute left-0 top-full z-20 mt-1 grid max-h-64 min-w-64 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-2 shadow-xl">
-                  {SEARCH_ENGINES.map((se) => (
-                    <a
-                      key={se.key}
-                      href={se.url + encodeURIComponent(trend.title)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => {
-                        play('interaction.tap');
-                        e.stopPropagation();
-                        e.currentTarget.closest('details')?.removeAttribute('open');
-                      }}
-                      className="flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs text-base-content/80 hover:bg-base-200 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                      <span className="h-4 w-4 shrink-0 text-base-content/70" aria-hidden="true">{se.icon}</span>
-                      <span className="truncate">{se.name}</span>
-                    </a>
-                  ))}
-                </div>
-              </details>
+                </button>
+                {openSearch === i && (
+                  <div className="absolute left-0 top-full z-30 mt-1 grid max-h-64 min-w-64 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-2 shadow-xl">
+                    {SEARCH_ENGINES.map((se) => (
+                      <a
+                        key={se.key}
+                        href={se.url + encodeURIComponent(trend.title)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          play('interaction.tap');
+                          e.stopPropagation();
+                          setOpenSearch(null);
+                        }}
+                        className="flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs text-base-content/80 hover:bg-base-200 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        <span className="h-4 w-4 shrink-0 text-base-content/70" aria-hidden="true">{se.icon}</span>
+                        <span className="truncate">{se.name}</span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="hidden flex-wrap gap-1 md:flex">
                 {SEARCH_ENGINES.map((se) => (
                   <a
