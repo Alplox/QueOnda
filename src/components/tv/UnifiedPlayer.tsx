@@ -582,7 +582,7 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
         )}
 
         {/* --- VIDEO AREA --- */}
-        <div className={`relative bg-neutral ${(mode === 'inline' && isFullscreen) ? 'h-full' : mode === 'inline' ? 'aspect-video rounded-b-xl overflow-hidden' : 'h-full pt-9'}`}>
+        <div className={`@container relative bg-neutral ${(mode === 'inline' && isFullscreen) ? 'h-full' : mode === 'inline' ? 'aspect-video rounded-b-xl overflow-hidden' : 'h-full pt-9'}`}>
           {/* Loading */}
           {loading && isHlsType && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral/80">
@@ -592,20 +592,34 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
 
           {/* Error */}
           {error && isHlsType && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral/80">
-              <div className="text-center">
-                <p className="text-white text-xs">Señal no disponible</p>
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral/80 px-2">
+              <div className="flex w-full min-w-0 flex-col items-center gap-1.5 text-center">
+                <p className="w-full truncate text-xs text-white">Señal no disponible</p>
                 {hasMultipleSignals && (
-                  <div className="mt-1.5 flex items-center gap-1.5 justify-center">
-                    {signals.map((s, i) => (
-                      <button key={i} onClick={() => { play('interaction.tap'); onSignalChange(i); }}
-                        className={`text-[11px] px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                          i === signalIndex ? 'bg-primary text-primary-content' : 'bg-base-300/80 text-base-content/70 hover:bg-base-200'
-                        }`}>
-                        {SIGNAL_LABEL[s.type] ?? s.type}
-                      </button>
-                    ))}
-                  </div>
+                  <>
+                    {/* Visor ancho (inline/escritorio): chips con wrap. Visor chico
+                        (miniplayer, móvil angosto): `SignalSelect`, que sí cabe y
+                        no deja el mensaje recortado. */}
+                    <div className="hidden @min-[260px]:flex max-w-full flex-wrap items-center justify-center gap-1.5">
+                      {signals.map((s, i) => (
+                        <button key={i} onClick={() => { play('interaction.tap'); onSignalChange(i); }}
+                          className={`text-[11px] px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
+                            i === signalIndex ? 'bg-primary text-primary-content' : 'bg-base-300/80 text-base-content/70 hover:bg-base-200'
+                          }`}>
+                          {SIGNAL_LABEL[s.type] ?? s.type}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex @min-[260px]:hidden items-center gap-1">
+                      <span className="text-[10px] text-white/70">Señal</span>
+                      <SignalSelect
+                        signals={signals}
+                        signalIndex={signalIndex}
+                        onChange={onSignalChange}
+                        className="bg-neutral/80 text-white border-white/15"
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -682,8 +696,9 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
             )
           )}
 
-          {/* Controls overlay — inline mode only */}
-          {isHlsType && mode === 'inline' && (
+          {/* Controls overlay — inline mode only (oculto en error: la celda muestra
+              sólo el overlay de «Señal no disponible»). */}
+          {isHlsType && mode === 'inline' && !error && (
             <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-neutral/90 via-neutral/50 to-transparent pt-10 pb-1.5 px-2.5 transition-opacity duration-300 z-20 ${showControls || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               <div ref={progressRef} className="relative w-full h-0.5 bg-base-content/20 rounded-full cursor-pointer mb-2 group/progress" onClick={(e) => { play('interaction.tap'); handleSeek(e); }}>
                 <div className="absolute left-0 top-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />

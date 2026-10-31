@@ -184,28 +184,43 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
         </button>
       </div>
 
-      {/* Video area */}
-      <div className="relative w-full aspect-video bg-neutral">
+      {/* Video area — `@container`: el overlay de error decide entre chips y
+          selector compacto según el ancho real de la celda. */}
+      <div className="@container relative w-full aspect-video bg-neutral">
         {loading && isHlsType && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral/70">
             <div className="w-4 h-4 border-[1.5px] border-primary/30 border-t-primary rounded-full animate-spin" />
           </div>
         )}
         {error && isHlsType && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral/80">
-            <div className="text-center">
-              <p className="text-white text-[11px]">Señal no disponible</p>
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral/80 px-1.5">
+            <div className="flex w-full min-w-0 flex-col items-center gap-1 text-center">
+              <p className="w-full truncate text-[11px] text-white">Señal no disponible</p>
               {hasMultipleSignals && (
-                <div className="mt-1 flex gap-1 justify-center">
-                  {signals.map((s, i) => (
-                    <button key={i} onClick={(e) => { e.stopPropagation(); play('interaction.tap'); onSignalChange(i); }}
-                      className={`text-[8px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
-                        i === signalIndex ? 'bg-primary text-primary-content' : 'bg-white/15 text-white/60 hover:bg-white/25'
-                      }`}>
-                      {SIGNAL_LABEL[s.type] ?? s.type}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  {/* Celdas anchas: fila de chips (con wrap, nunca se sale).
+                      Celdas chicas: `SignalSelect`, porque la fila no cabe y el
+                      mensaje quedaba recortado por el `overflow-hidden` de la card. */}
+                  <div className="hidden @min-[230px]:flex max-w-full flex-wrap items-center justify-center gap-1">
+                    {signals.map((s, i) => (
+                      <button key={i} onClick={(e) => { e.stopPropagation(); play('interaction.tap'); onSignalChange(i); }}
+                        className={`text-[8px] px-1.5 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
+                          i === signalIndex ? 'bg-primary text-primary-content' : 'bg-white/15 text-white/60 hover:bg-white/25'
+                        }`}>
+                        {SIGNAL_LABEL[s.type] ?? s.type}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex @min-[230px]:hidden items-center gap-1">
+                    <span className="text-[9px] text-white/70">Señal</span>
+                    <SignalSelect
+                      signals={signals}
+                      signalIndex={signalIndex}
+                      onChange={onSignalChange}
+                      className="bg-white/15 text-white border-white/15"
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -221,8 +236,10 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
       {/* Bottom controls — sólo HLS. En embeds (YouTube/Twitch/iframe) esa banda
           es la barra del player ajeno: el overlay nuestro tapaba su mute (caía
           sobre nuestro botón de pantalla completa) y su configuración. Ahí no se
-          pinta nada, ni siquiera el degradado; el selector de señal vive arriba. */}
-      {isHlsType && (
+          pinta nada, ni siquiera el degradado; el selector de señal vive arriba.
+          En error tampoco se pintan: la celda muestra sólo el overlay de
+          «Señal no disponible», evitando dos selectores y saturar el bloque. */}
+      {isHlsType && !error && (
         <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/95 via-neutral/50 to-transparent px-1.5 pb-1 pt-6 transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-0.5">
