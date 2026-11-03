@@ -154,6 +154,9 @@ export function EmergencyWidget() {
   const inflight = useRef<Promise<void> | null>(null);
 
   const hasShareData = items.length > 0 || alerts.length > 0 || (powerCount != null && powerCount > 0);
+  const hasMapCoordinates = items.some(
+    (item) => item.type === 'earthquake' && item.lat != null && item.lon != null && item.mag !== undefined,
+  );
 
   const openMap = (item: EmergencyItem) => {
     setShowMap(true);
@@ -241,6 +244,10 @@ export function EmergencyWidget() {
     if (showMap) setMapMounted(true);
     else { const t = setTimeout(() => setMapMounted(false), 300); return () => clearTimeout(t); }
   }, [showMap]);
+
+  useEffect(() => {
+    if (!hasMapCoordinates) setShowMap(false);
+  }, [hasMapCoordinates]);
 
   const handleShare = async (action: 'link' | 'summary' | 'image') => {
     setShareOpen(false);
@@ -529,24 +536,26 @@ export function EmergencyWidget() {
             <div className="flex gap-2 mt-3">
               <button
                 type="button"
+                disabled={!hasMapCoordinates}
                 onClick={() => {
                   const next = !showMap;
                   setShowMap(next);
                   if (next) setFocusId(null);
                   play('interaction.toggle');
                 }}
-                aria-expanded={showMap}
+                aria-expanded={showMap && hasMapCoordinates}
                 aria-controls="sismos-map"
-                className="mt-1 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+                title={hasMapCoordinates ? undefined : 'No hay coordenadas disponibles para estos sismos'}
+                className="mt-1 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer disabled:cursor-not-allowed disabled:text-base-content/50 disabled:hover:text-base-content/50 disabled:active:scale-100"
               >
                 <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                  className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
+                  className={`transition-transform duration-200 ${showMap && hasMapCoordinates ? 'rotate-90' : ''}`}>
                   <path d="M9 18l6-6-6-6" />
                 </svg>
-                {showMap ? 'Ocultar mapa de sismos' : 'Ver mapa de sismos'}
+                {!hasMapCoordinates ? 'Mapa no disponible: fuente cargada no ofrece coordenadas' : showMap ? 'Ocultar mapa de sismos' : 'Ver mapa de sismos'}
               </button>
             </div>
-            <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showMap ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+            <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showMap && hasMapCoordinates ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
               <div className="overflow-hidden min-h-0">
                 {mapMounted && (
                   <div id="sismos-map" className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">

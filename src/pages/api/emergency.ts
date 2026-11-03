@@ -91,7 +91,7 @@ async function fetchGaelCloud(): Promise<{ items: EmergencyItem[]; ok: boolean }
         title: `M ${mag.toFixed(1)} — ${eq.RefGeografica}`,
         description: `${eq.RefGeografica}. Profundidad: ${depth} km.`,
         time: parseChileLocal(eq.Fecha),
-        url: 'https://www.csn.uchile.cl/',
+        url: '',
         severity: getSeverity(mag),
         mag, place: eq.RefGeografica, depth,
       });
@@ -103,52 +103,42 @@ async function fetchGaelCloud(): Promise<{ items: EmergencyItem[]; ok: boolean }
 
   if (items.length === 0) return { items, ok };
 
-  // Gael sends no coordinates; Boostr serves the same CSN data with lat/lon,
-  // so attach them by matching the Chile-local timestamp.
-  const candidates: Array<{ time: number; mag: number; lat: number; lon: number }> = [];
-  for (const b of (await fetchBoostr()).items) {
-    if (b.lat != null && b.lon != null) {
-      candidates.push({ time: b.time, mag: b.mag!, lat: b.lat, lon: b.lon });
-    }
-  }
-
-  // Boostr keeps the site's CSN datacenter live, but if it's down or blocks the
-  // Workers IP, fall back to USGS coords so at least the notable quakes get pins.
-  if (candidates.length === 0) {
-    try {
-      for (const u of (await fetchUSGS()).items) {
-        if (u.lat != null && u.lon != null) {
-          candidates.push({ time: u.time, mag: u.mag!, lat: u.lat, lon: u.lon });
-        }
+  // Gael sends no coordinates; prefer matching CSN's own Boostr records first.
+  const attachCoordinates = (
+    targets: EmergencyItem[],
+    candidates: Array<{ time: number; mag: number; lat: number; lon: number }>,
+  ) => {
+    const tolerance = 10 * 60 * 1000;
+    for (const it of targets) {
+      if (it.time == null || it.lat != null) continue;
+      const exact = candidates.find((c) => c.time === it.time);
+      const near = exact ?? candidates
+        .filter((c) => Math.abs(c.time - it.time) <= tolerance)
+        .sort((a, b) => {
+          const distance = (c: { time: number; mag: number }) =>
+            Math.abs(c.time - it.time) + Math.abs(c.mag - (it.mag ?? 0)) * 60_000;
+          return distance(a) - distance(b);
+        })[0];
+      if (near) {
+        it.lat = near.lat;
+        it.lon = near.lon;
       }
-    } catch {
-      /* ignore — no coords available at all */
     }
-  }
+  };
 
-  // Match exactly by epoch first; otherwise pick the nearest event inside a
-  // tolerance window (weighting magnitude distance) so one missing or slightly
-  // mismatched record never drops coords for the rest of the list.
-  const TOL = 10 * 60 * 1000;
-  for (const it of items) {
-    if (it.time == null) continue;
-    const exact = candidates.find((c) => c.time === it.time);
-    if (exact) {
-      it.lat = exact.lat;
-      it.lon = exact.lon;
-      continue;
-    }
-    const near = candidates
-      .filter((c) => Math.abs(c.time - it.time) <= TOL)
-      .sort((a, b) => {
-        const dist = (c: { time: number; mag: number }) =>
-          Math.abs(c.time - it.time) + Math.abs(c.mag - (it.mag ?? 0)) * 60_000;
-        return dist(a) - dist(b);
-      })[0];
-    if (near) {
-      it.lat = near.lat;
-      it.lon = near.lon;
-    }
+  const boostrCandidates = (await fetchBoostr()).items
+    .filter((item) => item.lat != null && item.lon != null)
+    .map((item) => ({ time: item.time, mag: item.mag!, lat: item.lat!, lon: item.lon! }));
+  attachCoordinates(items, boostrCandidates);
+
+  // Boostr can be reachable but omit or lag individual CSN events. Use USGS
+  // only for those unmatched events, preserving Boostr's coordinates when present.
+  const missingCoordinates = items.filter((item) => item.lat == null || item.lon == null);
+  if (missingCoordinates.length > 0) {
+    const usgsCandidates = (await fetchUSGS()).items
+      .filter((item) => item.lat != null && item.lon != null && item.mag != null)
+      .map((item) => ({ time: item.time, mag: item.mag!, lat: item.lat!, lon: item.lon! }));
+    attachCoordinates(missingCoordinates, usgsCandidates);
   }
   return { items, ok };
 }
