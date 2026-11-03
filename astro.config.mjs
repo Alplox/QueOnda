@@ -33,7 +33,7 @@ export default defineConfig({
       },
     ],
     optimizeDeps: {
-      include: ['hls.js', 'react-dom/client']
+      include: ['hls.js', 'react-dom/client', 'maplibre-gl', '@maplibre/maplibre-gl-leaflet']
     },
     ssr: {
       noExternal: ['hls.js', 'react', 'react-dom']

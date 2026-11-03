@@ -154,9 +154,11 @@ export function EmergencyWidget() {
   const inflight = useRef<Promise<void> | null>(null);
 
   const hasShareData = items.length > 0 || alerts.length > 0 || (powerCount != null && powerCount > 0);
-  const hasMapCoordinates = items.some(
+  const earthquakeCount = items.filter((item) => item.type === 'earthquake').length;
+  const mappedCount = items.filter(
     (item) => item.type === 'earthquake' && item.lat != null && item.lon != null && item.mag !== undefined,
-  );
+  ).length;
+  const hasMapCoordinates = mappedCount > 0;
 
   const openMap = (item: EmergencyItem) => {
     setShowMap(true);
@@ -526,6 +528,9 @@ export function EmergencyWidget() {
                     {item.depth !== undefined && (
                       <span className="text-[11px] text-base-content/70">{item.depth.toFixed(1)} km</span>
                     )}
+                    {item.lat == null || item.lon == null ? (
+                      <span className="ml-auto text-[10px] text-base-content/70 whitespace-nowrap">Coordenadas no disponibles</span>
+                    ) : null}
                     {item.url && (
                       <span className="ml-auto text-[11px] text-base-content/70 truncate max-w-[70%]">{extractHost(item.url)}</span>
                     )}
@@ -552,13 +557,20 @@ export function EmergencyWidget() {
                   className={`transition-transform duration-200 ${showMap && hasMapCoordinates ? 'rotate-90' : ''}`}>
                   <path d="M9 18l6-6-6-6" />
                 </svg>
-                {!hasMapCoordinates ? 'Mapa no disponible: fuente cargada no ofrece coordenadas' : showMap ? 'Ocultar mapa de sismos' : 'Ver mapa de sismos'}
+                {!hasMapCoordinates
+                  ? 'Mapa no disponible: fuente cargada no ofrece coordenadas'
+                  : `${showMap ? 'Ocultar mapa' : 'Ver mapa'} · ${mappedCount} de ${earthquakeCount} ubicados`}
               </button>
             </div>
             <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showMap && hasMapCoordinates ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
               <div className="overflow-hidden min-h-0">
                 {mapMounted && (
                   <div id="sismos-map" className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
+                    <p className="mb-2 text-[11px] text-base-content/70">
+                      {mappedCount === earthquakeCount
+                        ? `El mapa incluye todos los sismos (${mappedCount}).`
+                        : `El mapa incluye ${mappedCount} de ${earthquakeCount} sismos; los demás no tienen coordenadas disponibles.`}
+                    </p>
                     <Suspense fallback={<div className="h-40 animate-pulse bg-base-300 rounded" />}>
                       <EmergencyMap items={items} focusId={focusId} />
                     </Suspense>
