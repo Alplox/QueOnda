@@ -51,7 +51,7 @@
     },
     "emergency": {
       "title": "Sismos / Emergencias (/api/emergency)",
-      "strategy": "Fallback secuencial (magnitud mínima 5.0; pasa al siguiente si items.length === 0)",
+      "strategy": "Fallback secuencial (magnitud mínima 1.0; pasa al siguiente si items.length === 0)",
       "role": "primary",
       "sources": [
         {
@@ -74,13 +74,6 @@
           "role": "fallback",
           "license": "Dominio público (USGS)",
           "note": "earthquake.usgs.gov/.../2.5_day.geojson, filtrado a Chile/Sudamérica, timeout 10s"
-        },
-        {
-          "name": "CSN (U. de Chile)",
-          "url": "https://www.csn.uchile.cl/",
-          "role": "single",
-          "license": "Datos públicos — sin licencia explícita",
-          "note": "origen de los datos sísmicos; enlace de cada sismo (no se consulta directamente)"
         }
       ]
     },

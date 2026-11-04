@@ -710,9 +710,6 @@ export function FiestasCountdown() {
                 {String(timeLeft.seconds).padStart(2, '0')}s
               </span>
             </div>
-            {phase === 'after' && (
-              <div className="text-xs text-base-content/85 mt-2">para el 18 de septiembre del próximo año</div>
-            )}
           </div>
         ) : timeLeft ? (
           <div className="text-center">
@@ -720,15 +717,15 @@ export function FiestasCountdown() {
               Últimas horas
             </div>
             <div className="text-5xl sm:text-6xl font-light tabular-nums text-primary leading-none tracking-[-0.02em]">
-              <span key={`h-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
+              <span>
                 {String(timeLeft.hours).padStart(2, '0')}
               </span>
               <span className="text-3xl sm:text-4xl align-middle text-base-content/85 mx-1">:</span>
-              <span key={`m-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
+              <span>
                 {String(timeLeft.minutes).padStart(2, '0')}
               </span>
               <span className="text-3xl sm:text-4xl align-middle text-base-content/85 mx-1">:</span>
-              <span key={`s-${secTick}`} style={{ animation: 'tickPop 0.25s ease-out' }}>
+              <span>
                 {String(timeLeft.seconds).padStart(2, '0')}
               </span>
             </div>

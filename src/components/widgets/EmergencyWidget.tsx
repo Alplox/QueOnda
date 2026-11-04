@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 const PowerOutageWidget = lazy(() => import('./PowerOutageWidget').then(m => ({ default: m.PowerOutageWidget })));
 const EmergencyMap = lazy(() => import('./EmergencyMap').then(m => ({ default: m.EmergencyMap })));
 import { play } from '@/lib/sound';
-import { extractHost } from '@/lib/url';
 import { idbGet, idbSet } from '@/lib/idb-cache';
 import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 import { parseChileLocal } from '@/lib/chile-time';
@@ -33,6 +32,19 @@ export interface EmergencyItem {
   lon?: number;
 }
 
+type EarthquakeSource = 'gael' | 'boostr' | 'usgs';
+const EARTHQUAKE_SOURCE_ORDER: EarthquakeSource[] = ['gael', 'boostr', 'usgs'];
+const EARTHQUAKE_SOURCE_NAMES: Record<EarthquakeSource, string> = {
+  gael: 'Gael Cloud',
+  boostr: 'Boostr',
+  usgs: 'USGS',
+};
+
+function orderSources(sources: EarthquakeSource[]): EarthquakeSource[] {
+  const used = new Set(sources);
+  return EARTHQUAKE_SOURCE_ORDER.filter(source => used.has(source));
+}
+
 const IDB_KEY = 'emergency';
 const IDB_TTL = 5 * 60 * 1000;
 
@@ -44,16 +56,21 @@ async function fetchEmergency() {
     // Si falla la petición no sabemos nada de NINGUNA fuente: marcar también las
     // alertas como error, si no el bloque diría «sin alertas» cuando en realidad
     // no se pudo consultar (una alerta real quedaría oculta).
-    if (!res.ok) return { items: [], senapred: [], error: true, senapredError: true, source: null };
+    if (!res.ok) return {
+      items: [], senapred: [], error: true, senapredError: true, source: null, coordinateSources: [],
+    };
     const data = await res.json();
     return {
       items: (data.items || []) as EmergencyItem[],
       senapred: (data.senapred || []) as EmergencyItem[],
       error: !!data.error,
       senapredError: !!data.senapredError,
-      source: (data.source ?? null) as string | null,
+      source: (data.source ?? null) as EarthquakeSource | null,
+      coordinateSources: (data.coordinateSources || []) as EarthquakeSource[],
     };
-  } catch { return { items: [], senapred: [], error: true, senapredError: true, source: null }; }
+  } catch {
+    return { items: [], senapred: [], error: true, senapredError: true, source: null, coordinateSources: [] };
+  }
 }
 
 // Client-side coordinate enrichment. /api/emergency attaches lat/lon from Boostr,
@@ -61,11 +78,11 @@ async function fetchEmergency() {
 // user's browser, ACAO: *). So if any sismo came back without coordinates, refetch
 // Boostr from the browser and match by the same Chile-local epoch, so pins always render.
 const COORD_TOL = 10 * 60 * 1000;
-async function enrichWithBoostr(items: EmergencyItem[]): Promise<EmergencyItem[]> {
+async function enrichWithBoostr(items: EmergencyItem[]): Promise<{ items: EmergencyItem[]; coordinateSources: EarthquakeSource[] }> {
   const needsCoords = items.some(
     (i) => i.type === 'earthquake' && i.mag != null && i.lat == null,
   );
-  if (!needsCoords) return items;
+  if (!needsCoords) return { items, coordinateSources: [] };
 
   let candidates: Array<{ time: number; mag: number; lat: number; lon: number }> = [];
   try {
@@ -87,9 +104,10 @@ async function enrichWithBoostr(items: EmergencyItem[]): Promise<EmergencyItem[]
     /* Boostr unreachable from browser too — leave items as-is */
   }
 
-  if (candidates.length === 0) return items;
+  if (candidates.length === 0) return { items, coordinateSources: [] };
 
-  return items.map((it) => {
+  let matched = false;
+  const enriched = items.map((it) => {
     if (it.type !== 'earthquake' || it.mag == null || it.lat != null) return it;
     const mag = it.mag;
     const exact = candidates.find((c) => c.time === it.time);
@@ -103,8 +121,11 @@ async function enrichWithBoostr(items: EmergencyItem[]): Promise<EmergencyItem[]
             (Math.abs(b.time - it.time) + Math.abs(b.mag - mag) * 60_000),
         )[0];
     }
-    return c ? { ...it, lat: c.lat, lon: c.lon } : it;
+    if (!c) return it;
+    matched = true;
+    return { ...it, lat: c.lat, lon: c.lon };
   });
+  return { items: enriched, coordinateSources: matched ? ['boostr'] : [] };
 }
 
 const severityBadges: Record<string, string> = {
@@ -133,7 +154,7 @@ const SENAPRED_LINKS = [
 
 export function EmergencyWidget() {
   const [items, setItems] = useState<EmergencyItem[]>([]);
-  const [sismosSource, setSismosSource] = useState<string | null>(null);
+  const [sismosSources, setSismosSources] = useState<EarthquakeSource[]>([]);
   const [alerts, setAlerts] = useState<EmergencyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sismosError, setSismosError] = useState(false);
@@ -144,6 +165,7 @@ export function EmergencyWidget() {
   const [alertsLoaded, setAlertsLoaded] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
   const [mapMounted, setMapMounted] = useState(false);
   const [liveMsg, setLiveMsg] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
@@ -160,24 +182,41 @@ export function EmergencyWidget() {
   ).length;
   const hasMapCoordinates = mappedCount > 0;
 
-  const openMap = (item: EmergencyItem) => {
+  const openMap = useCallback((item: EmergencyItem) => {
     setShowMap(true);
     setFocusId(item.id);
+    setFocusRequest(request => request + 1);
+    window.setTimeout(() => {
+      const map = document.getElementById('sismos-map');
+      if (!map) return;
+      const rect = map.getBoundingClientRect();
+      const top = window.scrollY + rect.top - (window.innerHeight - rect.height) / 2;
+      const root = document.documentElement;
+      const previousScrollBehavior = root.style.scrollBehavior;
+      root.style.scrollBehavior = 'auto';
+      window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+      root.style.scrollBehavior = previousScrollBehavior;
+    }, 350);
     play('interaction.toggle');
-  };
+  }, []);
 
   const refresh = useCallback(async () => {
     // Una sola petición en vuelo: el reintento automático, el botón y el
     // auto-refresh compartido pueden aterrizar en el mismo segundo.
     if (inflight.current) return inflight.current;
     const run = (async () => {
-      const { items: eqs, senapred, error, senapredError, source } = await fetchEmergency();
+      const { items: eqs, senapred, error, senapredError, source, coordinateSources } = await fetchEmergency();
       if (!error) {
         // Trust a reachable server: a genuinely empty day clears to the placeholder instead of
         // showing stale alerts forever. Only a failed fetch keeps the error state.
-        const enriched = await enrichWithBoostr(eqs);
+        const clientEnrichment = await enrichWithBoostr(eqs);
+        const enriched = clientEnrichment.items;
         setItems(enriched);
-        setSismosSource(source);
+        setSismosSources(orderSources([
+          ...(source ? [source] : []),
+          ...coordinateSources,
+          ...clientEnrichment.coordinateSources,
+        ]));
         setAlerts(senapred);
         if (enriched.length) idbSet(IDB_KEY, enriched, IDB_TTL);
 
@@ -228,8 +267,13 @@ export function EmergencyWidget() {
       if (Array.isArray(cached.data)) {
         // enrich cached (possibly coord-less) data in the background so pins appear
         // even while the fresh fetch is still in flight
-        enrichWithBoostr(cached.data).then(enriched => {
-          if (!cancelled) setItems(enriched);
+        enrichWithBoostr(cached.data).then(({ items: enriched, coordinateSources }) => {
+          if (!cancelled) {
+            setItems(enriched);
+            if (coordinateSources.length) {
+              setSismosSources(previous => orderSources([...previous, ...coordinateSources]));
+            }
+          }
         });
       }
       setLoading(false);
@@ -246,6 +290,25 @@ export function EmergencyWidget() {
     if (showMap) setMapMounted(true);
     else { const t = setTimeout(() => setMapMounted(false), 300); return () => clearTimeout(t); }
   }, [showMap]);
+
+  useEffect(() => {
+    const handleFocusSismo = (event: Event) => {
+      const requested = (event as CustomEvent<EmergencyItem>).detail;
+      if (!requested || requested.lat == null || requested.lon == null) return;
+      const existing = items.find(item => item.id === requested.id);
+      const focusedItem = existing
+        ? { ...requested, ...existing, lat: existing.lat ?? requested.lat, lon: existing.lon ?? requested.lon }
+        : requested;
+      setItems(previous => {
+        const index = previous.findIndex(item => item.id === focusedItem.id);
+        if (index >= 0) return previous.map((item, i) => i === index ? focusedItem : item);
+        return [...previous, focusedItem].sort((a, b) => b.time - a.time).slice(0, 10);
+      });
+      openMap(focusedItem);
+    };
+    window.addEventListener('emergency:focus-sismo', handleFocusSismo);
+    return () => window.removeEventListener('emergency:focus-sismo', handleFocusSismo);
+  }, [items, openMap]);
 
   useEffect(() => {
     if (!hasMapCoordinates) setShowMap(false);
@@ -465,7 +528,14 @@ export function EmergencyWidget() {
         </div>
 
         <div className="mt-4 rounded-xl p-4 border border-base-300 shadow bg-base-200 animate-[fadeInUp_0.3s_ease-out]">
-          <p className="em-subhead"><span>🌐 Sismos</span></p>
+          <p className="em-subhead">
+            <span className="flex items-baseline gap-2">
+              <span>🌐 Sismos</span>
+              <span className="text-[10px] font-normal normal-case tracking-normal text-base-content/70">
+                Máximo 10 sismos más recientes
+              </span>
+            </span>
+          </p>
           {loading ? (
             <>
               <div className="flex gap-2 overflow-x-hidden" aria-hidden="true">
@@ -502,20 +572,26 @@ export function EmergencyWidget() {
                       {item.mag !== undefined && (
                         <span className="text-sm font-bold text-base-content shrink-0">M {item.mag.toFixed(1)}</span>
                       )}
-                      {item.lat != null && item.lon != null && (
-                        <button
-                          type="button"
-                          onClick={() => openMap(item)}
-                          aria-label="Ver dónde ocurrió en el mapa"
-                          title="Ver en el mapa"
-                          className="ml-auto w-6 h-6 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                            <circle cx="12" cy="10" r="3" />
-                          </svg>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => openMap(item)}
+                        disabled={item.lat == null || item.lon == null}
+                        aria-label={item.lat != null && item.lon != null
+                          ? 'Ver dónde ocurrió en el mapa'
+                          : 'Mapa no disponible: este sismo no tiene coordenadas'}
+                        title={item.lat != null && item.lon != null
+                          ? 'Ver en el mapa'
+                          : 'Mapa no disponible: este sismo no tiene coordenadas'}
+                        className="ml-auto w-6 h-6 shrink-0 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-base-200 disabled:hover:text-base-content/70"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                          <circle cx="12" cy="10" r="3" />
+                          {(item.lat == null || item.lon == null) && (
+                            <path d="m9 9 6 6m0-6-6 6" />
+                          )}
+                        </svg>
+                      </button>
                     </div>
                     <span className="block text-[11px] text-base-content/70 mt-0.5">
                       {new Date(item.time).toLocaleDateString('es-CL', {
@@ -527,12 +603,6 @@ export function EmergencyWidget() {
                   <div className="mt-auto pt-1.5 flex items-center justify-between gap-1">
                     {item.depth !== undefined && (
                       <span className="text-[11px] text-base-content/70">{item.depth.toFixed(1)} km</span>
-                    )}
-                    {item.lat == null || item.lon == null ? (
-                      <span className="ml-auto text-[10px] text-base-content/70 whitespace-nowrap">Coordenadas no disponibles</span>
-                    ) : null}
-                    {item.url && (
-                      <span className="ml-auto text-[11px] text-base-content/70 truncate max-w-[70%]">{extractHost(item.url)}</span>
                     )}
                   </div>
                 </div>
@@ -572,7 +642,7 @@ export function EmergencyWidget() {
                         : `El mapa incluye ${mappedCount} de ${earthquakeCount} sismos; los demás no tienen coordenadas disponibles.`}
                     </p>
                     <Suspense fallback={<div className="h-40 animate-pulse bg-base-300 rounded" />}>
-                      <EmergencyMap items={items} focusId={focusId} />
+                      <EmergencyMap items={items} focusId={focusId} focusRequest={focusRequest} />
                     </Suspense>
                   </div>
                 )}
@@ -580,7 +650,12 @@ export function EmergencyWidget() {
             </div>
             </>
           )}
-          <SectionSources section="emergency" only={['CSN (U. de Chile)', sismosSource === 'boostr' ? 'Boostr' : sismosSource === 'usgs' ? 'USGS' : 'Gael Cloud']} />
+          {sismosSources.length > 0 && (
+            <SectionSources
+              section="emergency"
+              only={sismosSources.map(source => EARTHQUAKE_SOURCE_NAMES[source])}
+            />
+          )}
         </div>
 
         <Suspense fallback={<div className="h-24 animate-pulse bg-base-300 rounded" />}>

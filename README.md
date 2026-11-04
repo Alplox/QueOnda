@@ -66,14 +66,13 @@ pnpm run sync-credits         # regenera fuentes en AGENTS.md + tabla en README.
 
 ### Sismos / Emergencias (/api/emergency)
 
-*Fallback secuencial (magnitud mínima 5.0; pasa al siguiente si items.length === 0)*
+*Fallback secuencial (magnitud mínima 1.0; pasa al siguiente si items.length === 0)*
 
 | Fuente | Rol en la cadena | Licencia | Detalle / Enlace |
 | ------ | ---------------- | -------- | ---------------- |
 | [Gael Cloud](https://api.gael.cloud) | Primario | API pública — sin licencia explícita | api.gael.cloud/general/public/sismos, timeout 10s; los datos provienen del CSN |
 | [Boostr](https://docs.boostr.cl) | Respaldo | API pública — sin licencia explícita | api.boostr.cl/earthquakes/recent.json, timeout 10s; añade coordenadas |
 | [USGS](https://earthquake.usgs.gov) | Respaldo | Dominio público (USGS) | earthquake.usgs.gov/.../2.5_day.geojson, filtrado a Chile/Sudamérica, timeout 10s |
-| [CSN (U. de Chile)](https://www.csn.uchile.cl/) | Único | Datos públicos — sin licencia explícita | origen de los datos sísmicos; enlace de cada sismo (no se consulta directamente) |
 
 ### Alertas SENAPRED (canal independiente)
 
@@ -120,7 +119,7 @@ pnpm run sync-credits         # regenera fuentes en AGENTS.md + tabla en README.
 | Fuente | Rol en la cadena | Licencia | Detalle / Enlace |
 | ------ | ---------------- | -------- | ---------------- |
 | [ESPN (API pública)](https://site.web.api.espn.com) | Único | Términos de ESPN — sin licencia explícita | standings + scoreboard chi.1, timeout 8s; sin fallback → tabla/partidos vacíos |
-| [Sports RSS (awesome-chilean-rss)](https://github.com/Alplox/awesome-chilean-rss) | Único | CC0 1.0 | noticias vía /api/futbol; siempre se cargan, independiente de ESPN |
+| [awesome-chilean-rss](https://github.com/Alplox/awesome-chilean-rss/blob/main/dist/readme/categories/sports.md) | Único | CC0 1.0 | noticias vía /api/futbol; siempre se cargan, independiente de ESPN |
 
 ### Transporte (/api/transport)
 

@@ -21,11 +21,11 @@ const BAND_LABEL: Record<Band, string> = {
   low: 'M < 4.0',
 };
 
-export function EmergencyMap({ items, focusId }: { items: EmergencyItem[]; focusId: string | null }) {
+export function EmergencyMap({ items, focusId, focusRequest }: { items: EmergencyItem[]; focusId: string | null; focusRequest: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<{ map: L.Map; destroy: () => void } | null>(null);
   const groupRef = useRef<{ clearLayers: () => void } | null>(null);
-  const lastFocusedRef = useRef<string | null>(null);
+  const lastFocusRequestRef = useRef(0);
   const [ready, setReady] = useState(false);
   const [hidden, setHidden] = useState<Set<Band>>(new Set());
 
@@ -39,7 +39,7 @@ export function EmergencyMap({ items, focusId }: { items: EmergencyItem[]; focus
 
   // build the map once
   useEffect(() => {
-    if (!containerRef.current || withCoords.length === 0) return;
+    if (!containerRef.current) return;
     let destroyed = false;
 
     (async () => {
@@ -90,12 +90,11 @@ export function EmergencyMap({ items, focusId }: { items: EmergencyItem[]; focus
     })();
 
     return () => { destroyed = true; mapRef.current?.destroy(); };
-  }, [withCoords]);
+  }, []);
 
   // render circles whenever items/filters change; focus the requested quake
   useEffect(() => {
     if (!ready || !mapRef.current || withCoords.length === 0) return;
-    if (!focusId) lastFocusedRef.current = null;
     (async () => {
       const L = await import('leaflet');
       groupRef.current?.clearLayers();
@@ -140,13 +139,13 @@ export function EmergencyMap({ items, focusId }: { items: EmergencyItem[]; focus
 
       const focus = withCoords.find((i) => i.id === focusId);
       const focused = byId.get(focusId ?? '');
-      if (focus && focused && focusId !== lastFocusedRef.current) {
-        lastFocusedRef.current = focusId;
-        mapRef.current?.map.flyTo([focus.lat!, focus.lon!], 7, { duration: 0.8 });
+      if (focus && focused && focusRequest !== lastFocusRequestRef.current) {
+        lastFocusRequestRef.current = focusRequest;
+        mapRef.current?.map.panTo([focus.lat!, focus.lon!], { animate: true, duration: 0.8 });
         focused.openPopup();
       }
     })();
-  }, [ready, withCoords, hidden, focusId]);
+  }, [ready, withCoords, hidden, focusId, focusRequest]);
 
   if (withCoords.length === 0) return null;
 

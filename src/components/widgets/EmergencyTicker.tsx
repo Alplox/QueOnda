@@ -72,6 +72,10 @@ export function EmergencyTicker() {
     });
   };
 
+  const openSismoMap = (item: EmergencyItem) => {
+    window.dispatchEvent(new CustomEvent('emergency:focus-sismo', { detail: item }));
+  };
+
   return (
     <div role="region" aria-label="Alertas de emergencia" className="sticky z-40 transition-[top] duration-300" style={{ top: navHidden ? 0 : 56 }}>
       <div
@@ -82,7 +86,7 @@ export function EmergencyTicker() {
           collapsed ? 'max-h-0 opacity-0 overflow-hidden' : 'max-h-10 opacity-100'
         }`}
       >
-        <EmergencyAlertBar items={items} onClose={toggle} />
+        <EmergencyAlertBar items={items} onClose={toggle} onOpenMap={openSismoMap} />
       </div>
       <button
         onClick={toggle}

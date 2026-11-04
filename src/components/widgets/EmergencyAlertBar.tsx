@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EmergencyItem } from './EmergencyWidget';
-import { play } from '@/lib/sound';
 
 interface Props {
   items: EmergencyItem[];
   onClose?: () => void;
+  onOpenMap: (item: EmergencyItem) => void;
 }
 
 const severityColors: Record<string, string> = {
@@ -14,7 +14,7 @@ const severityColors: Record<string, string> = {
   low: 'bg-success',
 };
 
-export function EmergencyAlertBar({ items, onClose }: Props) {
+export function EmergencyAlertBar({ items, onClose, onOpenMap }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
   const pausedRef = useRef(false);
@@ -84,25 +84,45 @@ export function EmergencyAlertBar({ items, onClose }: Props) {
   const topItem = items[0];
   const isCritical = topItem.severity === 'critical' || topItem.severity === 'high';
 
-  const renderItem = (item: EmergencyItem, key: string) => (
-    <a
-      key={key}
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={() => play('notification.warning')}
-      className={`inline-flex items-center gap-2 text-xs no-underline shrink-0 ${
-        item.severity === 'critical' ? 'text-error' : item.severity === 'high' ? 'text-warning' : 'text-base-content/80'
-      } hover:text-base-content transition-colors`}
-    >
-      <span className={`w-1.5 h-1.5 rounded-full ${severityColors[item.severity]}`} />
-      <span className="font-semibold text-base-content">{item.mag ? `M${item.mag.toFixed(1)}` : ''}</span>
-      <span className="whitespace-nowrap text-base-content/70">{item.place || item.title}</span>
-      <span className="text-[11px] text-base-content/70">
-        {new Date(item.time).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
-      </span>
-    </a>
-  );
+  const renderItem = (item: EmergencyItem, key: string) => {
+    const hasCoordinates = item.lat != null && item.lon != null;
+    const content = (
+      <>
+        <span className={`w-1.5 h-1.5 rounded-full ${severityColors[item.severity]}`} />
+        <span className="font-semibold text-base-content">{item.mag ? `M${item.mag.toFixed(1)}` : ''}</span>
+        <span className="whitespace-nowrap text-base-content/70">{item.place || item.title}</span>
+        <span className="text-[11px] text-base-content/70">
+          {new Date(item.time).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+        {hasCoordinates && (
+          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        )}
+      </>
+    );
+    const className = `inline-flex items-center gap-2 text-xs shrink-0 ${
+      item.severity === 'critical' ? 'text-error' : item.severity === 'high' ? 'text-warning' : 'text-base-content/80'
+    }`;
+
+    if (!hasCoordinates) return <span key={key} className={className}>{content}</span>;
+
+    const location = item.place || item.title;
+    const name = `Ver sismo ${item.mag != null ? `M ${item.mag.toFixed(1)} ` : ''}${location} en el mapa`;
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={() => onOpenMap(item)}
+        aria-label={name}
+        title="Ver en el mapa"
+        className={`${className} cursor-pointer hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+      >
+        {content}
+      </button>
+    );
+  };
 
   return (
     <div

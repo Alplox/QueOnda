@@ -51,6 +51,8 @@ interface EmergencyItem {
   lon?: number;
 }
 
+type EarthquakeSource = 'gael' | 'boostr' | 'usgs';
+
 const MIN_MAGNITUDE = 1.0;
 
 // Alertas SENAPRED no expiran explícitamente en el feed de Telegram, pero una alerta
@@ -69,7 +71,11 @@ function getSeverity(mag: number): 'low' | 'moderate' | 'high' | 'critical' {
 // parseChileLocal lives in src/lib/chile-time.ts (shared with the client so both
 // attach coordinates by the exact same epoch).
 
-async function fetchGaelCloud(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
+async function fetchGaelCloud(): Promise<{
+  items: EmergencyItem[];
+  ok: boolean;
+  coordinateSources: EarthquakeSource[];
+}> {
   let items: EmergencyItem[] = [];
   let ok = false;
   try {
@@ -82,7 +88,7 @@ async function fetchGaelCloud(): Promise<{ items: EmergencyItem[]; ok: boolean }
     const filteredData = chileData.filter(eq => parseFloat(eq.Magnitud) >= MIN_MAGNITUDE);
     filteredData.sort((a, b) => parseChileLocal(b.Fecha) - parseChileLocal(a.Fecha));
 
-    for (const eq of filteredData.slice(0, 25)) {
+    for (const eq of filteredData.slice(0, 10)) {
       const mag = parseFloat(eq.Magnitud);
       const depth = parseFloat(eq.Profundidad);
       items.push({
@@ -98,17 +104,19 @@ async function fetchGaelCloud(): Promise<{ items: EmergencyItem[]; ok: boolean }
     }
   } catch (err) {
     console.error('Emergency: Gael Cloud API fetch failed:', err);
-    return { items: [], ok: false };
+    return { items: [], ok: false, coordinateSources: [] };
   }
 
-  if (items.length === 0) return { items, ok };
+  if (items.length === 0) return { items, ok, coordinateSources: [] };
+  const coordinateSources = new Set<EarthquakeSource>();
 
   // Gael sends no coordinates; prefer matching CSN's own Boostr records first.
   const attachCoordinates = (
     targets: EmergencyItem[],
     candidates: Array<{ time: number; mag: number; lat: number; lon: number }>,
-  ) => {
+  ): boolean => {
     const tolerance = 10 * 60 * 1000;
+    let matched = false;
     for (const it of targets) {
       if (it.time == null || it.lat != null) continue;
       const exact = candidates.find((c) => c.time === it.time);
@@ -122,14 +130,16 @@ async function fetchGaelCloud(): Promise<{ items: EmergencyItem[]; ok: boolean }
       if (near) {
         it.lat = near.lat;
         it.lon = near.lon;
+        matched = true;
       }
     }
+    return matched;
   };
 
   const boostrCandidates = (await fetchBoostr()).items
     .filter((item) => item.lat != null && item.lon != null)
     .map((item) => ({ time: item.time, mag: item.mag!, lat: item.lat!, lon: item.lon! }));
-  attachCoordinates(items, boostrCandidates);
+  if (attachCoordinates(items, boostrCandidates)) coordinateSources.add('boostr');
 
   // Boostr can be reachable but omit or lag individual CSN events. Use USGS
   // only for those unmatched events, preserving Boostr's coordinates when present.
@@ -138,9 +148,9 @@ async function fetchGaelCloud(): Promise<{ items: EmergencyItem[]; ok: boolean }
     const usgsCandidates = (await fetchUSGS()).items
       .filter((item) => item.lat != null && item.lon != null && item.mag != null)
       .map((item) => ({ time: item.time, mag: item.mag!, lat: item.lat!, lon: item.lon! }));
-    attachCoordinates(missingCoordinates, usgsCandidates);
+    if (attachCoordinates(missingCoordinates, usgsCandidates)) coordinateSources.add('usgs');
   }
-  return { items, ok };
+  return { items, ok, coordinateSources: [...coordinateSources] };
 }
 
 async function fetchBoostr(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
@@ -319,22 +329,27 @@ async function fetchSenapred(): Promise<{ items: EmergencyItem[]; ok: boolean }>
 }
 
 export const GET: APIRoute = async () => {
-  const { items, senapred, error, senapredError, source } = await dedupeFetch<{
+  const { items, senapred, error, senapredError, source, coordinateSources } = await dedupeFetch<{
     items: EmergencyItem[];
     senapred: EmergencyItem[];
     error: boolean;
     senapredError: boolean;
     source: string | null;
+    coordinateSources: EarthquakeSource[];
   }>('emergency', async () => {
     // error solo si TODAS las fuentes fallaron (HTTP/parse), no si un feed legítimamente
     // devuelve vacío — eso sería "no hay sismos", no un fallo de carga.
     let result: EmergencyItem[] = [];
     let sourcesOk = false;
     let source: string | null = null;
+    let coordinateSources: EarthquakeSource[] = [];
     const gael = await fetchGaelCloud();
     result = gael.items;
     sourcesOk = gael.ok;
-    if (result.length > 0) source = 'gael';
+    if (result.length > 0) {
+      source = 'gael';
+      coordinateSources = gael.coordinateSources;
+    }
     else {
       const boostr = await fetchBoostr();
       result = boostr.items;
@@ -356,10 +371,11 @@ export const GET: APIRoute = async () => {
       error: !sourcesOk,
       senapredError: !senapred.ok,
       source,
+      coordinateSources,
     };
   });
 
-  return new Response(JSON.stringify({ items, senapred, error, senapredError, source }), {
+  return new Response(JSON.stringify({ items, senapred, error, senapredError, source, coordinateSources }), {
     headers: edgeCacheHeaders(300),
   });
 };
