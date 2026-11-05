@@ -77,7 +77,7 @@ export function EmergencyTicker() {
   };
 
   return (
-    <div role="region" aria-label="Alertas de emergencia" className="sticky z-40 transition-[top] duration-300" style={{ top: navHidden ? 0 : 56 }}>
+    <div role="region" aria-label="Alertas de emergencia" className="fixed inset-x-0 z-40 transition-[top] duration-300" style={{ top: navHidden ? 0 : 56 }}>
       <div
         id="emergency-alert-bar"
         inert={collapsed}

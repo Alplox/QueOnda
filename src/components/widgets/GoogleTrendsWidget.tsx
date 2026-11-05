@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { play } from '@/lib/sound';
+import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
 
 interface Trend {
@@ -106,30 +107,27 @@ export function GoogleTrendsWidget() {
     return () => { cancelled = true; };
   }, [retryKey]);
 
-  if (loading) {
-    /* Reserva el alto medido del bloque: 901 px desktop / 1021 px móvil. */
-    return (
-      <div className="flex min-h-[1001px] flex-col animate-pulse sm:min-h-[881px]">
-        <p className="sr-only" role="status">Cargando tendencias de Google…</p>
-        <div aria-hidden="true" className="flex flex-1 flex-col space-y-1">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="flex flex-1 items-center gap-3 p-2.5 rounded-xl">
-              <span className="text-xs font-mono text-base-content/70 w-5 text-right shrink-0">
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="h-3 bg-base-300 rounded w-full" />
-                <div className="h-2.5 bg-base-300 rounded w-2/3" />
-              </div>
-              <div className="h-5 w-12 bg-base-300 rounded-full shrink-0" />
+  const skeleton = (
+    <div className="flex min-h-[1001px] flex-col animate-pulse sm:min-h-[881px]">
+      <div aria-hidden="true" className="flex flex-1 flex-col space-y-1">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="flex flex-1 items-center gap-3 p-2.5 rounded-xl">
+            <span className="text-xs font-mono text-base-content/70 w-5 text-right shrink-0">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="h-3 bg-base-300 rounded w-full" />
+              <div className="h-2.5 bg-base-300 rounded w-2/3" />
             </div>
-          ))}
-        </div>
+            <div className="h-5 w-12 bg-base-300 rounded-full shrink-0" />
+          </div>
+        ))}
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (trends.length === 0) {
+  const body = () => {
+    if (trends.length === 0) {
     return (
       <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center">
         <p className="text-sm text-base-content/70">Tendencias de Google no disponibles</p>
@@ -239,5 +237,12 @@ export function GoogleTrendsWidget() {
       </div>
       <SectionSources section="google-trends" />
     </div>
+  );
+  };
+
+  return (
+    <LoadSwap loading={loading} skeleton={skeleton} label="Cargando tendencias de Google…">
+      {loading ? null : body()}
+    </LoadSwap>
   );
 }

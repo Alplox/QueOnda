@@ -3,6 +3,7 @@ import { AirQualityMap } from './AirQualityMap';
 import { AIR_STATUS, airSeverity, orderedRegions } from '@/lib/air-quality';
 import type { AirData, AirStation } from '@/lib/air-quality';
 import { idbGet, idbSet } from '@/lib/idb-cache';
+import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
 
 const IDB_KEY = 'air-quality';
@@ -106,42 +107,36 @@ export function AirQualityWidget() {
     return c;
   }, [sorted]);
 
-  if (loading) {
-    /*
-     * Reserva el alto medido del bloque cargado (619 px: tarjeta + filas de
-     * estaciones). Antes eran 132 px y la sección crecía ~490 px.
-     */
-    return (
-      <div className="mt-4 flex min-h-[624px] flex-col rounded-xl p-4 border border-base-300 shadow-sm animate-[fadeInUp_0.3s_ease-out]">
-        <p className="sr-only" role="status">Cargando calidad del aire…</p>
-        <div aria-hidden="true" className="flex flex-1 flex-col animate-pulse">
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-5 rounded-full bg-base-300" />
-            <div className="h-4 w-44 bg-base-300 rounded" />
-            <div className="ml-auto h-3 w-10 rounded bg-base-300" />
-          </div>
-          <div className="h-8 w-32 bg-base-300 rounded mt-3" />
-          <div className="h-2.5 bg-base-300 rounded w-full mt-3" />
-          <div className="flex gap-1.5 mt-3">
-            <div className="h-6 w-20 rounded-full bg-base-300/70" />
-            <div className="h-6 w-20 rounded-full bg-base-300/70" />
-            <div className="h-6 w-24 rounded-full bg-base-300/70" />
-          </div>
-          <div className="flex flex-1 flex-col gap-1.5 mt-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 px-3">
-                <div className="h-3 w-32 rounded bg-base-300" />
-                <div className="h-3 w-14 rounded bg-base-300" />
-                <div className="ml-auto h-3 w-10 rounded bg-base-300" />
-              </div>
-            ))}
-          </div>
+  const skeleton = (
+    <div className="mt-4 flex min-h-[624px] flex-col rounded-xl p-4 border border-base-300 shadow-sm bg-base-200">
+      <div aria-hidden="true" className="flex flex-1 flex-col animate-pulse">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 rounded-full bg-base-300" />
+          <div className="h-4 w-44 bg-base-300 rounded" />
+          <div className="ml-auto h-3 w-10 rounded bg-base-300" />
+        </div>
+        <div className="h-8 w-32 bg-base-300 rounded mt-3" />
+        <div className="h-2.5 bg-base-300 rounded w-full mt-3" />
+        <div className="flex gap-1.5 mt-3">
+          <div className="h-6 w-20 rounded-full bg-base-300/70" />
+          <div className="h-6 w-20 rounded-full bg-base-300/70" />
+          <div className="h-6 w-24 rounded-full bg-base-300/70" />
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5 mt-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 px-3">
+              <div className="h-3 w-32 rounded bg-base-300" />
+              <div className="h-3 w-14 rounded bg-base-300" />
+              <div className="ml-auto h-3 w-10 rounded bg-base-300" />
+            </div>
+          ))}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (failed && (!data || sorted.length === 0)) {
+  const body = () => {
+    if (failed && (!data || sorted.length === 0)) {
     return (
       <div className="mt-4 rounded-xl p-4 border border-base-300 shadow-sm animate-[fadeInUp_0.3s_ease-out]">
         <p className="text-sm text-base-content/70">
@@ -180,7 +175,7 @@ export function AirQualityWidget() {
         </p>
       </div>
 
-      <div className="flex items-baseline gap-3 mt-2 animate-[heroFadeUp_0.4s_ease-out]">
+      <div className="flex items-baseline gap-3 mt-2">
         <span className="text-3xl font-bold text-base-content tabular-nums">{worstRow?.value ?? '—'}</span>
         <span className="text-base-content/70 text-sm font-normal">µg/m³ en {worst.nombre}</span>
         <StatusChip code={worstRow?.statusCode ?? 0} large />
@@ -270,5 +265,12 @@ export function AirQualityWidget() {
 
       <SectionSources section="air-quality" only={[data.source === 'sinca' ? 'SINCA · MMA' : 'Open-Meteo (CAMS)']} />
     </div>
+  );
+  };
+
+  return (
+    <LoadSwap loading={loading} skeleton={skeleton} label="Cargando calidad del aire…">
+      {loading ? null : body()}
+    </LoadSwap>
   );
 }

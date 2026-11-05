@@ -388,7 +388,7 @@ export function FootballTable() {
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => { play('interaction.tap'); setActiveTab(t.key); }}
+            onClick={() => { play('navigation.tab'); setActiveTab(t.key); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.96] ${
               activeTab === t.key
                 ? 'bg-primary text-primary-content'

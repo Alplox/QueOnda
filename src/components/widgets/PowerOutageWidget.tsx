@@ -7,6 +7,7 @@ import { idbGet, idbSet } from '@/lib/idb-cache';
 import { regionNsOrder, secRegionSlug } from '@/lib/regions';
 import { useErrorRetry } from '@/lib/retry';
 import { RetryHint } from '@/components/RetryHint';
+import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
 
 interface Comuna {
@@ -64,8 +65,8 @@ const IDB_TTL = 10 * 60 * 1000;
 // server's power-fresh rate limit so users get feedback before the 429 arrives.
 const FORCE_COOLDOWN_MS = 2 * 60 * 1000;
 const FORCE_AT_KEY = 'power-force-at';
-const STALE_MS = 90 * 60 * 1000;
-const WARN_MS = 60 * 60 * 1000;
+const STALE_MS = 60 * 60 * 1000;
+const WARN_MS = 45 * 60 * 1000;
 
 function fmtRelative(ms: number): string {
   const diff = Date.now() - ms;
@@ -117,7 +118,7 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
 // "O`Higgins" con backtick, "Tarapaca"/"Biobio" sin tilde). Desconocidas al final.
 const secNsIndex = (nombreRegion: string) => regionNsOrder(secRegionSlug(nombreRegion) ?? '');
 
-export function PowerOutageWidget() {
+export function PowerOutageWidget({ initialBreakdown }: { initialBreakdown?: boolean } = {}) {
   const [data, setData] = useState<PowerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -126,7 +127,7 @@ export function PowerOutageWidget() {
   const [mapMounted, setMapMounted] = useState(false);
   const [chartMounted, setChartMounted] = useState(false);
   const [tab, setTab] = useState<'regiones' | 'comunas'>('regiones');
-  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(initialBreakdown ?? true);
   const [regionSort, setRegionSort] = useState<'pct' | 'affected' | 'ns'>('affected');
   const [scale, setScale] = useState<PowerScale>('zoom');
   const [comunaRegion, setComunaRegion] = useState<string | null>(null);
@@ -143,13 +144,19 @@ export function PowerOutageWidget() {
 
   // Escala de las barras (Regiones): preferencia por navegador. Se lee después
   // del mount porque el servidor no tiene localStorage (evita el desajuste de
-  // hidratación).
-  useEffect(() => {
+  // hidratación), pero en un layout effect: si no, el esqueleto se pinta
+  // desplegado (918 px) y colapsa al siguiente frame cuando el usuario tenía
+  // el desglose cerrado.
+  useIsoLayoutEffect(() => {
     try {
       if (localStorage.getItem(SCALE_KEY) === 'real') setScale('real');
-      if (localStorage.getItem(BREAKDOWN_KEY) === 'closed') setShowBreakdown(false);
+      // Si el servidor ya nos dio la preferencia (cookie), no la pisamos con
+      // localStorage: evita el flash de esqueleto grande → pequeño en la carga.
+      if (initialBreakdown === undefined && localStorage.getItem(BREAKDOWN_KEY) === 'closed') {
+        setShowBreakdown(false);
+      }
     } catch {}
-  }, []);
+  }, [initialBreakdown]);
   const chooseScale = (v: PowerScale) => {
     play('interaction.tap');
     setScale(v);
@@ -160,8 +167,10 @@ export function PowerOutageWidget() {
   const toggleBreakdown = () => {
     play('interaction.toggle');
     setShowBreakdown((v) => {
-      try { localStorage.setItem(BREAKDOWN_KEY, v ? 'closed' : 'open'); } catch {}
-      return !v;
+      const next = !v;
+      try { localStorage.setItem(BREAKDOWN_KEY, next ? 'open' : 'closed'); } catch {}
+      try { document.cookie = `power-breakdown=${next ? 'open' : 'closed'}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`; } catch {}
+      return next;
     });
   };
 
@@ -350,43 +359,77 @@ export function PowerOutageWidget() {
     return list;
   }, [data, regionSort]);
 
-  if (loading) {
-    /*
-     * Reserva el alto real del bloque (medido: 884 px en desktop, 1157 px en
-     * móvil) y lo llena con las mismas piezas: cifra principal, pestañas de
-     * desglose y listado. Antes eran 136 px y la sección de Emergencia crecía
-     * ~750 px al llegar los datos.
-     */
-    return (
-      <div className="mt-4 flex min-h-[1137px] flex-col rounded-xl p-4 border border-base-300 shadow-sm sm:min-h-[864px]">
-        <p className="sr-only" role="status">Cargando cortes de luz…</p>
-        <div aria-hidden="true" className="flex flex-1 flex-col animate-pulse">
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-5 rounded-full bg-base-300" />
-            <div className="h-4 w-40 bg-base-300 rounded" />
-            <div className="ml-auto h-4 w-12 bg-base-300 rounded" />
+  /*
+   * Esqueleto = el bloque real sin contenido: misma card (`rounded-xl p-4
+   * border bg-base-200 shadow-sm`), mismo encabezado con su botón, misma cifra,
+   * misma superficie de ayuda y, con el desglose desplegado, las mismas
+   * pestañas y filas cebra. Antes era una card sin fondo (`transparent`) con
+   * barras flotantes, así que al llegar los datos el bloque "aparecía" de la
+   * nada en vez de rellenarse.
+   *
+   * La reserva sigue el estado del usuario (`power-breakdown`): desplegado
+   * 1210/918 px, colapsado 306/277 px — medidos del bloque real, porque un
+   * esqueleto desplegado colapsaba ~840 px al llegar los datos.
+   */
+  const skeleton = (
+    <div
+      className={`mt-4 flex flex-col rounded-xl p-4 border border-base-300 bg-base-200 shadow-sm ${
+        showBreakdown ? 'min-h-[1210px] sm:min-h-[918px]' : 'min-h-[306px] sm:min-h-[277px]'
+      }`}
+    >
+      <div aria-hidden="true" className="flex flex-1 flex-col animate-pulse">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <div className="h-4 w-4 rounded bg-base-300" />
+            <div className="h-3.5 w-44 rounded bg-base-300" />
           </div>
-          <div className="h-8 w-28 bg-base-300 rounded mt-3" />
-          <div className="h-2.5 bg-base-300 rounded w-full mt-3" />
-          <div className="h-2.5 bg-base-300 rounded w-3/4 mt-1.5" />
-          <div className="flex gap-2 mt-4">
-            <div className="h-8 w-28 rounded-lg bg-base-300/70" />
-            <div className="h-8 w-28 rounded-lg bg-base-300/70" />
-            <div className="ml-auto h-8 w-24 rounded-lg bg-base-300/70" />
-          </div>
-          <div className="flex flex-1 flex-col gap-1.5 mt-3">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 px-3">
-                <div className="h-3 w-24 rounded bg-base-300" />
-                <div className="ml-auto h-3 w-16 rounded bg-base-300" />
-                <div className="h-3 w-10 rounded bg-base-300" />
-              </div>
-            ))}
+          <div className="h-7 w-32 shrink-0 rounded-md border border-base-300 bg-base-100" />
+        </div>
+        <div className="mt-1.5 h-2.5 w-40 rounded bg-base-300/80" />
+
+        <div className="mt-3 flex items-baseline gap-2">
+          <div className="h-8 w-28 rounded bg-base-300" />
+          <div className="h-3.5 w-20 rounded bg-base-300/70" />
+          <div className="h-3.5 w-24 rounded bg-base-300/70" />
+        </div>
+
+        <div className="mt-3 border-t border-base-300/70 pt-2">
+          <div className="rounded-lg border border-base-300 bg-base-content/[0.04] px-2.5 py-2">
+            <div className="h-2.5 w-full rounded bg-base-300/80" />
+            <div className="mt-1.5 h-2.5 w-2/3 rounded bg-base-300/80" />
           </div>
         </div>
+
+        <div className="mt-3 h-3 w-56 rounded bg-base-300/80" />
+
+        {showBreakdown && (
+          <>
+            <div className="mt-2 flex gap-1">
+              <div className="h-7 w-20 rounded-lg bg-primary/30" />
+              <div className="h-7 w-24 rounded-lg bg-base-300" />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <div className="h-3 w-12 rounded bg-base-300/70" />
+              <div className="h-5 w-20 rounded-md bg-primary/15" />
+              <div className="h-5 w-24 rounded-md bg-base-300/50" />
+              <div className="h-5 w-20 rounded-md bg-base-300/50" />
+              <div className="ml-auto h-5 w-16 rounded-md bg-base-300/50" />
+            </div>
+            <div className="mt-2 flex flex-1 flex-col gap-0.5">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex flex-1 items-center gap-2 rounded-md px-1.5 odd:bg-base-100/60">
+                  <div className="h-2.5 w-24 shrink-0 rounded bg-base-300" />
+                  <div className="h-2 w-full max-w-[55%] rounded bg-base-300/50" />
+                  <div className="ml-auto h-2.5 w-10 shrink-0 rounded bg-base-300" />
+                  <div className="h-2.5 w-9 shrink-0 rounded bg-base-300/70" />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
-    );
-  }
+    </div>
+  );
 
   /*
    * Sin datos (fallo de la SEC o cero cortes) el bloque CONSERVA el alto del
@@ -397,10 +440,17 @@ export function PowerOutageWidget() {
    * la SEC en frío tarda más que el timeout del cliente; el reintento llega con
    * la caché caliente, así que ese colapso pasaba en cada carga real.
    */
+  /*
+   * `renderBody` existe para que `LoadSwap` pueda mantener el esqueleto
+   * montado durante el fundido cruzado: si cada estado hiciera su propio
+   * `return`, React desmontaría el esqueleto de golpe y se abriría un hueco
+   * del color del fondo antes de que el contenido alcance opacidad 1.
+   */
+  const renderBody = () => {
   if (!data || data.total === 0) {
     return (
       <div
-        className={`mt-4 flex min-h-[1137px] flex-col rounded-xl p-4 border shadow-sm sm:min-h-[864px] animate-[fadeInUp_0.3s_ease-out] ${
+        className={`mt-4 flex min-h-[1210px] flex-col rounded-xl p-4 border shadow-sm sm:min-h-[918px] ${
           error ? 'border-warning/30 bg-warning/10' : 'border-base-300'
         }`}
       >
@@ -483,26 +533,48 @@ export function PowerOutageWidget() {
   const nextHour = new Date(data.updatedAt + 3600000).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className={`mt-4 rounded-xl p-4 border shadow-sm ${isStale ? 'border-warning/40 bg-warning/10' : isWarn ? 'border-warning/25 bg-warning/5' : 'border-base-300 bg-base-200'}`}>
+    <div className="mt-4 rounded-xl p-4 border shadow-sm border-base-300 bg-base-200">
       <div className="flex items-start justify-between gap-2">
         <p className="em-subhead !mb-0 !pb-1">
-          <span><span className="mr-1.5" role="img" aria-label="rayo">⚡</span>Clientes sin suministro eléctrico</span>
+          <span className="inline-flex items-center gap-1.5"><svg className="h-5 w-5" width="1em" height="1em" viewBox="0 0 512 512" aria-hidden="true"><title>power-supply</title><path fill="currentColor" fillRule="evenodd" d="M213.333 128V42.667h-42.666V128h-64v128c0 67.648 44.981 124.79 106.665 143.149l.001 70.184h85.333l.023-70.19C360.362 380.777 405.333 323.64 405.333 256V128h-64V42.667h-42.667V128zm64 106.667l25.817-64h-78.507L202.667 256h42.666l-32 106.667l117.333-128z" clipRule="evenodd"/></svg>Clientes sin suministro eléctrico</span>
         </p>
+      {isStale && (
         <button
           type="button"
           onClick={forceRefresh}
           disabled={forcing || cooldownLeft > 0}
           title={cooldownLeft > 0 ? `Reintenta en ${cooldownLeft}s` : 'Pide datos frescos directo a la SEC (máx. 1 vez cada 2 min)'}
           aria-live="off"
-          className="shrink-0 mt-0.5 px-2.5 py-1 min-w-[20ch] text-center rounded-md bg-base-100 border border-base-300 text-[11px] font-semibold hover:bg-base-200 transition-colors cursor-pointer active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="shrink-0 mt-0.5 px-2.5 py-1 min-w-[20ch] text-center rounded-md bg-base-100 border text-[11px] font-semibold hover:bg-base-200 transition-colors cursor-pointer active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ borderColor: `color-mix(in srgb, var(--color-warning) ${Math.round(Math.min(1, ((Date.now() - data.updatedAt) / 60000) / 15) * 100)}%, transparent)` }}
         >
           {forcing ? 'Actualizando…' : cooldownLeft > 0 ? (<>Reintentar en <span className="inline-block w-[5ch] text-right tabular-nums">{cooldownLeft}s</span></>) : 'Forzar actualización'}
         </button>
+      )}
       </div>
-      <p className={`mt-0.5 text-[11px] ${isStale ? 'text-warning font-semibold' : 'text-base-content/70'}`} title={`Dato: ${new Date(data.updatedAt).toISOString()} · Obtenido: ${new Date(data.fetchedAt ?? data.updatedAt).toISOString()}`}>
-        {absTime} · actualizado {relFetch}
-        {isStale ? ' · desactualizado' : isWarn ? ` · esperando las ${nextHour}` : ''}
-      </p>
+      <div className="mt-0.5 flex items-center gap-1.5">
+        <p className={`text-[11px] ${isStale ? 'text-warning font-semibold' : 'text-base-content/70'}`}>
+          {absTime} · actualizado {relFetch}
+          {isStale ? ' · desactualizado' : isWarn ? ` · esperando las ${nextHour}` : ''}
+        </p>
+        <span className="group relative inline-flex">
+          <button
+            type="button"
+            aria-label="La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada."
+            className="inline-flex h-4 w-4 items-center justify-center text-base-content/70 hover:text-base-content transition-colors cursor-help"
+          >
+            <svg className="h-4 w-4" viewBox="-0.0 -0.0 233.0 233.0" fill="currentColor" aria-hidden="true">
+              <g transform="translate(0.000000,233.000000) scale(0.100000,-0.100000)">
+                <path d="M990 2139 c-93 -14 -246 -69 -336 -120 -97 -55 -222 -179 -301 -297 -152 -226 -205 -509 -148 -784 44 -215 197 -442 388 -578 77 -55 226 -125 323 -152 116 -32 381 -32 507 0 343 86 602 356 698 728 34 130 32 308 -5 457 -51 211 -109 319 -245 460 -123 127 -295 226 -465 268 -95 23 -317 33 -416 18z m248 -325 c74 -37 106 -93 100 -173 -11 -160 -194 -234 -315 -128 -99 87 -81 238 36 299 67 35 112 35 179 2z m47 -499 l25 -24 0 -281 c0 -267 1 -281 20 -300 11 -11 29 -20 41 -20 35 0 58 -19 68 -56 13 -47 -7 -100 -44 -114 -37 -14 -438 -13 -468 1 -65 29 -60 135 7 159 17 6 42 17 56 24 l25 12 3 197 c1 109 -2 205 -6 214 -5 8 -31 23 -58 32 -58 19 -80 53 -69 107 4 25 16 41 38 54 28 18 51 20 185 20 149 0 154 -1 177 -25z" />
+              </g>
+            </svg>
+          </button>
+          <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 -translate-x-1/2 max-w-[260px] whitespace-normal rounded-lg border border-base-300 bg-base-100 px-2.5 py-1.5 text-center text-[11px] leading-snug text-base-content shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <span className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-base-300 bg-base-100" aria-hidden="true" />
+            La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada.
+          </span>
+        </span>
+      </div>
       {forceStatus && (
         <p role="status" aria-live="polite" className={`mt-1 text-[11px] font-medium ${forceStatus.ok ? 'text-success' : 'text-error'}`}>
           {forceStatus.msg}
@@ -512,7 +584,7 @@ export function PowerOutageWidget() {
       {isStale && (
         <div className="mt-2 rounded-lg px-3 py-2 text-xs bg-warning/15 border border-warning/30 text-warning" role="status" aria-live="polite">
           <span className="leading-snug">
-            {`⚠️ Datos desactualizados — SEC sin actualizar ${rel} (último reporte ${absTime}). Este número puede no reflejar cortes actuales.`}
+            {`Datos desactualizados — SEC sin actualizar ${rel} (último reporte ${absTime}). Este número puede no reflejar cortes actuales.`}
           </span>
         </div>
       )}
@@ -536,7 +608,7 @@ export function PowerOutageWidget() {
         </div>
       )}
 
-      <div className="flex items-baseline gap-3 mt-2 animate-[heroFadeUp_0.4s_ease-out]">
+      <div className="flex items-baseline gap-3 mt-2">
         <span className="text-3xl font-bold text-base-content tabular-nums">{miles(data.affected)}</span>
         <span className="text-base-content/70 text-sm font-normal"> de {miles(data.total)}</span>
         <span className={`text-sm font-medium ${data.pct >= 2 ? 'text-error' : 'text-base-content/70'}`}>
@@ -695,7 +767,7 @@ export function PowerOutageWidget() {
               {tab === 'regiones' && <span className="text-right">%</span>}
               {tab === 'regiones' && <span />}
             </div>
-            {rows.map((r, i) => {
+            {rows.map((r) => {
               const name = tab === 'regiones' ? (r as RegionRow).region : (r as Comuna).comuna;
               const key = tab === 'regiones' ? name : `${(r as Comuna).region} — ${(r as Comuna).comuna}`;
               const regionTotal = tab === 'regiones' ? ((r as RegionRow).total ?? 0) : 0;
@@ -770,8 +842,7 @@ export function PowerOutageWidget() {
               ) : (
                 <div
                   key={key}
-                  className={`grid ${rowGrid} items-center gap-x-2 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 animate-[fadeInUp_0.3s_ease-out_both]`}
-                style={{ animationDelay: `${Math.min(i * 40, 400)}ms` }}
+                  className={`grid ${rowGrid} items-center gap-x-2 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60`}
                 >
                   <span className="truncate text-base-content/80">{name}</span>
                   {barTrack}
@@ -791,34 +862,21 @@ export function PowerOutageWidget() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
+      <div className="flex flex-col">
         <button
           type="button"
           onClick={() => { play('interaction.toggle'); if (!showMap) setMapFocusRegion(null); setShowMap(s => !s); }}
           aria-expanded={showMap}
-          className="flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
+          className="mt-2 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] cursor-pointer"
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-            className={`transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
+            className={`shrink-0 transition-transform duration-200 ${showMap ? 'rotate-90' : ''}`}>
             <path d="M9 18l6-6-6-6" />
           </svg>
           {showMap ? 'Ocultar mapa' : 'Ver mapa por comuna'}
         </button>
-        <button
-          type="button"
-          onClick={() => { play('interaction.toggle'); setShowChart(s => !s); }}
-          aria-expanded={showChart}
-          className="flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer"
-        >
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-            className={`transition-transform duration-200 ${showChart ? 'rotate-90' : ''}`}>
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-          {showChart ? 'Ocultar evolución' : 'Ver evolución'}
-        </button>
-      </div>
 
-      <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showMap ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${showMap ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
         <div className="overflow-hidden min-h-0">
           {mapMounted && (
             <div className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
@@ -828,7 +886,19 @@ export function PowerOutageWidget() {
         </div>
       </div>
 
-      <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showChart ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+      <button
+        type="button"
+        onClick={() => { play('interaction.toggle'); setShowChart(s => !s); }}
+        aria-expanded={showChart}
+        className="mt-2 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] cursor-pointer"
+      >
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+          className={`shrink-0 transition-transform duration-200 ${showChart ? 'rotate-90' : ''}`}>
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+        {showChart ? 'Ocultar evolución' : 'Ver evolución'}
+      </button>
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${showChart ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
         <div className="overflow-hidden min-h-0">
           {chartMounted && (
             <div className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
@@ -837,13 +907,18 @@ export function PowerOutageWidget() {
           )}
         </div>
       </div>
+      </div>
 
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 text-[11px] text-base-content/70">
-        <span className="max-w-[70%] leading-snug">
-          La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada.
-        </span>
+      <div className="mt-2 flex flex-wrap items-end justify-end gap-x-3 gap-y-1 text-[11px] text-base-content/70">
         <SectionSources section="power" inline />
       </div>
     </div>
+  );
+  };
+
+  return (
+    <LoadSwap loading={loading} skeleton={skeleton}>
+      {loading ? null : renderBody()}
+    </LoadSwap>
   );
 }

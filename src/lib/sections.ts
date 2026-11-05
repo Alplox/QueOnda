@@ -22,6 +22,7 @@ export const SECTIONS: SectionLink[] = [
   { id: 'trabajos', label: 'Trabajos' },
   { id: 'feriados', label: 'Feriados' },
   { id: 'fiestas-patrias', label: 'Fiestas' },
+  { id: 'adopcion', label: 'Adopción' },
 ];
 
 export const PRIMARY = SECTIONS.slice(0, 7);

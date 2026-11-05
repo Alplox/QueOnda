@@ -129,7 +129,7 @@ export function CyberWidget() {
 
   const selectTab = (next: Tab) => {
     if (next === tab) return;
-    play('interaction.tap');
+    play('navigation.tab');
     setTab(next);
   };
 

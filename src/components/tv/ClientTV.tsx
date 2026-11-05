@@ -237,6 +237,7 @@ export function ClientTV() {
   }
 
   const handleSourceChange = useCallback((s: typeof source) => {
+    play('navigation.tab');
     setSource(s);
     localStorage.setItem('tv-source', s);
     setPlayer(null);

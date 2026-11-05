@@ -19,6 +19,7 @@ import { JobList } from '../components/widgets/JobList';
 import { EmergencyWidget } from '../components/widgets/EmergencyWidget';
 import { EmergencyTicker } from '../components/widgets/EmergencyTicker';
 import { HolidaysWidget } from '../components/widgets/HolidaysWidget';
+import { AdoptionWidget } from '../components/widgets/AdoptionWidget';
 import { CyberWidget } from '../components/widgets/CyberWidget';
 import { ClientNewsFeed } from '../components/news/ClientNewsFeed';
 import { ClientTV } from '../components/tv/ClientTV';
@@ -33,6 +34,7 @@ const hour = new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false
 const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long', timeZone: 'America/Santiago' });
 const todayBg = getTodayBg();
 const festivity = getTodayFestivity();
+const powerBreakdownOpen = Astro.cookies.get('power-breakdown')?.value !== 'closed';
 const nightGreetings = ['¿Mucho café?', 'Anda acostarte wn', '¿No funcionó contar ovejas?'];
 const greeting = festivity?.message ?? (dayOfWeek === 'Monday' && Number(hour) === 10 ? 'Se me hizo larga esta semana' : Number(hour) === 23 ? 'A trabajar con el nóctulo' : Number(hour) < 6 ? nightGreetings[Math.floor(Math.random() * nightGreetings.length)] : Number(hour) < 12 ? 'Buenos días' : Number(hour) < 19 ? 'Buenas tardes' : 'Buenas noches');
 
@@ -150,7 +152,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
                 {festivity?.flagSvg ? <img src={festivity.flagSvg} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : festivity?.emoji ? <img src={emojiToPath(festivity.emoji)} alt="" class="inline-block h-[1em] align-text-bottom mr-1" /> : ''}{greeting}
               </div>
             </div>
-<h1 class="hero-title text-[clamp(2rem,8vw,3rem)] md:text-[clamp(2.5rem,6vw,4.5rem)] lg:text-[clamp(3rem,5vw,6rem)] font-extrabold tracking-tighter leading-none text-base-content mb-4 text-nowrap animate-[heroScaleIn_0.6s_cubic-bezier(0.16,1,0.3,1)_0.1s_both] will-animate">
+<h1 class="hero-title text-[clamp(2.5rem,9vw,3.5rem)] md:text-[clamp(2.5rem,6vw,4.5rem)] lg:text-[clamp(3rem,5vw,6rem)] font-extrabold tracking-tighter leading-none text-base-content mb-4 text-nowrap animate-[heroScaleIn_0.6s_cubic-bezier(0.16,1,0.3,1)_0.1s_both] will-animate">
   <span class="text-accent-safe inline-block animate-[float_3s_ease-in-out_infinite]">¿</span>
   Qué Onda
   <span class="text-accent-safe inline-block animate-[float_3s_ease-in-out_infinite_0.5s]">?</span>
@@ -158,7 +160,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
             <p class="text-base md:text-lg max-w-lg mx-auto text-base-content/80 animate-[heroFadeUp_0.6s_ease-out_0.18s_both] will-animate">
               Chile en una sola página.
             </p>
-            <p class="text-sm mt-3 max-w-lg mx-auto text-base-content/70 animate-[heroFadeUp_0.6s_ease-out_0.26s_both] will-animate">
+            <p class="text-sm mt-3 max-w-lg mx-auto text-base-content/70 animate-[heroFadeUp_0.6s_ease-out_0.26s_both] will-animate hidden sm:block">
               Noticias, TV, radios, tendencias y más.
             </p>
           </div>
@@ -217,6 +219,10 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
               hero.style.setProperty('--hero-isl-w', i.width + 'px');
               hero.style.setProperty('--hero-isl-h', i.height + 'px');
               hero.style.setProperty('--hero-isl-r', (i.height / 2) + 'px');
+              // Plain px (no calc()) so Chromium interpolates the clip-path transition
+              // instead of snapping to the end state.
+              hero.style.setProperty('--hero-clip-top', (c.height - i.height) + 'px');
+              hero.style.setProperty('--hero-clip-right', (c.width - i.width) + 'px');
             }
 
             function set(collapsed) {
@@ -225,6 +231,69 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
               btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
               btn.setAttribute('aria-label', collapsed ? 'Mostrar portada' : 'Ocultar portada para ver la foto');
               island.inert = !collapsed;
+              // Chromium does not interpolate clip-path (even with @property), so drive it
+              // manually with rAF. CSS still handles the transform transition.
+              animateClip(collapsed);
+            }
+
+            function animateClip(toCollapsed) {
+              if (!hero.classList.contains('hero-ready')) {
+                applyClip(toCollapsed ? 1 : 0);
+                if (toCollapsed) {
+                  card.querySelectorAll(':scope > *').forEach(function (el) {
+                    el.style.setProperty('opacity', '0', 'important');
+                    el.style.setProperty('transform', 'scale(0.55)', 'important');
+                  });
+                }
+                return;
+              }
+              var start = performance.now();
+              var dur = 300;
+              var from = toCollapsed ? 0 : 1;
+              var to = toCollapsed ? 1 : 0;
+              function step(now) {
+                var p = Math.min(1, (now - start) / dur);
+                // Collapse: clean ease-out (no overshoot). Expand: ease-out-back so the
+                // card settles into place with a small wobble.
+                var e;
+                if (toCollapsed) {
+                  e = 1 - Math.pow(1 - p, 3);
+                } else {
+                  var c1 = 1.70158;
+                  var c3 = c1 + 1;
+                  e = 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2);
+                }
+                var v = from + (to - from) * e;
+                applyClip(v);
+                if (p < 1) {
+                  requestAnimationFrame(step);
+                }
+              }
+              requestAnimationFrame(step);
+            }
+
+            function applyClip(v) {
+              // Chromium cannot interpolate clip-path reliably (it leaves a triangular
+              // artifact), so the clip is applied instantly by the CSS rule on
+              // [data-collapsed] and we only animate transform + opacity here.
+              var tx = parseFloat(hero.style.getPropertyValue('--hero-tx')) || 0;
+              var ty = parseFloat(hero.style.getPropertyValue('--hero-ty')) || 0;
+              wrap.style.transform = 'translate(' + (tx * v) + 'px, ' + (ty * v) + 'px)';
+              // Drive opacity + scale here too: Chromium does not interpolate clip-path,
+              // so the children fade/scale in lockstep with the JS-driven clip.
+              if (hero.classList.contains('hero-ready')) {
+                var contentOpacity = 1 - v;
+                var scale = 1 - 0.45 * v;
+                card.querySelectorAll(':scope > *').forEach(function (el) {
+                  el.style.setProperty('opacity', contentOpacity, 'important');
+                  el.style.setProperty('transform', 'scale(' + scale + ')', 'important');
+                });
+              } else if (v === 1) {
+                card.querySelectorAll(':scope > *').forEach(function (el) {
+                  el.style.setProperty('opacity', '0', 'important');
+                  el.style.setProperty('transform', 'scale(0.55)', 'important');
+                });
+              }
             }
 
             var stored = '0';
@@ -238,6 +307,12 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
             // state paints at rest instead of animating on boot.
             void hero.offsetHeight;
             hero.classList.add('hero-ready');
+
+            // Late layout shifts (ticker hydrating, fonts finishing) can invalidate the
+            // measured vars; re-measure once while still expanded so the collapse lands right.
+            window.setTimeout(function () {
+              if (hero.dataset.collapsed !== 'true') { measure(); }
+            }, 200);
 
             // Web fonts change the card/island boxes — re-measure once they are in
             if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
@@ -263,7 +338,7 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
 
       <!-- Emergencia -->
       <SectionShareHandler client:idle />
-      <EmergencyWidget client:load />
+      <EmergencyWidget client:load initialBreakdown={powerBreakdownOpen} />
 
       <!-- Noticias -->
       <Section id="noticias" title="Noticias" subtitle="Agrupadas por tema y medio">
@@ -338,6 +413,11 @@ const SITE_DESCRIPTION = 'Noticias, TV en vivo, radios, finanzas, clima y más d
       <!-- Fiestas Patrias -->
       <Section id="fiestas-patrias" title="Fiestas Patrias" subtitle="Cuenta regresiva para el 18 de septiembre">
         <FiestasCountdown client:idle />
+      </Section>
+
+      <!-- Adopción -->
+      <Section id="adopcion" title="Adopción" subtitle="Mascotas buscando hogar (Huachitos)">
+        <AdoptionWidget client:idle />
       </Section>
     </main>
 

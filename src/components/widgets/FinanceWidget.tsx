@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { idbGet, idbSet } from '../../lib/idb-cache';
+import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
 
 const IDB_KEY = 'finance';
@@ -206,39 +207,45 @@ export function FinanceWidget() {
     return () => { cancelled = true; };
   }, []);
 
-  if (loading) {
+  const skeleton = (
+    <div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+        {ITEMS.map((item) => <SkeletonCard key={item.key} />)}
+      </div>
+      <SectionSources section="finance" only={usedSources} />
+    </div>
+  );
+
+  const body = () => {
+    if (error && !data) {
+      return (
+        <div>
+          <p className="text-xs text-base-content/70 pb-1">Indicadores no disponibles</p>
+          <SectionSources section="finance" only={usedSources} />
+        </div>
+      );
+    }
+
     return (
       <div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-          {ITEMS.map((item) => <SkeletonCard key={item.key} />)}
+        {stale && (
+          <p className="text-xs text-warning mb-2">Datos con posible retraso</p>
+        )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+          {ITEMS.map((item, i) => {
+            const indicator = data?.[item.key] as Indicator | undefined;
+            if (!indicator?.value) return null;
+            return <ValueCard key={item.key} item={item} value={indicator.value} date={indicator.date} index={i} />;
+          })}
         </div>
         <SectionSources section="finance" only={usedSources} />
       </div>
     );
-  }
-
-  if (error && !data) {
-    return (
-      <div>
-        <p className="text-xs text-base-content/70 pb-1">Indicadores no disponibles</p>
-        <SectionSources section="finance" only={usedSources} />
-      </div>
-    );
-  }
+  };
 
   return (
-    <div>
-      {stale && (
-        <p className="text-xs text-warning mb-2">Datos con posible retraso</p>
-      )}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-        {ITEMS.map((item, i) => {
-          const indicator = data?.[item.key] as Indicator | undefined;
-          if (!indicator?.value) return null;
-          return <ValueCard key={item.key} item={item} value={indicator.value} date={indicator.date} index={i} />;
-        })}
-      </div>
-      <SectionSources section="finance" only={usedSources} />
-    </div>
+    <LoadSwap loading={loading} skeleton={skeleton} label="Cargando indicadores…">
+      {loading ? null : body()}
+    </LoadSwap>
   );
 }

@@ -165,6 +165,76 @@ Brave, Bing y el resto de buscadores) provienen de
 La CC0 cubre el archivo SVG, no las marcas: se usan sólo de forma nominativa,
 sin alterar el logotipo ni sugerir respaldo.
 
+### Icono de alerta — Line MD (MIT)
+
+El SVG `alert.svg` se usa como icono de alerta. Fuente:
+[Line MD](https://github.com/cyberalien/line-md).
+
+```
+MIT License
+
+Copyright (c) 2020 Vjacheslav Trushkin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+Licencia: https://github.com/cyberalien/line-md/blob/main/license.txt
+
+### Icono de sismos — Weather Icons (SIL OFL 1.1)
+
+El icono `wi:earthquake` se obtiene del set
+[Weather Icons](https://github.com/erikflowers/weather-icons), archivo
+[wi-earthquake.svg](https://raw.githubusercontent.com/erikflowers/weather-icons/refs/heads/master/svg/wi-earthquake.svg).
+El arte es de Erik Flowers; los diseños originales son de Lukas Bischoff.
+Licencia: [SIL Open Font License 1.1](https://scripts.sil.org/OFL).
+
+### Icono de energía — Siemens IX Icons (MIT)
+
+El archivo `power-supply.svg` se usa en la sección de energía. Fuente:
+[Siemens IX Icons](https://github.com/siemens/ix-icons/blob/eb6c7e8b219eb44f39f7b0c1edd12b530b4b02e5/incoming-svg/power-supply.svg).
+
+```
+MIT License
+
+Copyright (c) 2022 Siemens AG
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+Licencia: https://github.com/siemens/ix-icons/blob/main/LICENSE.md
+
 ### Google Fonts — SIL Open Font License 1.1
 
 - **Figtree** — https://github.com/erikdkennedy/figtree

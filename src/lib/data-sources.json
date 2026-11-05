@@ -1,5 +1,340 @@
 {
   "sections": {
+    "icons": {
+      "title": "Iconos",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Simple Icons",
+          "url": "https://simpleicons.org",
+          "role": "single",
+          "license": "CC0 1.0 Universal",
+          "note": "Logos de marca usados para identificar el buscador al que lleva cada enlace.",
+          "detail": "CC0 cubre el archivo SVG, no la marca registrada: se usan sólo de forma nominativa, sin alterar el logotipo ni sugerir respaldo."
+        },
+        {
+          "name": "Twemoji",
+          "url": "https://twemoji.twitter.com",
+          "role": "single",
+          "license": "CC-BY 4.0",
+          "note": "SVG de emoji usados en la sección de Fiestas Patrias."
+        },
+        {
+          "name": "Iconos inline del proyecto",
+          "url": "https://github.com/Alplox/QueOnda",
+          "role": "single",
+          "license": "AGPL-3.0",
+          "note": "SVG propios del proyecto para sonido, navegación y controles."
+        },
+        {
+          "name": "Icono de alerta (Line MD)",
+          "url": "https://github.com/cyberalien/line-md",
+          "role": "single",
+          "license": "MIT",
+          "note": "Copyright 2020 Vjacheslav Trushkin.",
+          "links": [
+            {
+              "label": "SVG alert.svg",
+              "url": "https://github.com/cyberalien/line-md/blob/main/svg/alert.svg"
+            },
+            {
+              "label": "Licencia MIT",
+              "url": "https://github.com/cyberalien/line-md/blob/main/license.txt"
+            }
+          ]
+        },
+        {
+          "name": "Icono de sismos (wi:earthquake, Weather Icons)",
+          "url": "https://github.com/erikflowers/weather-icons",
+          "role": "single",
+          "license": "SIL Open Font License 1.1",
+          "note": "Arte de Erik Flowers; diseños originales de Lukas Bischoff.",
+          "links": [
+            {
+              "label": "SVG wi-earthquake.svg",
+              "url": "https://raw.githubusercontent.com/erikflowers/weather-icons/refs/heads/master/svg/wi-earthquake.svg"
+            }
+          ]
+        },
+        {
+          "name": "Icono de energía (Power Supply, Siemens IX Icons)",
+          "url": "https://github.com/siemens/ix-icons",
+          "role": "single",
+          "license": "MIT",
+          "note": "Copyright (c) 2022 Siemens AG.",
+          "links": [
+            {
+              "label": "SVG power-supply.svg",
+              "url": "https://github.com/siemens/ix-icons/blob/eb6c7e8b219eb44f39f7b0c1edd12b530b4b02e5/incoming-svg/power-supply.svg"
+            },
+            {
+              "label": "Licencia MIT",
+              "url": "https://github.com/siemens/ix-icons/blob/main/LICENSE.md"
+            }
+          ]
+        }
+      ]
+    },
+    "senapred": {
+      "title": "Alertas SENAPRED (canal independiente)",
+      "strategy": "Única fuente",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Telegram SenapredChile",
+          "url": "https://t.me/s/SenapredChile",
+          "role": "single",
+          "license": "Canal oficial público — sin licencia explícita",
+          "note": "scraping de t.me/s/SenapredChile (BROWSER_UA); parsea .js-widget_message (data-post, <time datetime>, .js-message_text); severidad por keyword (desborde/aluvión/evacuar→critical, crecida/incendio/SAE/alerta→high, preventivo/monitoreo→moderate, else low)"
+        }
+      ]
+    },
+    "emergency": {
+      "title": "Sismos / Emergencias (/api/emergency)",
+      "strategy": "Fallback secuencial (magnitud mínima 1.0; pasa al siguiente si items.length === 0)",
+      "role": "primary",
+      "sources": [
+        {
+          "name": "Gael Cloud",
+          "url": "https://api.gael.cloud",
+          "role": "primary",
+          "license": "API pública — sin licencia explícita",
+          "note": "api.gael.cloud/general/public/sismos, timeout 10s; los datos provienen del CSN"
+        },
+        {
+          "name": "Boostr",
+          "url": "https://docs.boostr.cl",
+          "role": "fallback",
+          "license": "API pública — sin licencia explícita",
+          "note": "api.boostr.cl/earthquakes/recent.json, timeout 10s; añade coordenadas"
+        },
+        {
+          "name": "USGS",
+          "url": "https://earthquake.usgs.gov",
+          "role": "fallback",
+          "license": "Dominio público (USGS)",
+          "note": "earthquake.usgs.gov/.../2.5_day.geojson, filtrado a Chile/Sudamérica, timeout 10s"
+        }
+      ]
+    },
+    "power": {
+      "title": "Cortes de luz (/api/power)",
+      "strategy": "Única fuente + snapshot durable",
+      "role": "single",
+      "sources": [
+        {
+          "name": "SEC",
+          "url": "https://apps.sec.cl/INTONLINEv1/index.aspx",
+          "role": "single",
+          "license": "Datos públicos del Estado — sin licencia explícita",
+          "note": "POST ClientesAfectados/{Get,GetClientesNacional,GetPorFecha,GetClientesRegional}; sin alternativa pública. Si cae, sirve el snapshot power:lastgood (6 h) con stale:true"
+        }
+      ]
+    },
+    "news": {
+      "title": "Feeds RSS (/api/news)",
+      "strategy": "Local-first: base incluida en el build → GitHub raw → jsDelivr",
+      "role": "primary",
+      "sources": [
+        {
+          "name": "awesome-chilean-rss",
+          "url": "https://github.com/Alplox/awesome-chilean-rss",
+          "role": "primary",
+          "license": "CC0 1.0",
+          "note": "catálogo de medios chilenos; la base se incluye en el build como feeds-database.json, instantánea y siempre disponible"
+        },
+        {
+          "name": "GitHub raw",
+          "url": "https://raw.githubusercontent.com/alplox/awesome-chilean-rss/main/feeds-database.json",
+          "role": "fallback",
+          "license": "CC0 1.0",
+          "note": "actualización fire-and-forget, timeout 15s"
+        },
+        {
+          "name": "jsDelivr",
+          "url": "https://cdn.jsdelivr.net/gh/Alplox/awesome-chilean-rss@main/feeds-database.json",
+          "role": "fallback",
+          "license": "CC0 1.0",
+          "note": "actualización fire-and-forget, timeout 15s"
+        }
+      ]
+    },
+    "tv": {
+      "title": "TV en vivo (/api/channels)",
+      "strategy": "json-teles → iptv-org → mi-iptv",
+      "role": "fallback",
+      "sources": [
+        {
+          "name": "json-teles",
+          "url": "https://github.com/Alplox/json-teles",
+          "role": "primary",
+          "license": "Unlicense (dominio público)",
+          "note": "canales de TV chilenos"
+        },
+        {
+          "name": "iptv-org",
+          "url": "https://github.com/iptv-org/iptv",
+          "role": "fallback",
+          "license": "Unlicense (dominio público)",
+          "note": "canales CL (m3u)"
+        },
+        {
+          "name": "mi-iptv",
+          "url": "https://github.com/fparrav/mi-iptv",
+          "role": "fallback",
+          "license": "Sin licencia explícita",
+          "note": "playlist m3u (fallback jsDelivr)"
+        },
+        {
+          "name": "YouTube (señales en vivo)",
+          "url": "https://www.youtube.com",
+          "role": "single",
+          "license": "Términos de YouTube",
+          "note": "embeds YT Live/VOD de los canales que los exponen"
+        },
+        {
+          "name": "Twitch (señales en vivo)",
+          "url": "https://www.twitch.tv",
+          "role": "single",
+          "license": "Términos de Twitch",
+          "note": "embeds de los canales que transmiten por Twitch"
+        }
+      ]
+    },
+    "radio": {
+      "title": "Radios (/api/radio-stations)",
+      "strategy": "Fallback secuencial; si ambos fallan usa la lista local del código",
+      "role": "primary",
+      "sources": [
+        {
+          "name": "radio-browser.info",
+          "url": "https://api.radio-browser.info",
+          "role": "primary",
+          "license": "API pública — datos comunitarios (código AGPL-3.0)",
+          "note": "de1.api.radio-browser.info, timeout 15s"
+        },
+        {
+          "name": "json-teles",
+          "url": "https://github.com/Alplox/json-teles",
+          "role": "fallback",
+          "license": "Unlicense (dominio público)",
+          "note": "raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json, filtro category=music"
+        }
+      ]
+    },
+    "cyber": {
+      "title": "Ciberseguridad (/api/cyber)",
+      "strategy": "Bloques independientes en paralelo; TTL 15 min (3 min si algún bloque falló)",
+      "role": "merge",
+      "note": "CSIRT Nacional y CISA KEV",
+      "sources": [
+        {
+          "name": "CSIRT Nacional",
+          "url": "https://www.csirt.gob.cl/alertas/",
+          "role": "merge",
+          "license": "Sitio oficial público — sin licencia explícita",
+          "note": "RSS de alertas + severidad"
+        },
+        {
+          "name": "CISA KEV",
+          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+          "role": "merge",
+          "license": "Dominio público (obra del Gobierno de EE. UU.)",
+          "note": "catálogo JSON recortado a 30/90 días"
+        }
+      ]
+    },
+    "finance": {
+      "title": "Finanzas (/api/finance)",
+      "strategy": "Merge: itera todas las fuentes y llena indicadores faltantes; se detiene si ya tiene los 5",
+      "role": "primary",
+      "sources": [
+        {
+          "name": "mindicador.cl",
+          "url": "https://mindicador.cl",
+          "role": "primary",
+          "license": "Uso libre — sin licencia explícita",
+          "note": "mindicador.cl/api, UF, USD, EUR, IPC, UTM, timeout 8s"
+        },
+        {
+          "name": "Boostr",
+          "url": "https://docs.boostr.cl",
+          "role": "fallback",
+          "license": "API pública — sin licencia explícita",
+          "note": "api.boostr.cl/economy/indicators.json, timeout 8s"
+        },
+        {
+          "name": "findic.cl",
+          "url": "https://findic.cl",
+          "role": "fallback",
+          "license": "Uso libre — sin licencia explícita",
+          "note": "findic.cl/api/, timeout 8s"
+        },
+        {
+          "name": "SII",
+          "url": "https://zeus.sii.cl",
+          "role": "fallback",
+          "license": "Datos públicos del Estado — sin licencia explícita",
+          "note": "zeus.sii.cl/admin/rss/sii_ind_rss.xml, timeout 8s"
+        },
+        {
+          "name": "DolarApi",
+          "url": "https://cl.dolarapi.com",
+          "role": "fallback",
+          "license": "MIT",
+          "note": "cl.dolarapi.com/v1/cotizaciones, timeout 8s"
+        }
+      ]
+    },
+    "youtube-trends": {
+      "title": "YouTube Trends (/api/youtube)",
+      "strategy": "Única fuente",
+      "role": "single",
+      "sources": [
+        {
+          "name": "json-teles",
+          "url": "https://github.com/Alplox/json-teles/blob/main/countries/cl.json",
+          "role": "single",
+          "license": "Unlicense (dominio público)",
+          "note": "lista de canales chilenos (channel_id)"
+        },
+        {
+          "name": "YouTube RSS",
+          "url": "https://www.youtube.com",
+          "role": "single",
+          "license": "Términos de YouTube",
+          "note": "feeds/videos.xml por channel_id"
+        }
+      ]
+    },
+    "spotify": {
+      "title": "Spotify Chile (/api/spotify)",
+      "strategy": "Única fuente",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Spotify \"Top 50 Chile\" playlist",
+          "url": "https://open.spotify.com/playlist/37i9dQZEVXbL0GavIqMTeb",
+          "role": "single",
+          "license": "Spotify — embed oficial",
+          "note": "reproductor embebido; /api/spotify solo resuelve el oEmbed"
+        }
+      ]
+    },
+    "google-trends": {
+      "title": "Google Trends (/api/trends)",
+      "strategy": "Única fuente",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Google Trends RSS",
+          "url": "https://trends.google.com/trending?geo=CL",
+          "role": "single",
+          "license": "Contenido de Google — sin licencia explícita",
+          "note": "trending/rss?geo=CL + trendingsearches/daily (fallback)"
+        }
+      ]
+    },
     "weather": {
       "title": "Clima (/api/weather)",
       "strategy": "Fallback secuencial: Open-Meteo → Gael Cloud → Boostr",
@@ -49,90 +384,6 @@
         }
       ]
     },
-    "emergency": {
-      "title": "Sismos / Emergencias (/api/emergency)",
-      "strategy": "Fallback secuencial (magnitud mínima 1.0; pasa al siguiente si items.length === 0)",
-      "role": "primary",
-      "sources": [
-        {
-          "name": "Gael Cloud",
-          "url": "https://api.gael.cloud",
-          "role": "primary",
-          "license": "API pública — sin licencia explícita",
-          "note": "api.gael.cloud/general/public/sismos, timeout 10s; los datos provienen del CSN"
-        },
-        {
-          "name": "Boostr",
-          "url": "https://docs.boostr.cl",
-          "role": "fallback",
-          "license": "API pública — sin licencia explícita",
-          "note": "api.boostr.cl/earthquakes/recent.json, timeout 10s; añade coordenadas"
-        },
-        {
-          "name": "USGS",
-          "url": "https://earthquake.usgs.gov",
-          "role": "fallback",
-          "license": "Dominio público (USGS)",
-          "note": "earthquake.usgs.gov/.../2.5_day.geojson, filtrado a Chile/Sudamérica, timeout 10s"
-        }
-      ]
-    },
-    "senapred": {
-      "title": "Alertas SENAPRED (canal independiente)",
-      "strategy": "Única fuente",
-      "role": "single",
-      "sources": [
-        {
-          "name": "Telegram SenapredChile",
-          "url": "https://t.me/s/SenapredChile",
-          "role": "single",
-          "license": "Canal oficial público — sin licencia explícita",
-          "note": "scraping de t.me/s/SenapredChile (BROWSER_UA); parsea .js-widget_message (data-post, <time datetime>, .js-message_text); severidad por keyword (desborde/aluvión/evacuar→critical, crecida/incendio/SAE/alerta→high, preventivo/monitoreo→moderate, else low)"
-        }
-      ]
-    },
-    "finance": {
-      "title": "Finanzas (/api/finance)",
-      "strategy": "Merge: itera todas las fuentes y llena indicadores faltantes; se detiene si ya tiene los 5",
-      "role": "primary",
-      "sources": [
-        {
-          "name": "mindicador.cl",
-          "url": "https://mindicador.cl",
-          "role": "primary",
-          "license": "Uso libre — sin licencia explícita",
-          "note": "mindicador.cl/api, UF, USD, EUR, IPC, UTM, timeout 8s"
-        },
-        {
-          "name": "Boostr",
-          "url": "https://docs.boostr.cl",
-          "role": "fallback",
-          "license": "API pública — sin licencia explícita",
-          "note": "api.boostr.cl/economy/indicators.json, timeout 8s"
-        },
-        {
-          "name": "findic.cl",
-          "url": "https://findic.cl",
-          "role": "fallback",
-          "license": "Uso libre — sin licencia explícita",
-          "note": "findic.cl/api/, timeout 8s"
-        },
-        {
-          "name": "SII",
-          "url": "https://zeus.sii.cl",
-          "role": "fallback",
-          "license": "Datos públicos del Estado — sin licencia explícita",
-          "note": "zeus.sii.cl/admin/rss/sii_ind_rss.xml, timeout 8s"
-        },
-        {
-          "name": "DolarApi",
-          "url": "https://cl.dolarapi.com",
-          "role": "fallback",
-          "license": "MIT",
-          "note": "cl.dolarapi.com/v1/cotizaciones, timeout 8s"
-        }
-      ]
-    },
     "air-quality": {
       "title": "Calidad del aire (/api/air-quality)",
       "strategy": "Fallback secuencial (Boostr y Gael Cloud no exponen calidad del aire)",
@@ -151,48 +402,6 @@
           "role": "fallback",
           "license": "CC BY 4.0",
           "note": "air-quality-api.open-meteo.com, modelo CAMS, 18 ciudades, timeout 10s"
-        }
-      ]
-    },
-    "radio": {
-      "title": "Radios (/api/radio-stations)",
-      "strategy": "Fallback secuencial; si ambos fallan usa la lista local del código",
-      "role": "primary",
-      "sources": [
-        {
-          "name": "radio-browser.info",
-          "url": "https://api.radio-browser.info",
-          "role": "primary",
-          "license": "API pública — datos comunitarios (código AGPL-3.0)",
-          "note": "de1.api.radio-browser.info, timeout 15s"
-        },
-        {
-          "name": "json-teles",
-          "url": "https://github.com/Alplox/json-teles",
-          "role": "fallback",
-          "license": "Unlicense (dominio público)",
-          "note": "raw.githubusercontent.com/Alplox/json-teles/main/countries/cl.json, filtro category=music"
-        }
-      ]
-    },
-    "football": {
-      "title": "Fútbol (/api/futbol)",
-      "strategy": "Paths paralelos: ESPN para tabla y partidos, RSS para noticias",
-      "role": "merge",
-      "sources": [
-        {
-          "name": "ESPN (API pública)",
-          "url": "https://site.web.api.espn.com",
-          "role": "single",
-          "license": "Términos de ESPN — sin licencia explícita",
-          "note": "standings + scoreboard chi.1, timeout 8s; sin fallback → tabla/partidos vacíos"
-        },
-        {
-          "name": "awesome-chilean-rss",
-          "url": "https://github.com/Alplox/awesome-chilean-rss/blob/main/dist/readme/categories/sports.md",
-          "role": "single",
-          "license": "CC0 1.0",
-          "note": "noticias vía /api/futbol; siempre se cargan, independiente de ESPN"
         }
       ]
     },
@@ -224,179 +433,24 @@
         }
       ]
     },
-    "news": {
-      "title": "Feeds RSS (/api/news)",
-      "strategy": "Local-first: base incluida en el build → GitHub raw → jsDelivr",
-      "role": "primary",
+    "football": {
+      "title": "Fútbol (/api/futbol)",
+      "strategy": "Paths paralelos: ESPN para tabla y partidos, RSS para noticias",
+      "role": "merge",
       "sources": [
+        {
+          "name": "ESPN (API pública)",
+          "url": "https://site.web.api.espn.com",
+          "role": "single",
+          "license": "Términos de ESPN — sin licencia explícita",
+          "note": "standings + scoreboard chi.1, timeout 8s; sin fallback → tabla/partidos vacíos"
+        },
         {
           "name": "awesome-chilean-rss",
-          "url": "https://github.com/Alplox/awesome-chilean-rss",
-          "role": "primary",
+          "url": "https://github.com/Alplox/awesome-chilean-rss/blob/main/dist/readme/categories/sports.md",
+          "role": "single",
           "license": "CC0 1.0",
-          "note": "catálogo de medios chilenos; la base se incluye en el build como feeds-database.json, instantánea y siempre disponible"
-        },
-        {
-          "name": "GitHub raw",
-          "url": "https://raw.githubusercontent.com/alplox/awesome-chilean-rss/main/feeds-database.json",
-          "role": "fallback",
-          "license": "CC0 1.0",
-          "note": "actualización fire-and-forget, timeout 15s"
-        },
-        {
-          "name": "jsDelivr",
-          "url": "https://cdn.jsdelivr.net/gh/Alplox/awesome-chilean-rss@main/feeds-database.json",
-          "role": "fallback",
-          "license": "CC0 1.0",
-          "note": "actualización fire-and-forget, timeout 15s"
-        }
-      ]
-    },
-    "power": {
-      "title": "Cortes de luz (/api/power)",
-      "strategy": "Única fuente + snapshot durable",
-      "role": "single",
-      "sources": [
-        {
-          "name": "SEC",
-          "url": "https://apps.sec.cl/INTONLINEv1/index.aspx",
-          "role": "single",
-          "license": "Datos públicos del Estado — sin licencia explícita",
-          "note": "POST ClientesAfectados/{Get,GetClientesNacional,GetPorFecha,GetClientesRegional}; sin alternativa pública. Si cae, sirve el snapshot power:lastgood (6 h) con stale:true"
-        }
-      ]
-    },
-    "tv": {
-      "title": "TV en vivo (/api/channels)",
-      "strategy": "json-teles → iptv-org → mi-iptv",
-      "role": "fallback",
-      "sources": [
-        {
-          "name": "json-teles",
-          "url": "https://github.com/Alplox/json-teles",
-          "role": "primary",
-          "license": "Unlicense (dominio público)",
-          "note": "canales de TV chilenos"
-        },
-        {
-          "name": "iptv-org",
-          "url": "https://github.com/iptv-org/iptv",
-          "role": "fallback",
-          "license": "Unlicense (dominio público)",
-          "note": "canales CL (m3u)"
-        },
-        {
-          "name": "mi-iptv",
-          "url": "https://github.com/fparrav/mi-iptv",
-          "role": "fallback",
-          "license": "Sin licencia explícita",
-          "note": "playlist m3u (fallback jsDelivr)"
-        },
-        {
-          "name": "YouTube (señales en vivo)",
-          "url": "https://www.youtube.com",
-          "role": "single",
-          "license": "Términos de YouTube",
-          "note": "embeds YT Live/VOD de los canales que los exponen"
-        },
-        {
-          "name": "Twitch (señales en vivo)",
-          "url": "https://www.twitch.tv",
-          "role": "single",
-          "license": "Términos de Twitch",
-          "note": "embeds de los canales que transmiten por Twitch"
-        }
-      ]
-    },
-    "youtube-trends": {
-      "title": "YouTube Trends (/api/youtube)",
-      "strategy": "Única fuente",
-      "role": "single",
-      "sources": [
-        {
-          "name": "json-teles",
-          "url": "https://github.com/Alplox/json-teles/blob/main/countries/cl.json",
-          "role": "single",
-          "license": "Unlicense (dominio público)",
-          "note": "lista de canales chilenos (channel_id)"
-        },
-        {
-          "name": "YouTube RSS",
-          "url": "https://www.youtube.com",
-          "role": "single",
-          "license": "Términos de YouTube",
-          "note": "feeds/videos.xml por channel_id"
-        }
-      ]
-    },
-    "google-trends": {
-      "title": "Google Trends (/api/trends)",
-      "strategy": "Única fuente",
-      "role": "single",
-      "sources": [
-        {
-          "name": "Google Trends RSS",
-          "url": "https://trends.google.com/trending?geo=CL",
-          "role": "single",
-          "license": "Contenido de Google — sin licencia explícita",
-          "note": "trending/rss?geo=CL + trendingsearches/daily (fallback)"
-        }
-      ]
-    },
-    "spotify": {
-      "title": "Spotify Chile (/api/spotify)",
-      "strategy": "Única fuente",
-      "role": "single",
-      "sources": [
-        {
-          "name": "Spotify \"Top 50 Chile\" playlist",
-          "url": "https://open.spotify.com/playlist/37i9dQZEVXbL0GavIqMTeb",
-          "role": "single",
-          "license": "Spotify — embed oficial",
-          "note": "reproductor embebido; /api/spotify solo resuelve el oEmbed"
-        }
-      ]
-    },
-    "cyber": {
-      "title": "Ciberseguridad (/api/cyber)",
-      "strategy": "Bloques independientes en paralelo; TTL 15 min (3 min si algún bloque falló)",
-      "role": "merge",
-      "note": "CSIRT Nacional y CISA KEV",
-      "sources": [
-        {
-          "name": "CSIRT Nacional",
-          "url": "https://www.csirt.gob.cl/alertas/",
-          "role": "merge",
-          "license": "Sitio oficial público — sin licencia explícita",
-          "note": "RSS de alertas + severidad"
-        },
-        {
-          "name": "CISA KEV",
-          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
-          "role": "merge",
-          "license": "Dominio público (obra del Gobierno de EE. UU.)",
-          "note": "catálogo JSON recortado a 30/90 días"
-        }
-      ]
-    },
-    "holidays": {
-      "title": "Feriados (/api/holidays)",
-      "strategy": "Boostr → Nager.Date",
-      "role": "primary",
-      "sources": [
-        {
-          "name": "Boostr",
-          "url": "https://docs.boostr.cl/reference/holidays",
-          "role": "primary",
-          "license": "API pública — sin licencia explícita",
-          "note": "api.boostr.cl/holidays.json"
-        },
-        {
-          "name": "Nager.Date",
-          "url": "https://date.nager.at",
-          "role": "fallback",
-          "license": "MIT",
-          "note": "api/v3/publicholidays/{year}/CL; el widget también consulta directo"
+          "note": "noticias vía /api/futbol; siempre se cargan, independiente de ESPN"
         }
       ]
     },
@@ -425,6 +479,41 @@
           "role": "single",
           "license": "Contenido del sitio — API pública",
           "note": "remote-jobs API"
+        }
+      ]
+    },
+    "holidays": {
+      "title": "Feriados (/api/holidays)",
+      "strategy": "Boostr → Nager.Date",
+      "role": "primary",
+      "sources": [
+        {
+          "name": "Boostr",
+          "url": "https://docs.boostr.cl/reference/holidays",
+          "role": "primary",
+          "license": "API pública — sin licencia explícita",
+          "note": "api.boostr.cl/holidays.json"
+        },
+        {
+          "name": "Nager.Date",
+          "url": "https://date.nager.at",
+          "role": "fallback",
+          "license": "MIT",
+          "note": "api/v3/publicholidays/{year}/CL; el widget también consulta directo"
+        }
+      ]
+    },
+    "adoption": {
+      "title": "Adopción responsable (Huachitos)",
+      "strategy": "Única fuente",
+      "role": "single",
+      "sources": [
+        {
+          "name": "Huachitos",
+          "url": "https://huachitos.cl",
+          "role": "single",
+          "license": "API pública — sin licencia explícita",
+          "note": "huachitos.cl/api (CORS abierto): animales por tipo/region/comuna, paginado 100"
         }
       ]
     },
@@ -475,7 +564,7 @@
           "license": "Pexels License",
           "note": "rotación diaria por día del año (getTodayBg)",
           "backgrounds": [
-                     {
+            {
               "localPath": "/backgrounds/30342880.webp",
               "sourceUrl": "https://images.pexels.com/photos/30342880/pexels-photo-30342880.jpeg?auto=compress&cs=tinysrgb&w=1280&dpr=1",
               "photoUrl": "https://www.pexels.com/es-es/foto/impresionante-paisaje-urbano-de-santiago-con-la-cordillera-de-los-andes-30342880/",

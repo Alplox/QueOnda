@@ -8,6 +8,7 @@ import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 import { parseChileLocal } from '@/lib/chile-time';
 import { useErrorRetry } from '@/lib/retry';
 import { RetryHint } from '@/components/RetryHint';
+import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
 import {
   buildEmergencySummary,
@@ -152,7 +153,7 @@ const SENAPRED_LINKS = [
   { label: 'Telegram', href: 'https://t.me/SenapredChile' },
 ] as const;
 
-export function EmergencyWidget() {
+export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boolean } = {}) {
   const [items, setItems] = useState<EmergencyItem[]>([]);
   const [sismosSources, setSismosSources] = useState<EarthquakeSource[]>([]);
   const [alerts, setAlerts] = useState<EmergencyItem[]>([]);
@@ -456,200 +457,241 @@ export function EmergencyWidget() {
 
         <div className="mt-6 rounded-xl p-4 border border-base-300 shadow-sm bg-base-200 animate-[fadeInUp_0.3s_ease-out]">
           <p className="em-subhead">
-            <span>🚨 Alertas SENAPRED</span>
-            <a href="https://www.senapred.gov.cl/eventos/" target="_blank" rel="noopener noreferrer">senapred.gov.cl</a>
+            <span className="inline-flex items-center gap-1.5">
+              <svg className="h-5 w-5" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                <title>alert</title>
+                <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                  <path strokeDasharray="60" d="M12 3l9 17h-18l9 -17Z">
+                    <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="60;0" />
+                  </path>
+                  <path strokeDasharray="6" strokeDashoffset="6" d="M12 10v4">
+                    <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.7s" dur="0.2s" to="0" />
+                  </path>
+                  <path strokeDasharray="4" strokeDashoffset="4" d="M12 17v0.01">
+                    <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.7s" dur="0.2s" to="0" />
+                  </path>
+                </g>
+              </svg>
+              Alertas SENAPRED
+            </span>
+            {alerts.length > 0 && (
+              <a href="https://www.senapred.gov.cl/eventos/" target="_blank" rel="noopener noreferrer">senapred.gov.cl</a>
+            )}
           </p>
-          {!alertsLoaded ? (
-            <div className="flex gap-2 overflow-x-hidden">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="w-[260px] sm:w-[300px] shrink-0 rounded-lg p-3 border border-base-300">
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="h-4 w-16 bg-base-300 rounded-full animate-pulse" />
-                    <div className="h-2.5 w-10 bg-base-300 rounded animate-pulse" />
-                  </div>
-                  <div className="h-3 bg-base-300 rounded w-full animate-pulse" />
-                  <div className="h-3 bg-base-300 rounded w-4/5 mt-1.5 animate-pulse" />
-                </div>
-              ))}
-            </div>
-          ) : alertsError ? (
-            <LoadErrorBox retrying={retrying} retryIn={retryIn} onRetry={retryNow} />
-          ) : alerts.length === 0 ? (
-            <div className="pb-1">
-              <p className="text-xs text-base-content/70">
-                Sin alertas SENAPRED activas en las últimas 24 horas.
-              </p>
-              {/* Segunda línea: el bloque de canales no compite con el mensaje
-                  y puede envolver sin apretar los enlaces. */}
-              <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] text-base-content/70">
-                <span className="mr-0.5">Ver SENAPRED en:</span>
-                {SENAPRED_LINKS.map((l, i) => (
-                  // El separador viaja pegado a su enlace (nowrap): al envolver
-                  // nunca queda un «·» solo al principio de la línea.
-                  <Fragment key={l.href}>
-                    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
-                      {i > 0 && <span aria-hidden="true" className="text-base-content/30">·</span>}
-                      <a
-                        href={l.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline decoration-base-content/30 underline-offset-2 transition-colors hover:text-base-content hover:decoration-current"
-                      >
-                        {l.label}
-                      </a>
-                    </span>
-                  </Fragment>
+          <LoadSwap
+            loading={!alertsLoaded}
+            label="Cargando alertas SENAPRED…"
+            className="min-h-[63px] sm:min-h-[44px]"
+            skeleton={
+              <div aria-hidden="true" className="flex flex-col gap-2 pb-1">
+                <div className="h-[13px] w-3/4 max-w-[300px] rounded bg-base-300 animate-pulse" />
+                <div className="h-[13px] w-1/2 max-w-[220px] rounded bg-base-300 animate-pulse" />
+              </div>
+            }
+          >
+            {alertsError ? (
+              <LoadErrorBox retrying={retrying} retryIn={retryIn} onRetry={retryNow} />
+            ) : alerts.length === 0 ? (
+              <div className="pb-1">
+                <p className="text-xs text-base-content/70">
+                  Sin alertas SENAPRED activas en las últimas 24 horas.
+                </p>
+                {/* Segunda línea: el bloque de canales no compite con el mensaje
+                    y puede envolver sin apretar los enlaces. */}
+                <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[11px] text-base-content/70">
+                  <span className="mr-0.5">Ver SENAPRED en:</span>
+                  {SENAPRED_LINKS.map((l, i) => (
+                    // El separador viaja pegado a su enlace (nowrap): al envolver
+                    // nunca queda un «·» solo al principio de la línea.
+                    <Fragment key={l.href}>
+                      <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+                        {i > 0 && <span aria-hidden="true" className="text-base-content/30">·</span>}
+                        <a
+                          href={l.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline decoration-base-content/30 underline-offset-2 transition-colors hover:text-base-content hover:decoration-current"
+                        >
+                          {l.label}
+                        </a>
+                      </span>
+                    </Fragment>
+                  ))}
+                </p>
+              </div>
+            ) : (
+              <ScrollRow>
+                {alerts.map((a) => (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`card-curl sev-${a.severity} snap-start shrink-0 w-[260px] sm:w-[300px] flex flex-col rounded-lg p-3 bg-base-100 hover:bg-base-300 transition-colors no-underline`}
+                  >
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className={severityBadges[a.severity] + ' shrink-0'}>{severityLabels[a.severity]}</span>
+                      <span className="shrink-0 text-[11px] text-base-content">
+                        {new Date(a.time).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-base-content leading-snug line-clamp-4">{a.description}</p>
+                  </a>
                 ))}
-              </p>
-            </div>
-          ) : (
-            <ScrollRow>
-              {alerts.map((a, i) => (
-                <a
-                  key={a.id}
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ animationDelay: `${i * 60}ms` }}
-                  className={`card-curl sev-${a.severity} snap-start shrink-0 w-[260px] sm:w-[300px] flex flex-col rounded-lg p-3 bg-base-100 hover:bg-base-300 transition-colors no-underline animate-[fadeInUp_0.3s_ease-out_forwards] opacity-0`}
-                >
-                  <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <span className={severityBadges[a.severity] + ' shrink-0'}>{severityLabels[a.severity]}</span>
-                    <span className="shrink-0 text-[11px] text-base-content">
-                      {new Date(a.time).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-base-content leading-snug line-clamp-4">{a.description}</p>
-                </a>
-              ))}
-            </ScrollRow>
-          )}
-          <SectionSources section="senapred" />
+              </ScrollRow>
+            )}
+          </LoadSwap>
+          {alerts.length > 0 && <SectionSources section="senapred" />}
         </div>
 
         <div className="mt-4 rounded-xl p-4 border border-base-300 shadow bg-base-200 animate-[fadeInUp_0.3s_ease-out]">
           <p className="em-subhead">
-            <span className="flex items-baseline gap-2">
-              <span>🌐 Sismos</span>
-              <span className="text-[10px] font-normal normal-case tracking-normal text-base-content/70">
+            <span className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="h-5 w-5 scale-125" width="1em" height="1em" viewBox="0 0 30 30" aria-hidden="true">
+                  <title>earthquake</title>
+                  <path fill="currentColor" d="M5.25 15.3c0 .16.06.29.17.4s.25.16.4.16H8.8c.14 0 .27-.04.38-.13s.17-.2.2-.34l.9-5.27L11.9 23.3c.02.14.09.26.19.36c.1.09.22.14.36.14c.15 0 .28-.05.38-.14s.17-.21.2-.36l1.25-9.67l1.04 2.8c.04.11.1.2.2.27s.2.1.32.1h.05c.12-.01.23-.05.32-.13c.1-.08.16-.18.19-.31l1.53-6.86l.71 13.18c.01.14.06.27.15.37s.21.16.36.17c.14.01.27-.02.38-.1a.6.6 0 0 0 .22-.33l1.65-6.94h2.77c.16 0 .29-.05.4-.16s.17-.24.17-.4s-.06-.29-.17-.4a.56.56 0 0 0-.4-.17h-3.23c-.13 0-.25.04-.35.12s-.17.18-.2.31l-.83 3.54l-.72-13.36a.57.57 0 0 0-.16-.37a.5.5 0 0 0-.36-.16c-.14-.01-.27.02-.39.11s-.19.2-.22.34l-2 8.97l-1.16-3.16c-.04-.12-.12-.21-.24-.28s-.24-.1-.36-.08c-.13.01-.24.07-.33.16s-.15.21-.17.34l-.98 7.51l-1.53-12.56a.64.64 0 0 0-.19-.35a.6.6 0 0 0-.36-.15a.53.53 0 0 0-.38.12c-.11.09-.18.2-.2.35l-1.48 8.61H5.82c-.16 0-.29.06-.4.17s-.17.24-.17.4" />
+                </svg>
+                Sismos
+              </span>
+              <span className="group relative inline-flex">
+              <button
+                type="button"
+                aria-label="Máximo 10 sismos más recientes"
+                className="inline-flex h-5 w-5 items-center justify-center text-base-content/70 hover:text-base-content transition-colors cursor-help"
+              >
+                <svg className="h-5 w-5" viewBox="-0.0 -0.0 233.0 233.0" fill="currentColor" aria-hidden="true">
+                  <g transform="translate(0.000000,233.000000) scale(0.100000,-0.100000)">
+                    <path d="M990 2139 c-93 -14 -246 -69 -336 -120 -97 -55 -222 -179 -301 -297 -152 -226 -205 -509 -148 -784 44 -215 197 -442 388 -578 77 -55 226 -125 323 -152 116 -32 381 -32 507 0 343 86 602 356 698 728 34 130 32 308 -5 457 -51 211 -109 319 -245 460 -123 127 -295 226 -465 268 -95 23 -317 33 -416 18z m248 -325 c74 -37 106 -93 100 -173 -11 -160 -194 -234 -315 -128 -99 87 -81 238 36 299 67 35 112 35 179 2z m47 -499 l25 -24 0 -281 c0 -267 1 -281 20 -300 11 -11 29 -20 41 -20 35 0 58 -19 68 -56 13 -47 -7 -100 -44 -114 -37 -14 -438 -13 -468 1 -65 29 -60 135 7 159 17 6 42 17 56 24 l25 12 3 197 c1 109 -2 205 -6 214 -5 8 -31 23 -58 32 -58 19 -80 53 -69 107 4 25 16 41 38 54 28 18 51 20 185 20 149 0 154 -1 177 -25z" />
+                  </g>
+                </svg>
+              </button>
+              <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 max-w-[90vw] whitespace-nowrap rounded-lg border border-base-300 bg-base-100 px-2.5 py-1.5 text-left text-[11px] leading-snug text-base-content shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                <span className="absolute -top-1.5 left-2 h-3 w-3 rotate-45 border-l border-t border-base-300 bg-base-100" aria-hidden="true" />
                 Máximo 10 sismos más recientes
+              </span>
               </span>
             </span>
           </p>
-          {loading ? (
-            <>
-              <div className="flex gap-2 overflow-x-hidden" aria-hidden="true">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="w-[200px] sm:w-[230px] shrink-0 rounded-xl p-3 border border-base-300 h-[158px]">
-                    <div className="h-4 w-12 bg-base-300 rounded-full animate-pulse" />
-                    <div className="h-3 bg-base-300 rounded w-full mt-2 animate-pulse" />
-                    <div className="h-2.5 bg-base-300 rounded w-12 mt-1.5 animate-pulse" />
+          <LoadSwap
+            loading={loading}
+            label="Cargando sismos…"
+            skeleton={
+              <>
+                <div className="flex gap-2 overflow-x-hidden" aria-hidden="true">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="w-[200px] sm:w-[230px] shrink-0 rounded-xl p-3 border border-base-300 h-[158px]">
+                      <div className="h-4 w-12 bg-base-300 rounded-full animate-pulse" />
+                      <div className="h-3 bg-base-300 rounded w-full mt-2 animate-pulse" />
+                      <div className="h-2.5 bg-base-300 rounded w-12 mt-1.5 animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+                {/* Fila del enlace "Ver mapa de sismos", que la card real siempre pinta */}
+                <div className="mt-3 h-4 w-32 rounded bg-base-300 animate-pulse" aria-hidden="true" />
+              </>
+            }
+          >
+            {sismosError ? (
+              <LoadErrorBox retrying={retrying} retryIn={retryIn} onRetry={retryNow} />
+            ) : items.length === 0 ? (
+              <p className="text-xs text-base-content/70 pb-1">Sin sismos recientes -{' '}
+                <a href="https://www.sismologia.cl/" target="_blank" rel="noopener noreferrer"
+                  className="underline hover:text-base-content transition-colors">Sismología Chile</a>
+              </p>
+            ) : (
+              <>
+                <ScrollRow>
+                  {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`card-curl sev-${item.severity} snap-start shrink-0 w-[200px] sm:w-[230px] flex flex-col rounded-xl p-3 bg-base-100`}
+                  >
+                    <div className="mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className={severityBadges[item.severity] + ' shrink-0'}>{severityLabels[item.severity]}</span>
+                        {item.mag !== undefined && (
+                          <span className="text-sm font-bold text-base-content shrink-0">M {item.mag.toFixed(1)}</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openMap(item)}
+                          disabled={item.lat == null || item.lon == null}
+                          aria-label={item.lat != null && item.lon != null
+                            ? 'Ver dónde ocurrió en el mapa'
+                            : 'Mapa no disponible: este sismo no tiene coordenadas'}
+                          title={item.lat != null && item.lon != null
+                            ? 'Ver en el mapa'
+                            : 'Mapa no disponible: este sismo no tiene coordenadas'}
+                          className="ml-auto w-6 h-6 shrink-0 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-base-200 disabled:hover:text-base-content/70"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                            <circle cx="12" cy="10" r="3" />
+                            {(item.lat == null || item.lon == null) && (
+                              <path d="m9 9 6 6m0-6-6 6" />
+                            )}
+                          </svg>
+                        </button>
+                      </div>
+                      <span className="block text-[11px] text-base-content/70 mt-0.5">
+                        {new Date(item.time).toLocaleDateString('es-CL', {
+                          day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-base-content leading-snug line-clamp-2" title={item.place || item.title}>{item.place || item.title}</p>
+                    <div className="mt-auto pt-1.5 flex items-center justify-between gap-1">
+                      {item.depth !== undefined && (
+                        <span className="text-[11px] text-base-content/70">{item.depth.toFixed(1)} km</span>
+                      )}
+                    </div>
                   </div>
                 ))}
-              </div>
-              {/* Fila del enlace "Ver mapa de sismos", que la card real siempre pinta */}
-              <div className="mt-3 h-4 w-32 rounded bg-base-300 animate-pulse" aria-hidden="true" />
-            </>
-          ) : sismosError ? (
-            <LoadErrorBox retrying={retrying} retryIn={retryIn} onRetry={retryNow} />
-          ) : items.length === 0 ? (
-            <p className="text-xs text-base-content/70 pb-1">Sin sismos recientes -{' '}
-              <a href="https://www.sismologia.cl/" target="_blank" rel="noopener noreferrer"
-                className="underline hover:text-base-content transition-colors">Sismología Chile</a>
-            </p>
-          ) : (
-            <>
-              <ScrollRow>
-                {items.map((item, i) => (
-                <div
-                  key={item.id}
-                  style={{ animationDelay: `${i * 60}ms` }}
-                  className={`card-curl sev-${item.severity} snap-start shrink-0 w-[200px] sm:w-[230px] flex flex-col rounded-xl p-3 bg-base-100 animate-[fadeInUp_0.3s_ease-out_forwards] opacity-0`}
-                >
-                  <div className="mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className={severityBadges[item.severity] + ' shrink-0'}>{severityLabels[item.severity]}</span>
-                      {item.mag !== undefined && (
-                        <span className="text-sm font-bold text-base-content shrink-0">M {item.mag.toFixed(1)}</span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => openMap(item)}
-                        disabled={item.lat == null || item.lon == null}
-                        aria-label={item.lat != null && item.lon != null
-                          ? 'Ver dónde ocurrió en el mapa'
-                          : 'Mapa no disponible: este sismo no tiene coordenadas'}
-                        title={item.lat != null && item.lon != null
-                          ? 'Ver en el mapa'
-                          : 'Mapa no disponible: este sismo no tiene coordenadas'}
-                        className="ml-auto w-6 h-6 shrink-0 flex items-center justify-center rounded-full bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-base-200 disabled:hover:text-base-content/70"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                          <circle cx="12" cy="10" r="3" />
-                          {(item.lat == null || item.lon == null) && (
-                            <path d="m9 9 6 6m0-6-6 6" />
-                          )}
-                        </svg>
-                      </button>
-                    </div>
-                    <span className="block text-[11px] text-base-content/70 mt-0.5">
-                      {new Date(item.time).toLocaleDateString('es-CL', {
-                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-base-content leading-snug line-clamp-2" title={item.place || item.title}>{item.place || item.title}</p>
-                  <div className="mt-auto pt-1.5 flex items-center justify-between gap-1">
-                    {item.depth !== undefined && (
-                      <span className="text-[11px] text-base-content/70">{item.depth.toFixed(1)} km</span>
+                </ScrollRow>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    type="button"
+                    disabled={!hasMapCoordinates}
+                    onClick={() => {
+                      const next = !showMap;
+                      setShowMap(next);
+                      if (next) setFocusId(null);
+                      play('interaction.toggle');
+                    }}
+                    aria-expanded={showMap && hasMapCoordinates}
+                    aria-controls="sismos-map"
+                    title={hasMapCoordinates ? undefined : 'No hay coordenadas disponibles para estos sismos'}
+                    className="mt-1 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer disabled:cursor-not-allowed disabled:text-base-content/50 disabled:hover:text-base-content/50 disabled:active:scale-100"
+                  >
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      className={`transition-transform duration-200 ${showMap && hasMapCoordinates ? 'rotate-90' : ''}`}>
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                    {!hasMapCoordinates
+                      ? 'Mapa no disponible: fuente cargada no ofrece coordenadas'
+                      : `${showMap ? 'Ocultar mapa' : 'Ver mapa'} · ${mappedCount} de ${earthquakeCount} ubicados`}
+                  </button>
+                </div>
+                <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showMap && hasMapCoordinates ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                  <div className="overflow-hidden min-h-0">
+                    {mapMounted && (
+                      <div id="sismos-map" className="relative isolate z-0 rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
+                        <p className="mb-2 text-[11px] text-base-content/70">
+                          {mappedCount === earthquakeCount
+                            ? `El mapa incluye todos los sismos (${mappedCount}).`
+                            : `El mapa incluye ${mappedCount} de ${earthquakeCount} sismos; los demás no tienen coordenadas disponibles.`}
+                        </p>
+                        <Suspense fallback={<div className="h-40 animate-pulse bg-base-300 rounded" />}>
+                          <EmergencyMap items={items} focusId={focusId} focusRequest={focusRequest} />
+                        </Suspense>
+                      </div>
                     )}
                   </div>
                 </div>
-              ))}
-            </ScrollRow>
-            <div className="flex gap-2 mt-3">
-              <button
-                type="button"
-                disabled={!hasMapCoordinates}
-                onClick={() => {
-                  const next = !showMap;
-                  setShowMap(next);
-                  if (next) setFocusId(null);
-                  play('interaction.toggle');
-                }}
-                aria-expanded={showMap && hasMapCoordinates}
-                aria-controls="sismos-map"
-                title={hasMapCoordinates ? undefined : 'No hay coordenadas disponibles para estos sismos'}
-                className="mt-1 flex items-center gap-1 text-[11px] text-primary hover:text-base-content transition-[color,transform] active:scale-[0.96] cursor-pointer disabled:cursor-not-allowed disabled:text-base-content/50 disabled:hover:text-base-content/50 disabled:active:scale-100"
-              >
-                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                  className={`transition-transform duration-200 ${showMap && hasMapCoordinates ? 'rotate-90' : ''}`}>
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-                {!hasMapCoordinates
-                  ? 'Mapa no disponible: fuente cargada no ofrece coordenadas'
-                  : `${showMap ? 'Ocultar mapa' : 'Ver mapa'} · ${mappedCount} de ${earthquakeCount} ubicados`}
-              </button>
-            </div>
-            <div className={`mt-2 grid transition-[grid-template-rows] duration-300 ease-out ${showMap && hasMapCoordinates ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-              <div className="overflow-hidden min-h-0">
-                {mapMounted && (
-                  <div id="sismos-map" className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
-                    <p className="mb-2 text-[11px] text-base-content/70">
-                      {mappedCount === earthquakeCount
-                        ? `El mapa incluye todos los sismos (${mappedCount}).`
-                        : `El mapa incluye ${mappedCount} de ${earthquakeCount} sismos; los demás no tienen coordenadas disponibles.`}
-                    </p>
-                    <Suspense fallback={<div className="h-40 animate-pulse bg-base-300 rounded" />}>
-                      <EmergencyMap items={items} focusId={focusId} focusRequest={focusRequest} />
-                    </Suspense>
-                  </div>
-                )}
-              </div>
-            </div>
-            </>
-          )}
+              </>
+            )}
+          </LoadSwap>
           {sismosSources.length > 0 && (
             <SectionSources
               section="emergency"
@@ -658,8 +700,8 @@ export function EmergencyWidget() {
           )}
         </div>
 
-        <Suspense fallback={<div className="h-24 animate-pulse bg-base-300 rounded" />}>
-          <PowerOutageWidget />
+        <Suspense fallback={<div className={`mt-4 rounded-xl border border-base-300 shadow-sm ${initialBreakdown !== false ? 'min-h-[1210px] sm:min-h-[918px]' : 'min-h-[306px] sm:min-h-[277px]'}`} />}>
+          <PowerOutageWidget initialBreakdown={initialBreakdown} />
         </Suspense>
       </section>
     </>

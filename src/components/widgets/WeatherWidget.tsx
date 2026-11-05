@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { idbGet, idbSet } from '../../lib/idb-cache';
 import { play } from '@/lib/sound';
+import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
 
 const IDB_KEY = 'weather-default';
@@ -607,33 +608,29 @@ export function WeatherWidget() {
   const hasMore = !filterCity && allCities.length > limit;
   const hasExtra = !filterCity && limit > INITIAL;
 
-  if (loading) {
-    /* Reserva el alto medido: 538 px desktop / 707 px móvil (8 ciudades + controles).
-       La raíz mantiene el MISMO className que el estado cargado (flex + min-h):
-       si cambia, Chrome registra un layout shift de ~0,77 al llegar los datos. */
-    return (
-      <div className="flex min-h-[687px] flex-col sm:min-h-[518px]" aria-hidden="true">
-        <div className="grid animate-pulse grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-base-300 p-4">
-              <div className="h-3 bg-base-300 rounded w-20 mb-3" />
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 bg-base-300 rounded" />
-                <div className="h-8 w-12 bg-base-300 rounded" />
-              </div>
-              <div className="h-3 bg-base-300 rounded w-24 mb-2" />
-              <div className="flex gap-3">
-                <div className="h-2.5 bg-base-300 rounded w-16" />
-                <div className="h-2.5 bg-base-300 rounded w-20" />
-              </div>
+  const skeleton = (
+    <div className="flex min-h-[687px] flex-col sm:min-h-[518px]" aria-hidden="true">
+      <div className="grid animate-pulse grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-base-300 bg-base-200 p-4">
+            <div className="h-3 bg-base-300 rounded w-20 mb-3" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 bg-base-300 rounded" />
+              <div className="h-8 w-12 bg-base-300 rounded" />
             </div>
-          ))}
-        </div>
+            <div className="h-3 bg-base-300 rounded w-24 mb-2" />
+            <div className="flex gap-3">
+              <div className="h-2.5 bg-base-300 rounded w-16" />
+              <div className="h-2.5 bg-base-300 rounded w-20" />
+            </div>
+          </div>
+        ))}
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (allCities.length === 0) {
+  const body = () => {
+    if (allCities.length === 0) {
     return (
       <div className="rounded-xl bg-base-200 border border-base-300 p-8 text-center">
         <p className="text-sm text-base-content/70">Clima no disponible</p>
@@ -851,5 +848,12 @@ export function WeatherWidget() {
         <SectionSources section="weather" />
       </div>
     </div>
+  );
+  };
+
+  return (
+    <LoadSwap loading={loading} skeleton={skeleton} label="Cargando el clima…">
+      {loading ? null : body()}
+    </LoadSwap>
   );
 }

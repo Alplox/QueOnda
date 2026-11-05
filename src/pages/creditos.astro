@@ -5,6 +5,7 @@ import { backgrounds } from '../lib/backgrounds';
 import { ClientRouter } from 'astro:transitions';
 
 const imgGroup = dataSources.sections?.['images'];
+const iconGroup = dataSources.sections?.['icons'];
 const heroBgs = [...new Map(backgrounds.map((b) => [b.photoUrl, b])).values()];
 const cdImages = (imgGroup?.sources ?? []).find((s: any) => s.name === 'Discos CD (PNGImg)');
 
@@ -57,24 +58,32 @@ const roleClass = (role?: string) =>
       <h1 class="mt-4 text-3xl font-bold tracking-tight text-balance">Créditos y licencias</h1>
       <p class="mt-2 text-base text-base-content/70 leading-relaxed">
         ¿Qué Onda? se construye sobre datos y recursos de terceros. Esta página los lista con su licencia y enlace original.
-        El código del proyecto se publica bajo <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">GNU AGPL-3.0</a>.
+        El <a href="https://github.com/Alplox/QueOnda" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">código del proyecto</a> se publica bajo <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">GNU AGPL-3.0</a>.
       </p>
 
       <section class="mt-8">
-        <h2 class="text-xl font-semibold">Iconos</h2>
+        <h2 class="text-xl font-semibold">{iconGroup.title}</h2>
         <ul class="mt-3 space-y-2 text-base text-base-content/80">
-          <li>
-            <a href="https://simpleicons.org" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Simple Icons</a>
-            — CC0 1.0 Universal. Logos de marca usados para identificar el buscador al que lleva cada enlace.{' '}
-            <span class="text-base-content/70">CC0 cubre el archivo SVG, no la marca registrada: se usan sólo de forma nominativa, sin alterar el logotipo ni sugerir respaldo.</span>
-          </li>
-          <li>
-            <a href="https://twemoji.twitter.com" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">Twemoji</a>
-            — CC-BY 4.0. SVG de emoji usados en la sección de Fiestas Patrias.
-          </li>
-          <li>
-            Iconos inline (SVG) del propio proyecto (sonido, navegación, controles) — parte del código, <a href="https://github.com/Alplox/QueOnda" target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">AGPL-3.0</a>.
-          </li>
+          {(iconGroup.sources ?? []).map((item: any) => (
+            <li>
+              {item.url ? (
+                <a href={item.url} target="_blank" rel="noopener noreferrer" class="font-medium hover:text-base-content underline underline-offset-2 transition-colors">{item.name}</a>
+              ) : (
+                <span class="font-medium">{item.name}</span>
+              )}
+              {item.license && <span> — {item.license}</span>}
+              {item.note && <span>. {item.note}</span>}
+              {item.detail && <span class="text-base-content/70"> {item.detail}</span>}
+              {Array.isArray(item.links) && item.links.length > 0 && (
+                <span class="text-base-content/70"> - {item.links.map((link: any, i: number) => (
+                  <span>
+                    {i > 0 && ', '}
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-base-content transition-colors">{link.label}</a>
+                  </span>
+                ))}</span>
+              )}
+            </li>
+          ))}
         </ul>
       </section>
 
@@ -164,7 +173,7 @@ const roleClass = (role?: string) =>
           <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 bg-base-200 text-base-content/70 font-medium">Único</span>
         </div>
         <div class="mt-4 space-y-5">
-          {Object.entries(dataSources.sections ?? {}).filter(([k]) => k !== 'images').map(([, sec]: any) => (
+          {Object.entries(dataSources.sections ?? {}).filter(([k]) => k !== 'images' && k !== 'icons').map(([, sec]: any) => (
             <div>
               <h3 class="text-sm font-semibold text-base-content/90">{sec.title}</h3>
               {sec.strategy && <p class="text-sm text-base-content/70 mt-0.5">{sec.strategy}</p>}
