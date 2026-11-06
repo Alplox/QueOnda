@@ -108,9 +108,9 @@ export const GET: APIRoute = async ({ request }) => {
         // figure, hourly series, per-region client base) never drifts.
         const { fetchPowerSnapshot } = await import('../../lib/power');
         const data = await fetchPowerSnapshot();
-        await setCache('power', data, 15 * 60 * 1000);
+        await setCache('power', data, 5 * 60 * 1000);
         // Keep the durable snapshot warm too — it is what /api/power serves
-        // while SEC is unreachable beyond the 15 min TTL.
+        // while SEC is unreachable beyond the 5 min TTL.
         await setLastGood('power', data, 6 * 60 * 60 * 1000);
         warmed.push('power');
         log.push(`power: ${data.affected} afectados, ${data.comunas.length} comunas`);

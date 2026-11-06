@@ -4,7 +4,7 @@ import { checkRateLimit } from '../../lib/rate-limit';
 import { fetchPowerSnapshot } from '../../lib/power';
 
 const CACHE_KEY = 'power';
-const CACHE_TTL = 15 * 60 * 1000;
+const CACHE_TTL = 5 * 60 * 1000;
 // SEC has no alternative public source, so the durable snapshot is what keeps
 // the widget alive through an outage. 6h is still "today's picture" for a
 // rolling hourly series and is short enough that a stale banner stays honest.
