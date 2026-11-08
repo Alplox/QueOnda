@@ -80,7 +80,7 @@ export function TrendingTags({ tags, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="flex gap-2 overflow-hidden h-[34px]">
+      <div className="flex gap-2 overflow-hidden h-[40px] items-center">
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
@@ -108,7 +108,7 @@ export function TrendingTags({ tags, loading }: Props) {
           <path d="m15 18-6-6 6-6" />
         </svg>
       </button>
-      <div ref={scrollerRef} className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div ref={scrollerRef} className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-1 py-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tags.map((tag, i) => {
         const isActive = activeTag === tag;
         return (

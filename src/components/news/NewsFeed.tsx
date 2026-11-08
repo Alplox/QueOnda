@@ -155,8 +155,8 @@ function LoadingSkeleton({ count }: { count: number }) {
     <div className="space-y-8">
       <p className="sr-only" role="status">Cargando noticias…</p>
       <div aria-hidden="true" className="space-y-8">
-        {/* Tendencias: una fila fija de 34 px, igual que la tira real */}
-        <div className="flex gap-2 overflow-hidden h-[34px]">
+        {/* Tendencias: una fila fija (con aire vertical para que hover/bordes no se recorten) */}
+        <div className="flex gap-2 overflow-hidden h-[40px] items-center">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-[34px] w-20 rounded-full bg-base-300 shrink-0 skel-shimmer" />
           ))}
