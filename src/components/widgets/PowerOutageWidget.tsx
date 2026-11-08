@@ -580,8 +580,8 @@ export function PowerOutageWidget({
 
   return (
     <div className="mt-4 rounded-xl p-4 border shadow-sm border-base-300 bg-base-200">
-      <div className="flex items-start justify-between gap-2">
-        <p className="em-subhead !mb-0 !pb-1">
+      <div className="flex items-start justify-between gap-2 pb-1.5 mb-1.5 border-b border-base-300">
+        <p className="em-subhead !mb-0 !pb-0 !border-b-0">
           <span className="inline-flex items-center gap-1.5"><svg className="h-5 w-5" width="1em" height="1em" viewBox="0 0 512 512" aria-hidden="true"><title>power-supply</title><path fill="currentColor" fillRule="evenodd" d="M213.333 128V42.667h-42.666V128h-64v128c0 67.648 44.981 124.79 106.665 143.149l.001 70.184h85.333l.023-70.19C360.362 380.777 405.333 323.64 405.333 256V128h-64V42.667h-42.667V128zm64 106.667l25.817-64h-78.507L202.667 256h42.666l-32 106.667l117.333-128z" clipRule="evenodd"/></svg>Clientes sin suministro eléctrico</span>
         </p>
       {isStale && (
@@ -615,7 +615,7 @@ export function PowerOutageWidget({
               </g>
             </svg>
           </button>
-          <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 -translate-x-1/2 max-w-[260px] whitespace-normal rounded-lg border border-base-300 bg-base-100 px-2.5 py-1.5 text-center text-[11px] leading-snug text-base-content shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <span className="pointer-events-none absolute left-1/2 top-full z-[800] mt-1.5 -translate-x-1/2 max-w-[260px] whitespace-normal rounded-lg border border-base-300 bg-base-100 px-2.5 py-1.5 text-center text-[11px] leading-snug text-base-content shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <span className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-base-300 bg-base-100" aria-hidden="true" />
             La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada.
           </span>
