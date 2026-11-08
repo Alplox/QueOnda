@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { play } from '@/lib/sound';
+import { idbGet, idbSet } from '@/lib/idb-cache';
 import { SectionSources } from '../SectionSources';
 
 interface Animal {
@@ -22,6 +23,8 @@ type Tipo = (typeof TIPOS)[number];
 const API = 'https://huachitos.cl/api';
 const DECK_SIZE = 5;
 const HISTORY_LIMIT = 20;
+const IDB_KEY = 'adoption-animals';
+const IDB_TTL = 30 * 60 * 1000;
 
 function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
@@ -41,7 +44,6 @@ export function AdoptionWidget() {
   const [deck, setDeck] = useState<Animal[]>([]);
   const [queue, setQueue] = useState<Animal[]>([]);
   const [discarded, setDiscarded] = useState<Animal[]>([]);
-  const [batch, setBatch] = useState(0);
   const [flying, setFlying] = useState<'left' | 'right' | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [skipDir, setSkipDir] = useState<'left' | 'right'>('left');
@@ -51,6 +53,7 @@ export function AdoptionWidget() {
   const topCardRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
+  const deckInitRef = useRef<{ tipo: Tipo; reload: number } | null>(null);
 
   const setOverlay = (opacity: number, animated = false) => {
     const el = overlayRef.current;
@@ -62,6 +65,15 @@ export function AdoptionWidget() {
   const deckRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLButtonElement>(null);
 
+  const replayDeckIn = () => {
+    const el = deckRef.current;
+    if (!el) return;
+    el.classList.remove('adoption-deck-in');
+    // force reflow to restart the CSS animation without remounting the deck
+    void el.offsetWidth;
+    el.classList.add('adoption-deck-in');
+  };
+
   const pool = useMemo(
     () => all.filter((a) => a.imagen && (tipo === 'Todos' || a.tipo === tipo)),
     [all, tipo],
@@ -69,10 +81,15 @@ export function AdoptionWidget() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     setError('');
 
     async function loadAnimals() {
+      const cached = await idbGet<Animal[]>(IDB_KEY);
+      if (cached?.data?.length && !cancelled) {
+        setAll(cached.data);
+        setLoading(false);
+      }
+
       try {
         const firstRes = await fetch(`${API}/animales?page=1`);
         if (!firstRes.ok) throw new Error('Huachitos no respondió');
@@ -92,9 +109,14 @@ export function AdoptionWidget() {
           for (const page of rest) list.push(...page);
         }
 
-        if (!cancelled) setAll(list);
+        if (!cancelled && list.length) {
+          setAll(list);
+          void idbSet(IDB_KEY, list, IDB_TTL);
+        }
       } catch {
-        if (!cancelled) setError('No se pudo cargar la lista de adopción');
+        if (!cancelled && !cached?.data?.length) {
+          setError('No se pudo cargar la lista de adopción');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -104,7 +126,8 @@ export function AdoptionWidget() {
     return () => { cancelled = true; };
   }, [reload]);
 
-  // Cada cambio de filtro (o la primera carga) reparte una baraja nueva.
+  // Cada cambio de filtro o recarga reparte una baraja nueva.
+  // No se reinicia ante un refresco en segundo plano (all cambia, tipo/reload no).
   useEffect(() => {
     if (timerRef.current) {
       window.clearTimeout(timerRef.current);
@@ -112,6 +135,7 @@ export function AdoptionWidget() {
     }
 
     if (!pool.length) {
+      deckInitRef.current = null;
       setDeck([]);
       setQueue([]);
       setDiscarded([]);
@@ -119,18 +143,21 @@ export function AdoptionWidget() {
       return;
     }
 
+    if (deckInitRef.current?.tipo === tipo && deckInitRef.current.reload === reload) return;
+    deckInitRef.current = { tipo, reload };
+
     const shuffled = shuffle(pool);
     setDeck(shuffled.slice(0, DECK_SIZE));
     setQueue(shuffled.slice(DECK_SIZE));
     setDiscarded([]);
-    setBatch((b) => b + 1);
     if (topCardRef.current) topCardRef.current.style.transform = 'translate3d(0px, 0px, 0) rotate(0deg)';
     setFlying(null);
-  }, [pool]);
+    replayDeckIn();
+  }, [pool, tipo, reload]);
 
   // Precarga las siguientes imágenes para evitar decodificación en pleno gesto.
   useEffect(() => {
-    queue.slice(0, 3).forEach((a) => {
+    queue.slice(0, 2).forEach((a) => {
       const img = new Image();
       img.decoding = 'async';
       img.src = a.imagen;
@@ -194,9 +221,9 @@ export function AdoptionWidget() {
     }
 
     setDeck(nextDeck);
-    setBatch((b) => b + 1);
     setHasInteracted(true);
     play('notification.info');
+    replayDeckIn();
     window.setTimeout(() => deckRef.current?.focus(), 0);
   };
 
@@ -211,7 +238,6 @@ export function AdoptionWidget() {
     setDeck(shuffled.slice(0, DECK_SIZE));
     setQueue(shuffled.slice(DECK_SIZE));
     setDiscarded([]);
-    setBatch((b) => b + 1);
     if (topCardRef.current) {
       topCardRef.current.style.transform = 'translate3d(0px, 0px, 0) rotate(0deg)';
       topCardRef.current.style.opacity = '1';
@@ -219,6 +245,7 @@ export function AdoptionWidget() {
     setFlying(null);
     setHasInteracted(false);
     play('overlay.open');
+    replayDeckIn();
     window.setTimeout(() => deckRef.current?.focus(), 0);
   };
 
@@ -386,7 +413,6 @@ export function AdoptionWidget() {
               </div>
             ) : (
               <div
-                key={batch}
                 ref={deckRef}
                 className="adoption-deck-in relative mx-auto aspect-[3/4] w-[min(86vw,320px)] select-none rounded-3xl focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary [-webkit-tap-highlight-color:transparent]"
                 role="group"
@@ -434,7 +460,8 @@ export function AdoptionWidget() {
                         src={a.imagen}
                         alt={isTop ? `${a.nombre}, ${a.tipo}, ${a.edad}, ${a.comuna}` : ''}
                         draggable={false}
-                        loading="eager"
+                        loading={isTop ? 'eager' : 'lazy'}
+                        fetchPriority={isTop ? 'high' : 'low'}
                         className="h-full w-full object-cover"
                         decoding="async"
                       />
@@ -444,10 +471,10 @@ export function AdoptionWidget() {
                       {isTop && (
                         <>
                           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/80 to-transparent p-3 text-white">
-                            <span className="rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
+                            <span className="rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium">
                               {a.tipo}
                             </span>
-                            <span className="rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
+                            <span className="rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium">
                               {a.edad}
                             </span>
                           </div>
