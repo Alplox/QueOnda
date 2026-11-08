@@ -118,7 +118,14 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
 // "O`Higgins" con backtick, "Tarapaca"/"Biobio" sin tilde). Desconocidas al final.
 const secNsIndex = (nombreRegion: string) => regionNsOrder(secRegionSlug(nombreRegion) ?? '');
 
-export function PowerOutageWidget({ initialBreakdown }: { initialBreakdown?: boolean } = {}) {
+export function PowerOutageWidget({
+  initialBreakdown,
+  onSummary,
+}: {
+  initialBreakdown?: boolean;
+  /** Notifica al contenedor (EmergencyWidget) el conteo/meta para el resumen compartible, evitando un fetch duplicado de /api/power. */
+  onSummary?: (summary: { affected: number | null; updatedAt: number | null; stale: boolean } | null) => void;
+} = {}) {
   const [data, setData] = useState<PowerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -195,8 +202,10 @@ export function PowerOutageWidget({ initialBreakdown }: { initialBreakdown?: boo
     dataRef.current = d;
     setData(d);
     idbSet(IDB_KEY, d, IDB_TTL);
+    const stale = !!d.stale || (d.updatedAt != null && Date.now() - d.updatedAt > STALE_MS);
+    onSummary?.({ affected: d.affected, updatedAt: d.updatedAt ?? null, stale });
     return true;
-  }, []);
+  }, [onSummary]);
 
   const refresh = useCallback(async () => {
     // One in-flight request at a time: the retry timer, the manual button and the
@@ -210,6 +219,7 @@ export function PowerOutageWidget({ initialBreakdown }: { initialBreakdown?: boo
       } else {
         // keep stale data visible but mark error so banner/retry shows
         setError(true);
+        onSummary?.(null);
       }
       setLoading(false);
     })();

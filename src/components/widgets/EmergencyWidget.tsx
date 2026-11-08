@@ -260,18 +260,9 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
 
       // ponytail: a failed fetch must not leave stale quakes on screen — treat any in-flight
       // cached data as an error state. Retry via the buttons below re-runs refresh().
-      try {
-        const res = await fetch('/api/power', { signal: AbortSignal.timeout(10000) });
-        if (res.ok) {
-          const d = await res.json();
-          const stale = !!d?.stale || (d?.updatedAt != null && Date.now() - d.updatedAt > 90 * 60 * 1000);
-          setPowerCount(d?.affected != null ? d.affected : null);
-          setPowerMeta(d?.updatedAt != null ? { updatedAt: d.updatedAt, stale } : null);
-        } else {
-          // try to parse error payload that may still contain updatedAt
-          try { const d = await res.json(); setPowerMeta(d?.updatedAt ? { updatedAt: d.updatedAt, stale: true } : null); } catch {}
-        }
-      } catch { /* power unavailable — omit from summary */ }
+      // El conteo/meta de cortes de luz para el resumen compartible lo entrega
+      // PowerOutageWidget vía onSummary (evita un fetch duplicado de /api/power,
+      // que la SEC sirve lento y sumaba timeouts/errores en consola).
 
       setAlertsLoaded(true);
       setLoading(false);
@@ -742,7 +733,13 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
         </div>
 
         <Suspense fallback={<div className={`mt-4 rounded-xl border border-base-300 shadow-sm ${initialBreakdown !== false ? 'min-h-[1210px] sm:min-h-[918px]' : 'min-h-[306px] sm:min-h-[277px]'}`} />}>
-          <PowerOutageWidget initialBreakdown={initialBreakdown} />
+          <PowerOutageWidget
+            initialBreakdown={initialBreakdown}
+            onSummary={(s) => {
+              setPowerCount(s?.affected ?? null);
+              setPowerMeta(s?.updatedAt != null ? { updatedAt: s.updatedAt, stale: !!s.stale } : null);
+            }}
+          />
         </Suspense>
       </section>
     </>

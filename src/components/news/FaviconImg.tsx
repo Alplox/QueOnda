@@ -5,7 +5,8 @@ const FALLBACKS = [
   // los dominios del inventario, así que va primero: si arrancaba por Google,
   // cada favicon ausente dejaba un error de red en consola (audit
   // `errors-in-console`) y en el panel Issues de DevTools.
-  (d: string) => `https://icon.horse/icon/${d}`,
+  // size=64: 2x para los 28-32px a los que se renderizan (evita bajar un PNG 192x192).
+  (d: string) => `https://icon.horse/icon/${d}?size=64`,
   (d: string) => `https://icons.duckduckgo.com/ip3/${d}.ico`,
   (d: string) => `https://www.google.com/s2/favicons?domain=https://${d}&sz=32`,
 ];

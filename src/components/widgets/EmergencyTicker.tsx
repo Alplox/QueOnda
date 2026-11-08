@@ -249,6 +249,7 @@ export function EmergencyTicker() {
           <button
             type="button"
             onClick={toggle}
+            tabIndex={collapsed && !docked ? 0 : -1}
             aria-hidden={!collapsed || docked}
             aria-expanded={!collapsed}
             aria-controls="emergency-alert-bar"

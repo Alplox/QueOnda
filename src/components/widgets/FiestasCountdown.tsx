@@ -673,9 +673,11 @@ export function FiestasCountdown() {
         <p
           key={msgIndex}
           aria-live="polite"
-          className="text-sm text-center text-base-content/85 mb-6 animate-[fadeSlideIn_0.5s_ease-out]"
+          className="text-sm text-center text-base-content/85 mb-6 min-h-[2.5rem] sm:min-h-[1.25rem] flex items-center justify-center animate-[fadeSlideIn_0.5s_ease-out]"
         >
-          <Emoji emoji={displayMessage.emoji} className="inline-block h-[1em] align-text-bottom" /> {displayMessage.text}
+          <span className="text-pretty">
+            <Emoji emoji={displayMessage.emoji} className="inline-block h-[1em] align-text-bottom" /> {displayMessage.text}
+          </span>
         </p>
 
         {!data ? (
