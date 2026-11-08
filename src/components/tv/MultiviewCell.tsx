@@ -170,14 +170,14 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
       onMouseLeave={handleMouseLeave}
     >
       {/* Header */}
-      <div className={`absolute top-0 left-0 right-0 z-20 flex items-center gap-1.5 px-2 py-1.5 bg-gradient-to-b from-neutral/95 to-transparent transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'} ${isEmbedType ? 'pointer-events-none' : ''}`}>
+      <div className={`absolute top-0 left-0 right-0 z-20 flex items-start gap-1.5 px-2 pt-1.5 pb-8 bg-gradient-to-b from-neutral/90 from-0% via-neutral/45 via-[55%] to-transparent to-100% transition-opacity duration-200 ease-out ${controlsVisible ? 'opacity-100' : 'opacity-0'} ${isEmbedType ? 'pointer-events-none' : ''}`}>
         {channel.logo && (
-          <img src={channel.logo} alt="" className="w-4 h-4 rounded object-contain shrink-0" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          <img src={channel.logo} alt="" className="mt-0.5 w-4 h-4 rounded object-contain shrink-0" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         )}
-        <span className="text-[11px] text-white font-medium truncate flex-1 min-w-0">{channel.name}</span>
-        {focused && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
-        <button onClick={handleClose} className="min-w-[24px] min-h-[24px] flex items-center justify-center p-0.5 rounded text-white/60 hover:text-white hover:bg-white/15 transition-colors shrink-0 pointer-events-auto" title="Quitar del multiview">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        <span className="mt-0.5 text-[11px] text-white font-medium truncate flex-1 min-w-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">{channel.name}</span>
+        {focused && <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
+        <button onClick={handleClose} aria-label={`Quitar ${channel.name} del multiview`} className="pointer-events-auto shrink-0 inline-flex min-w-[28px] min-h-[28px] items-center justify-center rounded-md bg-black/35 text-white shadow-sm ring-1 ring-white/15 transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/55 hover:text-white active:scale-95" title="Quitar del multiview">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
       </div>
 
@@ -194,7 +194,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
             <div className="flex w-full min-w-0 flex-col items-center gap-1 text-center">
               <p className="w-full truncate text-[11px] text-white">Señal no disponible</p>
               {hasMultipleSignals && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
                   <span className="text-[9px] text-white/70">Señal</span>
                   <SignalSelect
                     signals={signals}
@@ -222,7 +222,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
           En error tampoco se pintan: la celda muestra sólo el overlay de
           «Señal no disponible», evitando dos selectores y saturar el bloque. */}
       {isHlsType && !error && (
-        <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/95 via-neutral/50 to-transparent px-1.5 pb-1 pt-6 transition-opacity ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/90 from-0% via-neutral/45 via-[55%] to-transparent to-100% px-1.5 pb-1 pt-8 transition-opacity duration-200 ease-out ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-0.5">
               <button onClick={(e) => { e.stopPropagation(); togglePlay(e); }}
@@ -245,7 +245,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
               </button>
             </div>
             {hasMultipleSignals && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
                 <span className="text-[9px] text-white/70">Señales</span>
                 <SignalSelect
                   signals={signals}
@@ -263,9 +263,9 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
           pointer-events sólo sobre él; el resto del degradado deja pasar los
           clics a la barra de YouTube (mute/volumen/configuración). */}
       {isEmbedType && hasMultipleSignals && (
-        <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/95 via-neutral/50 to-transparent px-1.5 pb-1 pt-6 transition-opacity pointer-events-none ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/90 from-0% via-neutral/45 via-[55%] to-transparent to-100% px-1.5 pb-1 pt-8 transition-opacity duration-200 ease-out pointer-events-none ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
           <div className="flex justify-end">
-            <div className="flex items-center gap-1 pointer-events-auto">
+            <div className="flex items-center gap-1 pointer-events-auto" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
               <span className="text-[9px] text-white/70">Señales</span>
               <SignalSelect
                 signals={signals}

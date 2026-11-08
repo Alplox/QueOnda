@@ -174,11 +174,30 @@ export function ClientTV() {
       return '2x2';
     } catch { return '2x2'; }
   });
-  const [multiviewSlots, setMultiviewSlots] = useState<Array<{ channel: Channel; signalIndex: number }>>(() => {
-    try { return JSON.parse(localStorage.getItem('tv-multiview-slots') || '[]'); } catch { return []; }
+  const [multiviewSlots, setMultiviewSlots] = useState<Array<{ channel: Channel; signalIndex: number } | null>>(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem('tv-multiview-slots') || '[]');
+      const layoutVal = localStorage.getItem('tv-multiview-layout');
+      const max = maxSlots(layoutVal === '1x1' || layoutVal === '1x2' || layoutVal === '1x3' || layoutVal === '2x2' || layoutVal === '2x3' || layoutVal === '3x3' ? layoutVal : '2x2');
+      if (!Array.isArray(raw)) return Array(max).fill(null);
+      const hasNulls = raw.some((x: any) => x == null);
+      if (!hasNulls) {
+        const filled = raw.filter((x: any) => x && x.channel).slice(0, max);
+        return [...filled, ...Array(Math.max(0, max - filled.length)).fill(null)];
+      }
+      const out = raw.slice(0, max).map((x: any) => (x && x.channel ? x : null));
+      while (out.length < max) out.push(null);
+      return out;
+    } catch {
+      return Array(maxSlots('2x2')).fill(null);
+    }
   });
   const [focusedSlot, setFocusedSlot] = useState<number | null>(null);
   const dragChannelRef = useRef<{ ch: Channel; ghost: HTMLElement; pointerId: number } | null>(null);
+  const [channelDragActive, setChannelDragActive] = useState(false);
+  const [channelDragOverSlot, setChannelDragOverSlot] = useState<number | null>(null);
+  const channelDragOverSlotRef = useRef<number | null>(null);
+  const [removeDragOverPicker, setRemoveDragOverPicker] = useState(false);
 
   playerRef.current = player;
   autoPipRef.current = autoPipEnabled;
@@ -417,10 +436,14 @@ export function ClientTV() {
   useEffect(() => { localStorage.setItem('tv-grid-rows', String(gridRows)); }, [gridRows]);
   useEffect(() => { localStorage.setItem('tv-sort', sortOrder); }, [sortOrder]);
 
-  // Truncate slots when layout shrinks
+  // Resize slots to layout capacity (preserve positions, pad/truncate)
   useEffect(() => {
     const max = maxSlots(multiviewLayout);
-    setMultiviewSlots(prev => prev.slice(0, max));
+    setMultiviewSlots(prev => {
+      if (prev.length === max) return prev;
+      if (prev.length > max) return prev.slice(0, max);
+      return [...prev, ...Array(max - prev.length).fill(null)];
+    });
     setFocusedSlot(prev => prev !== null && prev >= max ? null : prev);
   }, [multiviewLayout]);
 
@@ -439,33 +462,31 @@ export function ClientTV() {
 
   const handleAddToMultiview = useCallback((ch: Channel) => {
     play('interaction.tap');
-    const existing = multiviewSlots.findIndex(slot => slot.channel.id === ch.id);
+    const existing = multiviewSlots.findIndex(slot => slot?.channel.id === ch.id);
     if (existing !== -1) {
-      setMultiviewSlots(prev => prev.filter((_, index) => index !== existing));
-      setFocusedSlot(prev => {
-        if (prev === existing) return null;
-        return prev !== null && prev > existing ? prev - 1 : prev;
-      });
+      setMultiviewSlots(prev => { const next = [...prev]; next[existing] = null; return next; });
+      setFocusedSlot(prev => (prev === existing ? null : prev));
       return;
     }
 
     const max = maxSlots(multiviewLayout);
     setMultiviewSlots(prev => {
-      if (prev.length < max) return [...prev, { channel: ch, signalIndex: 0 }];
-      const target = focusedSlot !== null && focusedSlot < prev.length ? focusedSlot : prev.length - 1;
       const next = [...prev];
+      while (next.length < max) next.push(null);
+      const firstEmpty = next.findIndex((s) => s == null);
+      if (firstEmpty !== -1) {
+        next[firstEmpty] = { channel: ch, signalIndex: 0 };
+        return next;
+      }
+      const target = focusedSlot !== null && focusedSlot < max ? focusedSlot : max - 1;
       next[target] = { channel: ch, signalIndex: 0 };
       return next;
     });
   }, [multiviewLayout, multiviewSlots, focusedSlot]);
 
   const handleRemoveFromMultiview = useCallback((index: number) => {
-    setMultiviewSlots(prev => prev.filter((_, i) => i !== index));
-    setFocusedSlot(prev => {
-      if (prev === index) return null;
-      if (prev !== null && prev > index) return prev - 1;
-      return prev;
-    });
+    setMultiviewSlots(prev => { const next = [...prev]; next[index] = null; return next; });
+    setFocusedSlot(prev => (prev === index ? null : prev));
   }, []);
 
   const handleFocusSlot = useCallback((index: number) => {
@@ -473,26 +494,26 @@ export function ClientTV() {
   }, []);
 
   const handleReorderSlots = useCallback((fromIndex: number, toIndex: number) => {
+    // Intercambio de posiciones (grid de slots fijos): mantiene la semántica
+    // de "soltar en un espacio" sin desplazar el resto.
     setMultiviewSlots(prev => {
       const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
+      const a = next[fromIndex] ?? null;
+      const b = next[toIndex] ?? null;
+      next[fromIndex] = b;
+      next[toIndex] = a;
       return next;
     });
     setFocusedSlot(prev => {
       if (prev === null) return null;
       if (prev === fromIndex) return toIndex;
-      if (fromIndex < toIndex) {
-        if (prev > fromIndex && prev <= toIndex) return prev - 1;
-      } else {
-        if (prev >= toIndex && prev < fromIndex) return prev + 1;
-      }
+      if (prev === toIndex) return fromIndex;
       return prev;
     });
   }, []);
 
   const handleMultiviewSignalChange = useCallback((index: number, signalIndex: number) => {
-    setMultiviewSlots(prev => prev.map((s, i) => i === index ? { ...s, signalIndex } : s));
+    setMultiviewSlots(prev => prev.map((s, i) => (i === index && s ? { ...s, signalIndex } : s)));
   }, []);
 
   const handleDragChannelStart = useCallback((ch: Channel, e: React.PointerEvent) => {
@@ -505,17 +526,31 @@ export function ClientTV() {
     ghost.style.top = `${e.clientY - 40}px`;
     document.body.appendChild(ghost);
     dragChannelRef.current = { ch, ghost, pointerId: e.pointerId };
+    setChannelDragActive(true);
+    setChannelDragOverSlot(null);
+    channelDragOverSlotRef.current = null;
 
     const onMove = (ev: PointerEvent) => {
       if (!dragChannelRef.current) return;
       dragChannelRef.current.ghost.style.left = `${ev.clientX - 40}px`;
       dragChannelRef.current.ghost.style.top = `${ev.clientY - 40}px`;
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const slotEl = el?.closest('[data-slot-index]');
+      const idx = slotEl ? parseInt(slotEl.getAttribute('data-slot-index') ?? '', 10) : NaN;
+      const next = Number.isNaN(idx) ? null : idx;
+      if (channelDragOverSlotRef.current !== next) {
+        channelDragOverSlotRef.current = next;
+        setChannelDragOverSlot(next);
+      }
     };
     const onUp = (ev: PointerEvent) => {
       if (!dragChannelRef.current) return;
       dragChannelRef.current.ghost.remove();
       const chDropped = dragChannelRef.current.ch;
       dragChannelRef.current = null;
+      setChannelDragActive(false);
+      setChannelDragOverSlot(null);
+      channelDragOverSlotRef.current = null;
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
       document.removeEventListener('pointercancel', onUp);
@@ -525,20 +560,15 @@ export function ClientTV() {
         const idx = parseInt(slotEl.getAttribute('data-slot-index') ?? '', 10);
         if (!isNaN(idx)) {
           setMultiviewSlots(prev => {
-            const existing = prev.findIndex(s => s.channel.id === chDropped.id);
-            if (existing !== -1) return prev;
             const max = maxSlots(multiviewLayout);
-            if (prev.length >= max) {
-              const next = [...prev];
-              next[idx] = { channel: chDropped, signalIndex: 0 };
-              return next;
-            }
-            if (idx <= prev.length) {
-              const next = [...prev];
-              next.splice(idx, 0, { channel: chDropped, signalIndex: 0 });
-              return next.slice(0, max);
-            }
-            return [...prev, { channel: chDropped, signalIndex: 0 }];
+            if (idx < 0 || idx >= max) return prev;
+            const existing = prev.findIndex(s => s?.channel.id === chDropped.id);
+            if (existing === idx) return prev;
+            const next = [...prev];
+            while (next.length < max) next.push(null);
+            if (existing !== -1) next[existing] = null;
+            next[idx] = { channel: chDropped, signalIndex: 0 };
+            return next;
           });
           play('interaction.confirm');
         }
@@ -730,20 +760,28 @@ export function ClientTV() {
   );
 
   const gridNode = (
-    <div className="space-y-1">
+    <div className="relative space-y-1" data-tv-channel-picker>
       {gridControls}
       <div key={`${selectedCat}-${showFavorites}-${search}-${sideActive}`} className="transition-opacity duration-200">
         <ChannelGrid
           channels={filtered}
           rows={gridRows}
           variant={sideActive ? 'wrap' : 'strip'}
-          selectedIds={viewMode === 'multiview' ? multiviewSlots.map(s => s.channel.id) : (player ? [player.channel.id] : [])}
+          selectedIds={viewMode === 'multiview' ? multiviewSlots.flatMap(s => s ? [s.channel.id] : []) : (player ? [player.channel.id] : [])}
           favorites={favorites}
           onSelect={handleSelect}
           onToggleFavorite={toggleFavorite}
           onDragChannelStart={viewMode === 'multiview' ? handleDragChannelStart : undefined}
         />
       </div>
+      {removeDragOverPicker && (
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-lg border-2 border-dashed border-error/70 bg-error/10">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-error px-3 py-1.5 text-[11px] font-semibold text-error-content shadow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            Soltar para quitar
+          </span>
+        </div>
+      )}
     </div>
   );
 
@@ -850,6 +888,9 @@ export function ClientTV() {
       onRemove={handleRemoveFromMultiview}
       onSignalChange={handleMultiviewSignalChange}
       onReorder={handleReorderSlots}
+      externalDragActive={channelDragActive}
+      externalDragOver={channelDragOverSlot}
+      onDragOverPicker={setRemoveDragOverPicker}
     />
   ) : player ? (
     <UnifiedPlayer

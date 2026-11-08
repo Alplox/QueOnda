@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useMemo } from 'react';
 import type { RadioStation } from '../../lib/radios';
 import { play } from '@/lib/sound';
 import { SectionSources } from '../SectionSources';
+import { ChannelSelector } from '../tv/ChannelSelector';
 
 interface Props {
   stations: RadioStation[];
@@ -53,15 +54,15 @@ const MUTED_ICON = (
   </svg>
 );
 
-const STAR_FILLED = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+const HEART_FILLED = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
   </svg>
 );
 
-const STAR_EMPTY = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+const HEART_EMPTY = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
   </svg>
 );
 
@@ -145,7 +146,7 @@ function BoomboxDisplay({ station, playing, loading, isFav, onToggleFavorite }: 
               style={{ transition: 'transform 160ms ease-out, color 160ms ease-out' }}
               title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
             >
-              {isFav ? STAR_FILLED : STAR_EMPTY}
+              {isFav ? HEART_FILLED : HEART_EMPTY}
               <span>{isFav ? 'Guardada' : 'Guardar'}</span>
             </button>
           )}
@@ -253,7 +254,7 @@ function BoomboxControls({
               }`}
               title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
             >
-              {isFav ? STAR_FILLED : STAR_EMPTY}
+              {isFav ? HEART_FILLED : HEART_EMPTY}
             </button>
           )}
         </div>
@@ -354,7 +355,7 @@ function StationCard({
             : 'text-base-content/70 group-hover:text-base-content/70 hover:text-base-content/80'
         }`}
       >
-        {isFav ? STAR_FILLED : STAR_EMPTY}
+        {isFav ? HEART_FILLED : HEART_EMPTY}
       </button>
     </div>
   );
@@ -423,10 +424,9 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
   const [sectionInView, setSectionInView] = useState(true);
   const [showSticky, setShowSticky] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('todas');
   const [activeState, setActiveState] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [favExpanded, setFavExpanded] = useState(true);
   const [sortAZ, setSortAZ] = useState(true);
   const [visibleCount, setVisibleCount] = useState(STATION_BATCH);
 
@@ -434,7 +434,7 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
   const currentSignal = current?.signals?.[signalIndex] || { type: 'audio' as const, url: current?.streamUrl || '' };
 
   // Al cambiar el filtro la lista se acorta: volver al primer lote.
-  const filterKey = `${searchQuery}|${activeState}|${activeTags.join(',')}`;
+  const filterKey = `${searchQuery}|${activeState}|${selectedCategory}`;
   useEffect(() => {
     setVisibleCount(STATION_BATCH);
   }, [filterKey]);
@@ -636,7 +636,8 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
     }
   }, [current, sectionInView]);
 
-  const filteredStations = useMemo(() => {
+  // Filtro base (búsqueda + región), compartido por la lista y los conteos.
+  const baseStations = useMemo(() => {
     let result = stations;
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -644,40 +645,55 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
         (s) => s.name.toLowerCase().includes(q) || s.tags?.some((t) => t.includes(q))
       );
     }
-    if (activeTags.length > 0) {
-      result = result.filter((s) => activeTags.some((tag) => s.tags?.includes(tag)));
-    }
     if (activeState) {
       result = result.filter((s) => s.state === activeState);
     }
     return result;
-  }, [stations, searchQuery, activeTags, activeState]);
+  }, [stations, searchQuery, activeState]);
 
-  const favoriteStations = useMemo(() => {
-    const list = filteredStations.filter((s) => favorites[s.id]);
-    return sortAZ ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : [...list].sort((a, b) => b.name.localeCompare(a.name));
-  }, [filteredStations, favorites, sortAZ]);
+  const displayStations = useMemo(() => {
+    let list: RadioStation[];
+    if (selectedCategory === '__favorites__') {
+      list = baseStations.filter((s) => favorites[s.id]);
+    } else if (selectedCategory !== 'todas') {
+      list = baseStations.filter((s) => s.tags?.includes(selectedCategory));
+    } else {
+      list = baseStations;
+    }
+    return sortAZ ? [...list].sort((a, b) => a.name.localeCompare(b.name, 'es')) : [...list].sort((a, b) => b.name.localeCompare(a.name, 'es'));
+  }, [baseStations, favorites, selectedCategory, sortAZ]);
 
-  const otherStations = useMemo(() => {
-    const list = filteredStations.filter((s) => !favorites[s.id]);
-    return sortAZ ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : [...list].sort((a, b) => b.name.localeCompare(a.name));
-  }, [filteredStations, favorites, sortAZ]);
+  const catCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      todas: baseStations.length,
+      __favorites__: baseStations.filter((s) => favorites[s.id]).length,
+    };
+    for (const tag of tags) {
+      counts[tag] = baseStations.filter((s) => s.tags?.includes(tag)).length;
+    }
+    return counts;
+  }, [baseStations, favorites, tags]);
+
+  const categoryOptions = useMemo(
+    () => ['todas', '__favorites__', ...tags.filter((t) => t !== 'todas')],
+    [tags]
+  );
+
+  const categoryLabel = selectedCategory === '__favorites__'
+    ? 'Favoritos'
+    : selectedCategory === 'todas'
+      ? 'Todas'
+      : selectedCategory;
 
   /* Render por lotes: el catálogo trae ~500 radios y pintarlas todas de una
      añadía ~5.000 nodos al DOM (el mayor coste de layout de la página).
      Se cargan 40 y el resto al llegar al final del scroller. */
   const visibleStations = useMemo(
-    () => otherStations.slice(0, visibleCount),
-    [otherStations, visibleCount]
+    () => displayStations.slice(0, visibleCount),
+    [displayStations, visibleCount]
   );
-  const hasMoreStations = visibleCount < otherStations.length;
+  const hasMoreStations = visibleCount < displayStations.length;
   const loadMoreStations = () => setVisibleCount(c => c + STATION_BATCH);
-
-  const toggleTag = (tag: string) => {
-    setActiveTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
 
   const handlePlayPause = () => {
     play('interaction.tap');
@@ -736,7 +752,7 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
   };
 
   const handlePrev = () => {
-    const pool = filteredStations.length > 0 ? filteredStations : stations;
+    const pool = displayStations.length > 0 ? displayStations : baseStations.length > 0 ? baseStations : stations;
     if (pool.length === 0 || !current) return;
     const idx = pool.findIndex((s) => s.id === current.id);
     const next = pool[(idx - 1 + pool.length) % pool.length];
@@ -744,7 +760,7 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
     handleSelect(next);
   };
   const handleNext = () => {
-    const pool = filteredStations.length > 0 ? filteredStations : stations;
+    const pool = displayStations.length > 0 ? displayStations : baseStations.length > 0 ? baseStations : stations;
     if (pool.length === 0 || !current) return;
     const idx = pool.findIndex((s) => s.id === current.id);
     const next = pool[(idx + 1) % pool.length];
@@ -753,7 +769,7 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
   };
 
   const handleRandomPlay = () => {
-    const pool = filteredStations.length > 0 ? filteredStations : stations;
+    const pool = displayStations.length > 0 ? displayStations : baseStations.length > 0 ? baseStations : stations;
     if (pool.length === 0) return;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     play('interaction.confirm');
@@ -876,7 +892,7 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
               <div className="flex gap-2">
                 <button
                   onClick={handleRandomPlay}
-                  disabled={filteredStations.length === 0 && stations.length === 0}
+                  disabled={baseStations.length === 0 && stations.length === 0}
                   className="shrink-0 flex items-center gap-1.5 text-sm bg-primary text-primary-content rounded-xl px-3 py-2 hover:bg-primary/90 transition-colors active:scale-[0.96] disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Reproducir una radio al azar"
                   aria-label="Reproducir una radio al azar"
@@ -932,80 +948,16 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
                 </button>
               )}
               {tags.length > 0 && (
-                <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1 -mx-1 px-1 md:flex-wrap md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-                  {tags.map((tag) => {
-                    const active = activeTags.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        onClick={() => { play('interaction.tap'); toggleTag(tag); }}
-                        aria-pressed={active}
-                        className={`shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border transition-colors cursor-pointer ${
-                          active
-                            ? 'bg-primary text-primary-content border-primary'
-                            : 'bg-base-100 text-base-content/70 border-base-content/20 hover:border-base-content/30 hover:text-base-content'
-                        }`}
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
-                  {activeTags.length > 0 && (
-                    <button
-                      onClick={() => { play('interaction.confirm'); setActiveTags([]); }}
-                      className="shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-full border border-transparent text-base-content/70 hover:text-base-content/70 transition-colors"
-                    >
-                      Limpiar
-                    </button>
-                  )}
+                <div className="mt-2">
+                  <ChannelSelector
+                    categories={categoryOptions}
+                    counts={catCounts}
+                    selected={selectedCategory}
+                    onSelect={setSelectedCategory}
+                  />
                 </div>
               )}
             </div>
-
-            {/* Favorites — fixed, never scrolls */}
-            <div className="shrink-0 mb-2">
-              <button
-                onClick={() => { play('interaction.tap'); setFavExpanded((v) => !v); }}
-                aria-expanded={favExpanded}
-                className="w-full flex items-center justify-between px-1.5 py-1 rounded-lg hover:bg-base-100 transition-colors"
-              >
-                <span className="text-[11px] text-base-content/70 font-semibold uppercase tracking-wider">
-                  Favoritos {favoriteStations.length > 0 ? `(${favoriteStations.length})` : ''}
-                </span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-base-content/70 transition-transform duration-200 ${favExpanded ? 'rotate-180' : ''}`}>
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
-              <div className={`grid transition-[grid-template-rows] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${favExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-                <div className="overflow-hidden">
-                  {favExpanded && (
-                    <div className="mt-1 max-h-40 overflow-y-auto rounded-lg">
-                  {favoriteStations.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                      {favoriteStations.map((station) => (
-                        <StationCard
-                          key={station.id}
-                          station={station}
-                          isActive={station.id === current?.id}
-                          isFav={true}
-                          onSelect={handleSelect}
-                          onToggleFavorite={onToggleFavorite}
-                          compact
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-base-content/70 px-1.5 py-2 italic leading-relaxed">
-                      Sin favoritos todavía. Pulsa la estrella de alguna radio para guardarla.
-                    </p>
-                  )}
-                </div>
-              )}
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-base-300/40 mb-2" />
 
             {/* Scrollable list area */}
             <div
@@ -1019,7 +971,7 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
             >
               <div className="sticky top-0 z-10 bg-base-200 pt-0.5 pb-1 flex items-center justify-between">
                 <p className="text-[11px] text-base-content/70 font-semibold uppercase tracking-wider px-1.5">
-                  Todas ({otherStations.length})
+                  {categoryLabel} ({displayStations.length})
                 </p>
                 <button
                   onClick={() => { play('interaction.tap'); setSortAZ((v) => !v); }}
@@ -1031,7 +983,7 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
                 </button>
               </div>
 
-              {otherStations.length > 0 ? (
+              {displayStations.length > 0 ? (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                     {visibleStations.map((station) => (
@@ -1050,8 +1002,8 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
                       onClick={() => { play('interaction.tap'); loadMoreStations(); }}
                       className="mt-1 w-full py-1.5 rounded-lg text-[11px] font-medium text-base-content/70 bg-base-100 border border-base-300 hover:bg-base-300 hover:text-base-content transition-colors cursor-pointer"
                     >
-                      Mostrar {Math.min(STATION_BATCH, otherStations.length - visibleCount)} radios más
-                      <span className="sr-only"> ({otherStations.length - visibleCount} restantes)</span>
+                      Mostrar {Math.min(STATION_BATCH, displayStations.length - visibleCount)} radios más
+                      <span className="sr-only"> ({displayStations.length - visibleCount} restantes)</span>
                     </button>
                   )}
                 </>
@@ -1065,9 +1017,11 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
                     </div>
                   ))}
                 </div>
-              ) : filteredStations.length === 0 ? (
+              ) : displayStations.length === 0 ? (
                 <div className="text-center py-8 text-base-content/70 text-sm">
-                  Sin coincidencias
+                  {selectedCategory === '__favorites__'
+                    ? 'Sin favoritos todavía. Pulsa el corazón de alguna radio para guardarla.'
+                    : 'Sin coincidencias'}
                 </div>
               ) : null}
             </div>

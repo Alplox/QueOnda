@@ -386,12 +386,15 @@ export function CyberWidget() {
                   ? `Ransomware confirmado en los últimos ${kevRwDays} días`
                   : 'Solo alertas de severidad crítica'
               }
-              className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors active:scale-[0.96] ${
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors active:scale-[0.96] ${
                 (tab === 'kev' ? ransomwareOnly : criticalOnly)
                   ? 'border-error/40 bg-error/15 text-error'
                   : 'border-base-300 bg-base-100 text-base-content/70 hover:border-primary/30 hover:text-base-content'
               }`}
             >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
               {tab === 'kev' ? 'Solo ransomware' : 'Solo críticas'}
             </button>
           </div>

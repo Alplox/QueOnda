@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { MultiviewCell } from './MultiviewCell';
 import type { Channel } from '../../types';
 import { play } from '@/lib/sound';
@@ -19,23 +19,48 @@ interface Slot {
 }
 
 interface Props {
-  slots: Slot[];
+  slots: (Slot | null)[];
   layout: MultiviewLayout;
   focusedSlot: number | null;
   onFocus: (index: number) => void;
   onRemove: (index: number) => void;
   onSignalChange: (index: number, signalIndex: number) => void;
   onReorder?: (fromIndex: number, toIndex: number) => void;
+  /** Arrastre externo de un canal desde la grilla hacia el multiview. */
+  externalDragActive?: boolean;
+  externalDragOver?: number | null;
 }
 
-function EmptySlot() {
+function EmptySlot({ dropActive, dropHover }: { dropActive?: boolean; dropHover?: boolean }) {
+  const active = !!dropActive;
+  const hover = active && !!dropHover;
   return (
-    <div className="relative rounded-xl border-2 border-dashed border-base-300/50 flex items-center justify-center aspect-video bg-base-100/50">
+    <div
+      className={`relative rounded-xl border-2 border-dashed flex items-center justify-center aspect-video transition-[border-color,background-color,transform,box-shadow] duration-150 ${
+        hover
+          ? 'border-primary bg-primary/15 shadow-[0_0_0_2px_color-mix(in_oklch,var(--color-primary)_35%,transparent)] scale-[1.02]'
+          : active
+            ? 'border-primary/70 bg-primary/5'
+            : 'border-base-300/50 bg-base-100/50'
+      }`}
+      aria-label={active ? 'Espacio disponible: suelta aquí para agregar el canal' : undefined}
+    >
       <div className="text-center pointer-events-none">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mx-auto mb-1 text-base-content/70">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-        <p className="text-[11px] text-base-content/70">Agregar canal</p>
+        {active ? (
+          <>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`mx-auto mb-1 ${hover ? 'text-primary' : 'text-primary/80'}`}>
+              <path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M4 20h16" />
+            </svg>
+            <p className={`text-[11px] font-semibold ${hover ? 'text-primary' : 'text-primary/80'}`}>Soltar aquí</p>
+          </>
+        ) : (
+          <>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mx-auto mb-1 text-base-content/70">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <p className="text-[11px] text-base-content/70">Agregar canal</p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -50,9 +75,11 @@ function slotIndexFromPoint(x: number, y: number): number | null {
   return isNaN(idx) ? null : idx;
 }
 
-export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, onSignalChange, onReorder }: Props) {
+export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, onSignalChange, onReorder, externalDragActive, externalDragOver, onDragOverPicker }: Props) {
   const gridRef = useRef<HTMLDivElement>(null);
   const dragIdxRef = useRef<number | null>(null);
+  const dragGhostRef = useRef<HTMLElement | null>(null);
+  const dragOverPickerRef = useRef(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const handleDragStart = useCallback((e: React.PointerEvent, index: number) => {
@@ -63,28 +90,76 @@ export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, o
     setDragOverIndex(index);
     gridRef.current.setPointerCapture(e.pointerId);
     play('interaction.subtle');
-  }, [onReorder]);
+
+    const s = slots[index];
+    if (s && !dragGhostRef.current) {
+      const ghost = document.createElement('div');
+      ghost.className = 'fixed z-[9999] w-20 h-20 rounded-xl bg-primary/80 text-primary-content flex items-center justify-center text-[11px] font-bold shadow-2xl pointer-events-none px-2 text-center leading-tight';
+      ghost.textContent = s.channel.name.slice(0, 24);
+      ghost.style.left = `${e.clientX - 40}px`;
+      ghost.style.top = `${e.clientY - 40}px`;
+      document.body.appendChild(ghost);
+      dragGhostRef.current = ghost;
+    }
+  }, [onReorder, slots]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (dragIdxRef.current === null) return;
+    if (dragGhostRef.current) {
+      dragGhostRef.current.style.left = `${e.clientX - 40}px`;
+      dragGhostRef.current.style.top = `${e.clientY - 40}px`;
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
     const target = slotIndexFromPoint(e.clientX, e.clientY);
     if (target !== null) setDragOverIndex(target);
-  }, []);
+    const overPicker = target === null && !!el?.closest('[data-tv-channel-picker]');
+    if (dragOverPickerRef.current !== overPicker) {
+      dragOverPickerRef.current = overPicker;
+      onDragOverPicker?.(overPicker);
+    }
+  }, [onDragOverPicker]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const fromIndex = dragIdxRef.current;
     dragIdxRef.current = null;
     setDragOverIndex(null);
+    if (dragOverPickerRef.current) {
+      dragOverPickerRef.current = false;
+      onDragOverPicker?.(false);
+    }
+    if (dragGhostRef.current) {
+      dragGhostRef.current.remove();
+      dragGhostRef.current = null;
+    }
     if (fromIndex === null) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
     const target = slotIndexFromPoint(e.clientX, e.clientY);
     if (target !== null && target !== fromIndex && onReorder) {
       onReorder(fromIndex, target);
+      return;
     }
-  }, [onReorder]);
+    if (target === null && el?.closest('[data-tv-channel-picker]')) {
+      onRemove(fromIndex);
+      play('overlay.close');
+    }
+  }, [onReorder, onRemove, onDragOverPicker]);
+
+  useEffect(() => () => {
+    if (dragGhostRef.current) {
+      dragGhostRef.current.remove();
+      dragGhostRef.current = null;
+    }
+  }, []);
+
+  const internalDragActive = dragOverIndex !== null;
 
   function renderCell(index: number) {
     const s = slots[index];
-    if (!s) return <EmptySlot />;
+    const extActive = !!externalDragActive;
+    const extHover = extActive && externalDragOver === index;
+    const intHover = internalDragActive && dragOverIndex === index && dragIdxRef.current !== index;
+    const dropHover = extHover || intHover;
+    if (!s) return <EmptySlot dropActive={extActive || internalDragActive} dropHover={dropHover} />;
     return (
       <div className="relative group">
         <MultiviewCell
@@ -108,8 +183,10 @@ export function MultiviewGrid({ slots, layout, focusedSlot, onFocus, onRemove, o
             </svg>
           </button>
         )}
-        {dragOverIndex === index && dragIdxRef.current !== null && dragIdxRef.current !== index && (
-          <div className="absolute inset-0 z-20 rounded-xl ring-2 ring-primary ring-offset-2 ring-offset-base-100 pointer-events-none" />
+        {dropHover && (
+          <div className="absolute inset-0 z-20 rounded-xl ring-2 ring-primary bg-primary/15 pointer-events-none flex items-center justify-center">
+            <span className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-content shadow">Soltar aquí</span>
+          </div>
         )}
       </div>
     );
