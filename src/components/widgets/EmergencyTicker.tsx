@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { EmergencyItem } from './EmergencyWidget';
 import { EmergencyAlertBar } from './EmergencyAlertBar';
 import { play } from '@/lib/sound';
@@ -8,6 +8,12 @@ import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 const IDB_KEY = 'emergency';
 const IDB_TTL = 5 * 60 * 1000;
 const LS_COLLAPSED = 'emergency-bar-collapsed';
+const LS_DOCKED = 'emergency-bar-docked';
+const DOCK_EVENT = 'emergency:dock';
+
+const CLIP_OPEN = 'inset(0 0 0 0 round 0px)';
+const CLIP_PILL = 'inset(0 calc(50% - 60px) 0 calc(50% - 60px) round 18px)';
+const EASE = 'cubic-bezier(0.22,1,0.36,1)';
 
 async function fetchEmergency(): Promise<{ items: EmergencyItem[]; ok: boolean }> {
   try {
@@ -18,17 +24,144 @@ async function fetchEmergency(): Promise<{ items: EmergencyItem[]; ok: boolean }
   } catch { return { items: [], ok: false }; }
 }
 
+const PILL_VISUAL_W = 120; // matches CLIP_PILL: calc(50% - 60px) each side
+
+function morphToSlot(container: HTMLElement, collapsed: boolean): string | null {
+  const slot = document.querySelector('[data-dock-slot]') as HTMLElement | null;
+  if (!slot) return null;
+  const prev = container.style.transform;
+  container.style.transform = 'none';
+  const s = container.getBoundingClientRect();
+  container.style.transform = prev;
+  const t = slot.getBoundingClientRect();
+  const dx = (t.left + t.width / 2) - (s.left + s.width / 2);
+  const dy = (t.top + t.height / 2) - (s.top + s.height / 2);
+  // When collapsed, visible shape is a centered pill (PILL_VISUAL_W × container height)
+  // When expanded, full width is visible
+  const visualW = collapsed ? PILL_VISUAL_W : s.width;
+  const visualH = s.height || 36;
+  const sx = Math.max(0.05, t.width / visualW);
+  const sy = Math.max(0.3, t.height / visualH);
+  return `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+}
+
 export function EmergencyTicker() {
   const [items, setItems] = useState<EmergencyItem[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [docked, setDocked] = useState(false);
+  const [morph, setMorph] = useState<{ t: string; opacity: number; animate: boolean }>({ t: '', opacity: 1, animate: false });
+  const containerRef = useRef<HTMLDivElement>(null);
   const [navHidden, setNavHidden] = useState(false);
   const lastScrollY = useRef(0);
+  const morphTimer = useRef<number | null>(null);
+  const animatingRef = useRef(false);
 
+  // Init from localStorage (client-only, SSR-safe)
   useEffect(() => {
-    if (localStorage.getItem(LS_COLLAPSED) === '1') setCollapsed(true);
+    try {
+      if (localStorage.getItem(LS_COLLAPSED) === '1') setCollapsed(true);
+      if (localStorage.getItem(LS_DOCKED) === '1') setDocked(true);
+    } catch {}
   }, []);
 
-  // Header auto-hides on scroll down; hug the top when it's gone to avoid a gap
+  // When docked state changes, position ticker at slot (steady state, no animation)
+  useLayoutEffect(() => {
+    if (animatingRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
+    if (docked) {
+      const t = morphToSlot(el, true);
+      if (t) {
+        setMorph({ t, opacity: 0, animate: false });
+      } else {
+        // Slot not ready yet (widget island may not have hydrated) — retry briefly
+        let tries = 0;
+        const retry = () => {
+          tries++;
+          const t2 = el && morphToSlot(el, true);
+          if (t2) setMorph({ t: t2, opacity: 0, animate: false });
+          else if (tries < 12) requestAnimationFrame(retry);
+        };
+        requestAnimationFrame(retry);
+      }
+    } else {
+      setMorph({ t: '', opacity: 1, animate: false });
+    }
+  }, [docked, items.length]);
+
+  // Listen for dock events from EmergencyWidget
+  useEffect(() => {
+    const onDock = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { docked: boolean; silent?: boolean };
+      const next = !!detail?.docked;
+      const silent = !!detail?.silent;
+      const el = containerRef.current;
+
+      if (next && el) {
+        if (silent) {
+          setCollapsed(true);
+          setDocked(true);
+          return; // layout effect will snap to slot
+        }
+        // Dock: collapse to pill first if expanded, then morph to slot
+        const doMorph = () => {
+          const t = morphToSlot(el, true);
+          if (!t) { setDocked(true); return; }
+          animatingRef.current = true;
+          setMorph({ t: '', opacity: 1, animate: false });
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setMorph({ t, opacity: 0, animate: true });
+              if (morphTimer.current) window.clearTimeout(morphTimer.current);
+              morphTimer.current = window.setTimeout(() => {
+                animatingRef.current = false;
+                setDocked(true);
+              }, 520);
+            });
+          });
+        };
+        setCollapsed(prev => {
+          if (!prev) { setTimeout(doMorph, 220); return true; }
+          doMorph();
+          return prev;
+        });
+        return;
+      }
+
+      if (!next && el) {
+        // Undock: morph slot → floating pill, then expand pill → bar (preserve same-element illusion)
+        const t = morphToSlot(el, true);
+        animatingRef.current = true;
+        setDocked(false);
+        setCollapsed(true); // arrive as pill
+        requestAnimationFrame(() => {
+          setMorph({ t: t || '', opacity: 0, animate: false });
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              // 1) pill-at-slot → floating pill
+              setMorph({ t: '', opacity: 1, animate: true });
+              if (morphTimer.current) window.clearTimeout(morphTimer.current);
+              morphTimer.current = window.setTimeout(() => {
+                // 2) floating pill → expanded bar
+                setCollapsed(false);
+                morphTimer.current = window.setTimeout(() => { animatingRef.current = false; }, 340);
+              }, 520);
+            });
+          });
+        });
+        return;
+      }
+
+      setDocked(next);
+    };
+    window.addEventListener(DOCK_EVENT, onDock);
+    return () => {
+      window.removeEventListener(DOCK_EVENT, onDock);
+      if (morphTimer.current) window.clearTimeout(morphTimer.current);
+    };
+  }, []);
+
+  // Header auto-hides on scroll down
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
@@ -42,7 +175,7 @@ export function EmergencyTicker() {
 
   const refresh = useCallback(() => {
     fetchEmergency().then(({ items: eqs, ok }) => {
-      if (!ok) return; // API unreachable → keep last-known; a real empty day hides the ticker via items.length === 0
+      if (!ok) return;
       setItems(eqs);
       if (eqs.length) idbSet(IDB_KEY, eqs, IDB_TTL);
     });
@@ -50,12 +183,10 @@ export function EmergencyTicker() {
 
   useEffect(() => {
     let cancelled = false;
-
     idbGet<EmergencyItem[]>(IDB_KEY).then(cached => {
       if (cancelled || !cached?.data) return;
       setItems(cached.data);
     });
-
     refresh();
     return () => { cancelled = true; };
   }, [refresh]);
@@ -76,34 +207,63 @@ export function EmergencyTicker() {
     window.dispatchEvent(new CustomEvent('emergency:focus-sismo', { detail: item }));
   };
 
+  const clip = collapsed ? CLIP_PILL : CLIP_OPEN;
+  const clipTransition = `clip-path 300ms ${EASE}`;
+  const morphTransition = morph.animate ? `transform 500ms ${EASE}, opacity 500ms ${EASE}, top 300ms` : 'top 300ms';
+
   return (
-    <div role="region" aria-label="Alertas de emergencia" className={`fixed inset-x-0 z-40 transition-[top] duration-300 ${collapsed ? 'pointer-events-none' : ''}`} style={{ top: navHidden ? 0 : 56 }}>
-      <div
-        id="emergency-alert-bar"
-        inert={collapsed}
-        aria-hidden={collapsed}
-        className={`transition-[max-height,opacity] duration-300 ease-out ${
-          collapsed ? 'max-h-0 opacity-0 overflow-hidden' : 'max-h-10 opacity-100'
-        }`}
-      >
-        <EmergencyAlertBar items={items} onClose={toggle} onOpenMap={openSismoMap} />
+    <div
+      ref={containerRef}
+      role="region"
+      aria-label="Alertas de emergencia"
+      className={`fixed inset-x-0 z-40 ${collapsed ? 'pointer-events-none' : ''}`}
+      style={{
+        top: navHidden ? 0 : 56,
+        transform: morph.t || undefined,
+        opacity: morph.opacity,
+        transition: morphTransition,
+        pointerEvents: morph.opacity < 0.5 ? 'none' : undefined,
+      }}
+    >
+      <div className="relative min-h-[36px]">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-0 motion-reduce:!transition-none bg-base-200 border border-base-300"
+          style={{ clipPath: clip, transition: clipTransition }}
+        />
+        <div
+          id="emergency-alert-bar"
+          aria-hidden={collapsed || docked}
+          className={`relative z-[1] motion-reduce:!transition-none ${collapsed || docked ? 'pointer-events-none' : ''}`}
+          style={{
+            clipPath: clip,
+            opacity: collapsed || docked ? 0 : 1,
+            transition: collapsed || docked
+              ? `clip-path 300ms ${EASE}, opacity 150ms ease-out`
+              : `clip-path 300ms ${EASE}, opacity 200ms ease-out 100ms`,
+          }}
+        >
+          <EmergencyAlertBar items={items} onClose={toggle} onOpenMap={openSismoMap} />
+        </div>
+        <div className="absolute inset-0 z-[2] flex items-center justify-center pointer-events-none">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-hidden={!collapsed || docked}
+            aria-expanded={!collapsed}
+            aria-controls="emergency-alert-bar"
+            aria-label={collapsed ? 'Mostrar alertas de emergencia' : 'Ocultar alertas de emergencia'}
+            className={`pointer-events-auto cursor-pointer flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-base-content/80 hover:text-base-content rounded-full px-3 py-1.5 active:scale-[0.96] motion-reduce:!transition-none ${collapsed && !docked ? '' : 'pointer-events-none'}`}
+            style={{
+              opacity: collapsed && !docked ? 1 : 0,
+              transition: collapsed && !docked ? 'opacity 200ms ease-out 150ms' : 'opacity 100ms ease-out',
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
+            <span>Ver alertas</span>
+          </button>
+        </div>
       </div>
-      <button
-        onClick={toggle}
-        inert={!collapsed}
-        aria-hidden={!collapsed}
-        aria-expanded={!collapsed}
-        aria-controls="emergency-alert-bar"
-        aria-label={collapsed ? 'Mostrar alertas de emergencia' : 'Ocultar alertas de emergencia'}
-        className={`mx-auto flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-base-content/80 hover:text-base-content bg-base-200 border border-base-300 rounded-full px-3 py-1.5 shadow-sm transition-[background-color,color,transform] duration-300 active:scale-[0.96] pointer-events-auto ${
-          collapsed
-            ? 'mt-2 max-h-10 opacity-100 translate-y-0'
-            : 'mt-0 max-h-0 opacity-0 -translate-y-2 pointer-events-none overflow-hidden'
-        }`}
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
-        <span>Ver alertas</span>
-      </button>
     </div>
   );
 }

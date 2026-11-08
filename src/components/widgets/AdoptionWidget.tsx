@@ -274,13 +274,13 @@ export function AdoptionWidget() {
   if (loading) {
     return (
       <div className="flex min-h-[600px] flex-col">
-        <div className="flex flex-1 flex-col items-center justify-center animate-pulse">
+        <div className="flex flex-1 flex-col items-center justify-center">
           <p className="sr-only" role="status">Cargando mascotas en adopción…</p>
           <div className="relative w-[min(86vw,320px)] aspect-[3/4]">
             {[2, 1, 0].map((i) => (
               <div
                 key={i}
-                className="absolute inset-0 rounded-3xl border border-base-300 bg-base-200"
+                className="absolute inset-0 rounded-3xl border border-base-300 bg-base-200 skel-shimmer"
                 style={{ transform: `translateY(${i * 10}px) scale(${1 - i * 0.05})` }}
               />
             ))}

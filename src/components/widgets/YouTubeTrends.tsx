@@ -44,19 +44,19 @@ function YouTubeSkeleton() {
   return (
     <div className="flex min-h-[300px] flex-col sm:min-h-[524px]">
       <p className="sr-only" role="status">Cargando videos de YouTube…</p>
-      <div aria-hidden="true" className="flex flex-1 flex-col gap-3 animate-pulse">
+      <div aria-hidden="true" className="flex flex-1 flex-col gap-3">
         <div className="flex items-center gap-2">
-          <div className="h-4 w-40 rounded bg-base-300" />
-          <div className="ml-auto h-7 w-24 rounded-lg bg-base-300" />
-          <div className="h-7 w-20 rounded-lg bg-base-300" />
+          <div className="h-4 w-40 rounded bg-base-300 skel-shimmer" />
+          <div className="ml-auto h-7 w-24 rounded-lg bg-base-300 skel-shimmer" />
+          <div className="h-7 w-20 rounded-lg bg-base-300 skel-shimmer" />
         </div>
         <div className="flex gap-3 overflow-hidden sm:hidden">
           {[0, 1].map((i) => (
             <div key={i} className="w-52 shrink-0 rounded-xl overflow-hidden bg-base-200 border border-base-300">
-              <div className="aspect-video bg-base-300" />
+              <div className="aspect-video bg-base-300 skel-shimmer" />
               <div className="p-2 space-y-2">
-                <div className="h-3 bg-base-300 rounded w-full" />
-                <div className="h-3 bg-base-300 rounded w-3/4" />
+                <div className="h-3 bg-base-300 rounded w-full skel-shimmer" />
+                <div className="h-3 bg-base-300 rounded w-3/4 skel-shimmer" />
               </div>
             </div>
           ))}
@@ -65,11 +65,11 @@ function YouTubeSkeleton() {
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {Array.from({ length: VIEW_BATCH }).map((_, i) => (
               <div key={i} className="rounded-xl overflow-hidden bg-base-200 border border-base-300">
-                <div className="aspect-video bg-base-300" />
+                <div className="aspect-video bg-base-300 skel-shimmer" />
                 <div className="p-2 space-y-2">
-                  <div className="h-3 bg-base-300 rounded w-full" />
-                  <div className="h-3 bg-base-300 rounded w-3/4" />
-                  <div className="h-2.5 bg-base-300 rounded w-1/2" />
+                  <div className="h-3 bg-base-300 rounded w-full skel-shimmer" />
+                  <div className="h-3 bg-base-300 rounded w-3/4 skel-shimmer" />
+                  <div className="h-2.5 bg-base-300 rounded w-1/2 skel-shimmer" />
                 </div>
               </div>
             ))}

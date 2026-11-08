@@ -891,15 +891,15 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {[...addingSources].map(key => {
                   return (
-                    <div key={key} className="rounded-xl bg-base-200 border border-base-300 overflow-hidden animate-pulse">
+                    <div key={key} className="rounded-xl bg-base-200 border border-base-300 overflow-hidden">
                       <div className="px-3 py-2.5 border-b border-base-300 flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-base-300" />
-                        <div className="h-3 bg-base-300 rounded w-28" />
-                        <div className="h-2.5 bg-base-300 rounded w-12 ml-auto" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-base-300 skel-shimmer" />
+                        <div className="h-3 bg-base-300 rounded w-28 skel-shimmer" />
+                        <div className="h-2.5 bg-base-300 rounded w-12 ml-auto skel-shimmer" />
                       </div>
                       <div className="space-y-2 p-3">
                         {[1, 2, 3].map(n => (
-                          <div key={n} className="h-2.5 bg-base-300 rounded w-full" />
+                          <div key={n} className="h-2.5 bg-base-300 rounded w-full skel-shimmer" />
                         ))}
                       </div>
                     </div>

@@ -377,51 +377,51 @@ export function PowerOutageWidget({ initialBreakdown }: { initialBreakdown?: boo
         showBreakdown ? 'min-h-[1210px] sm:min-h-[918px]' : 'min-h-[306px] sm:min-h-[277px]'
       }`}
     >
-      <div aria-hidden="true" className="flex flex-1 flex-col animate-pulse">
+      <div aria-hidden="true" className="flex flex-1 flex-col">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <div className="h-4 w-4 rounded bg-base-300" />
-            <div className="h-3.5 w-44 rounded bg-base-300" />
+            <div className="h-4 w-4 rounded bg-base-300 skel-shimmer" />
+            <div className="h-3.5 w-44 rounded bg-base-300 skel-shimmer" />
           </div>
-          <div className="h-7 w-32 shrink-0 rounded-md border border-base-300 bg-base-100" />
+          <div className="h-7 w-32 shrink-0 rounded-md border border-base-300 bg-base-100 skel-shimmer" />
         </div>
-        <div className="mt-1.5 h-2.5 w-40 rounded bg-base-300/80" />
+        <div className="mt-1.5 h-2.5 w-40 rounded bg-base-300/80 skel-shimmer" />
 
         <div className="mt-3 flex items-baseline gap-2">
-          <div className="h-8 w-28 rounded bg-base-300" />
-          <div className="h-3.5 w-20 rounded bg-base-300/70" />
-          <div className="h-3.5 w-24 rounded bg-base-300/70" />
+          <div className="h-8 w-28 rounded bg-base-300 skel-shimmer" />
+          <div className="h-3.5 w-20 rounded bg-base-300/70 skel-shimmer" />
+          <div className="h-3.5 w-24 rounded bg-base-300/70 skel-shimmer" />
         </div>
 
         <div className="mt-3 border-t border-base-300/70 pt-2">
           <div className="rounded-lg border border-base-300 bg-base-content/[0.04] px-2.5 py-2">
-            <div className="h-2.5 w-full rounded bg-base-300/80" />
-            <div className="mt-1.5 h-2.5 w-2/3 rounded bg-base-300/80" />
+            <div className="h-2.5 w-full rounded bg-base-300/80 skel-shimmer" />
+            <div className="mt-1.5 h-2.5 w-2/3 rounded bg-base-300/80 skel-shimmer" />
           </div>
         </div>
 
-        <div className="mt-3 h-3 w-56 rounded bg-base-300/80" />
+        <div className="mt-3 h-3 w-56 rounded bg-base-300/80 skel-shimmer" />
 
         {showBreakdown && (
           <>
             <div className="mt-2 flex gap-1">
-              <div className="h-7 w-20 rounded-lg bg-primary/30" />
-              <div className="h-7 w-24 rounded-lg bg-base-300" />
+              <div className="h-7 w-20 rounded-lg bg-primary/30 skel-shimmer" />
+              <div className="h-7 w-24 rounded-lg bg-base-300 skel-shimmer" />
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <div className="h-3 w-12 rounded bg-base-300/70" />
-              <div className="h-5 w-20 rounded-md bg-primary/15" />
-              <div className="h-5 w-24 rounded-md bg-base-300/50" />
-              <div className="h-5 w-20 rounded-md bg-base-300/50" />
-              <div className="ml-auto h-5 w-16 rounded-md bg-base-300/50" />
+              <div className="h-3 w-12 rounded bg-base-300/70 skel-shimmer" />
+              <div className="h-5 w-20 rounded-md bg-primary/15 skel-shimmer" />
+              <div className="h-5 w-24 rounded-md bg-base-300/50 skel-shimmer" />
+              <div className="h-5 w-20 rounded-md bg-base-300/50 skel-shimmer" />
+              <div className="ml-auto h-5 w-16 rounded-md bg-base-300/50 skel-shimmer" />
             </div>
             <div className="mt-2 flex flex-1 flex-col gap-0.5">
               {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} className="flex flex-1 items-center gap-2 rounded-md px-1.5 odd:bg-base-100/60">
-                  <div className="h-2.5 w-24 shrink-0 rounded bg-base-300" />
-                  <div className="h-2 w-full max-w-[55%] rounded bg-base-300/50" />
-                  <div className="ml-auto h-2.5 w-10 shrink-0 rounded bg-base-300" />
-                  <div className="h-2.5 w-9 shrink-0 rounded bg-base-300/70" />
+                  <div className="h-2.5 w-24 shrink-0 rounded bg-base-300 skel-shimmer" />
+                  <div className="h-2 w-full max-w-[55%] rounded bg-base-300/50 skel-shimmer" />
+                  <div className="ml-auto h-2.5 w-10 shrink-0 rounded bg-base-300 skel-shimmer" />
+                  <div className="h-2.5 w-9 shrink-0 rounded bg-base-300/70 skel-shimmer" />
                 </div>
               ))}
             </div>
@@ -469,16 +469,16 @@ export function PowerOutageWidget({ initialBreakdown }: { initialBreakdown?: boo
               {retrying ? 'Reintentando…' : 'Reintentar ahora'}
             </button>
             {/* Fantasma del bloque real: mantiene la reserva sin fingir datos */}
-            <div aria-hidden="true" className="mt-4 flex flex-1 flex-col opacity-20 animate-pulse">
-              <div className="h-8 w-28 rounded bg-base-300" />
-              <div className="mt-3 h-2.5 w-full rounded bg-base-300" />
-              <div className="mt-1.5 h-2.5 w-3/4 rounded bg-base-300" />
+            <div aria-hidden="true" className="mt-4 flex flex-1 flex-col opacity-20">
+              <div className="h-8 w-28 rounded bg-base-300 skel-shimmer" />
+              <div className="mt-3 h-2.5 w-full rounded bg-base-300 skel-shimmer" />
+              <div className="mt-1.5 h-2.5 w-3/4 rounded bg-base-300 skel-shimmer" />
               <div className="mt-3 flex flex-1 flex-col gap-1.5">
                 {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 px-3">
-                    <div className="h-3 w-24 rounded bg-base-300" />
-                    <div className="ml-auto h-3 w-16 rounded bg-base-300" />
-                    <div className="h-3 w-10 rounded bg-base-300" />
+                  <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 skel-shimmer px-3">
+                    <div className="h-3 w-24 rounded bg-base-300 skel-shimmer" />
+                    <div className="ml-auto h-3 w-16 rounded bg-base-300 skel-shimmer" />
+                    <div className="h-3 w-10 rounded bg-base-300 skel-shimmer" />
                   </div>
                 ))}
               </div>

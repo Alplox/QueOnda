@@ -5,6 +5,7 @@ import { SectionSources } from '../SectionSources';
 
 interface Props {
   stations: RadioStation[];
+  stationsLoading: boolean;
   tags: string[];
   states: string[];
   stateCounts: Record<string, number>;
@@ -406,7 +407,7 @@ function MiniRadioCd({ playing, seed, size = 32 }: { playing: boolean; seed: str
   );
 }
 
-export function RadioPlayer({ stations, tags, states, stateCounts, favorites, onToggleFavorite }: Props) {
+export function RadioPlayer({ stations, stationsLoading, tags, states, stateCounts, favorites, onToggleFavorite }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const hlsRef = useRef<any>(null);
@@ -829,9 +830,9 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
               <div className="flex flex-col items-center justify-center flex-1 w-full px-6 text-center">
                 {fallback ? (
                   <>
-                    <div className="w-24 h-24 rounded-full bg-base-content/5 animate-pulse" />
-                    <div className="mt-4 h-3 w-28 rounded bg-base-content/5 animate-pulse" />
-                    <div className="mt-2 h-2.5 w-20 rounded bg-base-content/5 animate-pulse" />
+                    <div className="w-24 h-24 rounded-full bg-base-content/5 skel-shimmer" />
+                    <div className="mt-4 h-3 w-28 rounded bg-base-content/5 skel-shimmer" />
+                    <div className="mt-2 h-2.5 w-20 rounded bg-base-content/5 skel-shimmer" />
                   </>
                 ) : (
                   <>
@@ -1054,9 +1055,19 @@ export function RadioPlayer({ stations, tags, states, stateCounts, favorites, on
                     </button>
                   )}
                 </>
+              ) : stationsLoading ? (
+                <div aria-hidden="true" className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <div key={index} className="flex items-center gap-2 rounded-xl border border-base-300/50 p-2">
+                      <div className="w-9 h-9 rounded-full bg-base-300 shrink-0 skel-shimmer" />
+                      <div className="h-3 w-2/3 rounded bg-base-300 skel-shimmer" />
+                      <div className="ml-auto w-5 h-5 rounded bg-base-300/70 skel-shimmer" />
+                    </div>
+                  ))}
+                </div>
               ) : filteredStations.length === 0 ? (
                 <div className="text-center py-8 text-base-content/70 text-sm">
-                  {fallback ? 'Cargando radios...' : 'Sin coincidencias'}
+                  Sin coincidencias
                 </div>
               ) : null}
             </div>

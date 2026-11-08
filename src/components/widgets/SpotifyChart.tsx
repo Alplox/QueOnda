@@ -27,7 +27,7 @@ export function SpotifyChart() {
 
   return (
     <div>
-      <div className={`rounded-xl overflow-hidden bg-base-200 border border-base-300 transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-60'}`}>
+      <div aria-busy={!loaded && !failed || undefined} className={`relative rounded-xl overflow-hidden bg-base-200 border border-base-300 transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-60'}`}>
         {!failed ? (
           <>
             <iframe
@@ -43,12 +43,31 @@ export function SpotifyChart() {
               onError={() => setFailed(true)}
             />
             {!loaded && (
-              <div className="h-[380px] flex items-center justify-center -mt-[380px] relative z-10">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                  <span className="text-[11px] text-base-content/70">Cargando playlist...</span>
+              <>
+                <p className="sr-only" role="status">Cargando playlist...</p>
+                <div className="absolute inset-0 z-10 flex flex-col bg-base-200 p-4" aria-hidden="true">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="h-16 w-16 shrink-0 rounded-md bg-base-300 skel-shimmer" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-20 rounded bg-base-300 skel-shimmer" />
+                      <div className="h-4 w-40 max-w-full rounded bg-base-300 skel-shimmer" />
+                      <div className="h-3 w-28 rounded bg-base-300 skel-shimmer" />
+                    </div>
+                  </div>
+                  <div className="flex-1 divide-y divide-base-300">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="flex h-11 items-center gap-3">
+                        <div className="h-3 w-3 shrink-0 rounded-sm bg-base-300 skel-shimmer" />
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className={`h-3 rounded bg-base-300 skel-shimmer ${i % 2 ? 'w-3/4' : 'w-2/3'}`} />
+                          <div className="h-2.5 w-1/3 rounded bg-base-300 skel-shimmer" />
+                        </div>
+                        <div className="h-3 w-8 shrink-0 rounded bg-base-300 skel-shimmer" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </>
         ) : (

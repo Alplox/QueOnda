@@ -101,19 +101,19 @@ export function HolidaysWidget() {
   }, []);
 
   const skeleton = (
-    <div className="flex min-h-[881px] flex-col animate-pulse sm:min-h-[853px]">
+    <div className="flex min-h-[881px] flex-col sm:min-h-[853px]">
       <div aria-hidden="true" className="flex flex-1 flex-col">
         <div className="rounded-xl bg-base-200 border border-base-300 p-5 mb-4 space-y-2">
-          <div className="h-3 bg-base-300 rounded w-24" />
-          <div className="h-5 bg-base-300 rounded w-48" />
-          <div className="h-3 bg-base-300 rounded w-36" />
+          <div className="h-3 bg-base-300 rounded w-24 skel-shimmer" />
+          <div className="h-5 bg-base-300 rounded w-48 skel-shimmer" />
+          <div className="h-3 bg-base-300 rounded w-36 skel-shimmer" />
         </div>
         <div className="flex flex-1 flex-col gap-1">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="flex flex-1 items-center gap-3 p-2.5 rounded-xl">
-              <div className="h-3 w-12 bg-base-300 rounded shrink-0" />
-              <div className="h-3 bg-base-300 rounded flex-1" />
-              <div className="h-3 w-10 bg-base-300 rounded shrink-0" />
+              <div className="h-3 w-12 bg-base-300 rounded shrink-0 skel-shimmer" />
+              <div className="h-3 bg-base-300 rounded flex-1 skel-shimmer" />
+              <div className="h-3 w-10 bg-base-300 rounded shrink-0 skel-shimmer" />
             </div>
           ))}
         </div>

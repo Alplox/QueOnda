@@ -205,14 +205,14 @@ export function CyberWidget() {
              * depende de cuántas alertas haya.
              */
             <div className="flex flex-1 flex-col gap-2 p-3" aria-hidden="true">
-              <div className="flex gap-2 animate-pulse">
-                <div className="h-8 w-28 rounded-lg bg-base-300/60" />
-                <div className="h-8 w-24 rounded-lg bg-base-300/60" />
-                <div className="ml-auto h-8 w-40 rounded-lg bg-base-300/60" />
+              <div className="flex gap-2">
+                <div className="h-8 w-28 rounded-lg bg-base-300/60 skel-shimmer" />
+                <div className="h-8 w-24 rounded-lg bg-base-300/60 skel-shimmer" />
+                <div className="ml-auto h-8 w-40 rounded-lg bg-base-300/60 skel-shimmer" />
               </div>
-              <div className="flex flex-1 flex-col gap-2 animate-pulse">
+              <div className="flex flex-1 flex-col gap-2">
                 {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <div key={i} className="flex-1 rounded-lg bg-base-300/60" />
+                  <div key={i} className="flex-1 rounded-lg bg-base-300/60 skel-shimmer" />
                 ))}
               </div>
             </div>

@@ -610,21 +610,34 @@ export function WeatherWidget() {
 
   const skeleton = (
     <div className="flex min-h-[687px] flex-col sm:min-h-[518px]" aria-hidden="true">
-      <div className="grid animate-pulse grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
+      <div className="mb-3 flex gap-2">
+        <div className="h-10 flex-1 rounded-lg bg-base-200 skel-shimmer" />
+        <div className="h-10 w-12 rounded-lg bg-base-200 skel-shimmer" />
+      </div>
+      <div className="mb-3 h-4 w-28 rounded bg-base-300 skel-shimmer" />
+      <div className="mb-3 h-7 w-40 rounded-lg bg-base-200 skel-shimmer" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: INITIAL }).map((_, i) => (
           <div key={i} className="rounded-xl border border-base-300 bg-base-200 p-4">
-            <div className="h-3 bg-base-300 rounded w-20 mb-3" />
+            <div className="h-3 bg-base-300 rounded w-20 mb-3 skel-shimmer" />
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 bg-base-300 rounded" />
-              <div className="h-8 w-12 bg-base-300 rounded" />
+              <div className="w-6 h-6 bg-base-300 rounded skel-shimmer" />
+              <div className="h-8 w-12 bg-base-300 rounded skel-shimmer" />
             </div>
-            <div className="h-3 bg-base-300 rounded w-24 mb-2" />
+            <div className="h-3 bg-base-300 rounded w-24 mb-2 skel-shimmer" />
             <div className="flex gap-3">
-              <div className="h-2.5 bg-base-300 rounded w-16" />
-              <div className="h-2.5 bg-base-300 rounded w-20" />
+              <div className="h-2.5 bg-base-300 rounded w-16 skel-shimmer" />
+              <div className="h-2.5 bg-base-300 rounded w-20 skel-shimmer" />
             </div>
+            <div className="h-3 w-24 rounded bg-base-300 mt-2 skel-shimmer" />
           </div>
         ))}
+      </div>
+      <div className="mt-3 flex justify-center">
+        <div className="h-7 w-36 rounded-lg bg-base-200 skel-shimmer" />
+      </div>
+      <div className="mt-2 flex justify-end">
+        <div className="h-3 w-32 rounded bg-base-300 skel-shimmer" />
       </div>
     </div>
   );

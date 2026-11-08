@@ -127,13 +127,13 @@ function formatDate(dateStr: string): string {
 
 function SkeletonCard() {
   return (
-    <div className="rounded-xl bg-base-200 border border-base-300 p-4 animate-pulse">
+    <div className="rounded-xl bg-base-200 border border-base-300 p-4">
       <div className="flex items-center gap-1.5 mb-2">
-        <div className="w-4 h-4 rounded bg-base-300" />
-        <div className="h-3 w-10 bg-base-300 rounded" />
+        <div className="w-4 h-4 rounded bg-base-300 skel-shimmer" />
+        <div className="h-3 w-10 bg-base-300 rounded skel-shimmer" />
       </div>
-      <div className="h-7 w-28 bg-base-300 rounded mb-1.5" />
-      <div className="h-2.5 w-16 bg-base-300 rounded" />
+      <div className="h-7 w-28 bg-base-300 rounded mb-1.5 skel-shimmer" />
+      <div className="h-2.5 w-16 bg-base-300 rounded skel-shimmer" />
     </div>
   );
 }

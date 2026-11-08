@@ -333,6 +333,17 @@ h1, h2, h3, h4 {
   to   { opacity: 1; }
 }
 
+@keyframes skelShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skel-shimmer {
+  background-image: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skelShimmer 1.6s linear infinite;
+}
+
 @keyframes loadGhostOut {
   from { opacity: 1; }
   to   { opacity: 0; }
@@ -352,6 +363,9 @@ h1, h2, h3, h4 {
   /* Sin movimiento: el esqueleto desaparece ya, pero el fundido cruzado no se
      convierte en una espera de 220 ms con el contenido tapado. */
   .load-ghost-out { animation: loadGhostOut 1ms linear both; }
+  /* El shimmer es movimiento perpetuo: en reduced-motion los skeletons quedan
+     estáticos (se lee el fondo base-300, sin barrido). */
+  .skel-shimmer { animation: none; }
 }
 
 html {

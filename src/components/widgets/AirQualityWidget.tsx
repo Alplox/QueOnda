@@ -109,25 +109,25 @@ export function AirQualityWidget() {
 
   const skeleton = (
     <div className="mt-4 flex min-h-[624px] flex-col rounded-xl p-4 border border-base-300 shadow-sm bg-base-200">
-      <div aria-hidden="true" className="flex flex-1 flex-col animate-pulse">
+      <div aria-hidden="true" className="flex flex-1 flex-col">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 rounded-full bg-base-300" />
-          <div className="h-4 w-44 bg-base-300 rounded" />
-          <div className="ml-auto h-3 w-10 rounded bg-base-300" />
+          <div className="h-5 w-5 rounded-full bg-base-300 skel-shimmer" />
+          <div className="h-4 w-44 bg-base-300 rounded skel-shimmer" />
+          <div className="ml-auto h-3 w-10 rounded bg-base-300 skel-shimmer" />
         </div>
-        <div className="h-8 w-32 bg-base-300 rounded mt-3" />
-        <div className="h-2.5 bg-base-300 rounded w-full mt-3" />
+        <div className="h-8 w-32 bg-base-300 rounded mt-3 skel-shimmer" />
+        <div className="h-2.5 bg-base-300 rounded w-full mt-3 skel-shimmer" />
         <div className="flex gap-1.5 mt-3">
-          <div className="h-6 w-20 rounded-full bg-base-300/70" />
-          <div className="h-6 w-20 rounded-full bg-base-300/70" />
-          <div className="h-6 w-24 rounded-full bg-base-300/70" />
+          <div className="h-6 w-20 rounded-full bg-base-300/70 skel-shimmer" />
+          <div className="h-6 w-20 rounded-full bg-base-300/70 skel-shimmer" />
+          <div className="h-6 w-24 rounded-full bg-base-300/70 skel-shimmer" />
         </div>
         <div className="flex flex-1 flex-col gap-1.5 mt-3">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 px-3">
-              <div className="h-3 w-32 rounded bg-base-300" />
-              <div className="h-3 w-14 rounded bg-base-300" />
-              <div className="ml-auto h-3 w-10 rounded bg-base-300" />
+            <div key={i} className="flex flex-1 items-center gap-3 rounded-lg bg-base-300/40 skel-shimmer px-3">
+              <div className="h-3 w-32 rounded bg-base-300 skel-shimmer" />
+              <div className="h-3 w-14 rounded bg-base-300 skel-shimmer" />
+              <div className="ml-auto h-3 w-10 rounded bg-base-300 skel-shimmer" />
             </div>
           ))}
         </div>

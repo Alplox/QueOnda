@@ -28,7 +28,7 @@ export function Footer() {
   }
 
   return (
-    <footer className="relative -mt-48">
+    <footer className="relative -mt-56">
       <div ref={ref} className="footer-reveal relative overflow-hidden">
         {/* Background image */}
         <div
@@ -38,11 +38,17 @@ export function Footer() {
         />
         {/* Dark overlay for readability */}
         <div className="absolute inset-0 bg-base-100/75" aria-hidden="true" />
-        {/* Top fade into page */}
-        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-base-100 to-transparent" aria-hidden="true" />
+        {/* Top fade into page — eased gradient starting behind the last section */}
+        <div
+          className="absolute inset-x-0 top-0 h-72 md:h-96"
+          style={{
+            background: 'linear-gradient(to bottom, var(--color-base-100) 0%, color-mix(in oklab, var(--color-base-100) 88%, transparent) 18%, color-mix(in oklab, var(--color-base-100) 55%, transparent) 42%, color-mix(in oklab, var(--color-base-100) 22%, transparent) 68%, color-mix(in oklab, var(--color-base-100) 6%, transparent) 86%, transparent 100%)',
+          }}
+          aria-hidden="true"
+        />
 
         {/* pb clears the floating bottom dock (auto-hide nav) on <lg so it never covers #footer-credits */}
-        <div className="relative max-w-7xl mx-auto px-4 pt-56 pb-24 md:pb-20 lg:pb-14">
+        <div className="relative max-w-7xl mx-auto px-4 pt-64 md:pt-72 pb-24 md:pb-20 lg:pb-14">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
             {/* Col 1: Brand */}
             <div>

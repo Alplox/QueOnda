@@ -172,7 +172,32 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [shareMsgKey, setShareMsgKey] = useState(0);
+  const [docked, setDocked] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('emergency-bar-docked') === '1') {
+        setDocked(true);
+        window.dispatchEvent(new CustomEvent('emergency:dock', { detail: { docked: true, silent: true } }));
+      }
+    } catch {}
+    const onDock = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { docked: boolean };
+      setDocked(!!detail?.docked);
+    };
+    window.addEventListener('emergency:dock', onDock);
+    return () => window.removeEventListener('emergency:dock', onDock);
+  }, []);
+
+  const toggleDock = useCallback(() => {
+    setDocked((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('emergency-bar-docked', next ? '1' : '0'); } catch {}
+      window.dispatchEvent(new CustomEvent('emergency:dock', { detail: { docked: next } }));
+      return next;
+    });
+  }, []);
   const seenRef = useRef<{ sismos: Set<string>; alerts: Set<string> }>({ sismos: new Set(), alerts: new Set() });
   const inflight = useRef<Promise<void> | null>(null);
 
@@ -484,8 +509,8 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
             className="min-h-[63px] sm:min-h-[44px]"
             skeleton={
               <div aria-hidden="true" className="flex flex-col gap-2 pb-1">
-                <div className="h-[13px] w-3/4 max-w-[300px] rounded bg-base-300 animate-pulse" />
-                <div className="h-[13px] w-1/2 max-w-[220px] rounded bg-base-300 animate-pulse" />
+                <div className="h-[13px] w-3/4 max-w-[300px] rounded bg-base-300 skel-shimmer" />
+                <div className="h-[13px] w-1/2 max-w-[220px] rounded bg-base-300 skel-shimmer" />
               </div>
             }
           >
@@ -544,7 +569,7 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
           {alerts.length > 0 && <SectionSources section="senapred" />}
         </div>
 
-        <div className="mt-4 rounded-xl p-4 border border-base-300 shadow bg-base-200 animate-[fadeInUp_0.3s_ease-out]">
+        <div className="relative mt-4 rounded-xl p-4 border border-base-300 shadow bg-base-200 animate-[fadeInUp_0.3s_ease-out]">
           <p className="em-subhead">
             <span className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5">
@@ -581,14 +606,14 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
                 <div className="flex gap-2 overflow-x-hidden" aria-hidden="true">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="w-[200px] sm:w-[230px] shrink-0 rounded-xl p-3 border border-base-300 h-[158px]">
-                      <div className="h-4 w-12 bg-base-300 rounded-full animate-pulse" />
-                      <div className="h-3 bg-base-300 rounded w-full mt-2 animate-pulse" />
-                      <div className="h-2.5 bg-base-300 rounded w-12 mt-1.5 animate-pulse" />
+                      <div className="h-4 w-12 bg-base-300 rounded-full skel-shimmer" />
+                      <div className="h-3 bg-base-300 rounded w-full mt-2 skel-shimmer" />
+                      <div className="h-2.5 bg-base-300 rounded w-12 mt-1.5 skel-shimmer" />
                     </div>
                   ))}
                 </div>
                 {/* Fila del enlace "Ver mapa de sismos", que la card real siempre pinta */}
-                <div className="mt-3 h-4 w-32 rounded bg-base-300 animate-pulse" aria-hidden="true" />
+                <div className="mt-3 h-4 w-32 rounded bg-base-300 skel-shimmer" aria-hidden="true" />
               </>
             }
           >
@@ -682,7 +707,7 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
                             ? `El mapa incluye todos los sismos (${mappedCount}).`
                             : `El mapa incluye ${mappedCount} de ${earthquakeCount} sismos; los demás no tienen coordenadas disponibles.`}
                         </p>
-                        <Suspense fallback={<div className="h-40 animate-pulse bg-base-300 rounded" />}>
+                        <Suspense fallback={<div className="h-40 skel-shimmer bg-base-300 rounded" />}>
                           <EmergencyMap items={items} focusId={focusId} focusRequest={focusRequest} />
                         </Suspense>
                       </div>
@@ -698,6 +723,22 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
               only={sismosSources.map(source => EARTHQUAKE_SOURCE_NAMES[source])}
             />
           )}
+
+          {/* Pill-shaped dock slot: morph target for the floating ticker */}
+          <button
+            type="button"
+            onClick={toggleDock}
+            data-dock-slot
+            aria-label={docked ? 'Devolver la barra al modo flotante' : 'Acoplar la barra a esta sección'}
+            className={`absolute top-3 right-3 z-10 inline-flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.96] ${
+              docked
+                ? 'border-solid border-base-300 bg-base-100 text-base-content/80 shadow-sm'
+                : 'border-dashed border-warning/50 bg-base-300/40 text-base-content/45 shadow-[inset_0_1px_3px_rgba(0,0,0,0.12)] hover:border-warning/80 hover:text-base-content/65 hover:bg-base-300/55'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${docked ? 'bg-warning' : 'bg-warning/35'}`} />
+            <span>{docked ? 'Liberar alertas' : 'Acoplar alertas'}</span>
+          </button>
         </div>
 
         <Suspense fallback={<div className={`mt-4 rounded-xl border border-base-300 shadow-sm ${initialBreakdown !== false ? 'min-h-[1210px] sm:min-h-[918px]' : 'min-h-[306px] sm:min-h-[277px]'}`} />}>

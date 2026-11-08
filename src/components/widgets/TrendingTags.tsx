@@ -84,7 +84,7 @@ export function TrendingTags({ tags, loading }: Props) {
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="h-[34px] w-20 rounded-full bg-base-300 animate-pulse shrink-0"
+            className="h-[34px] w-20 rounded-full bg-base-300 skel-shimmer shrink-0"
           />
         ))}
       </div>

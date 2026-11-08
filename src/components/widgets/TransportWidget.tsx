@@ -659,24 +659,24 @@ export function TransportWidget() {
   if (loading) {
     /* Reserva el alto medido del bloque: 386 px desktop / 476 px móvil. */
     return (
-      <div className="space-y-6 animate-pulse min-h-[456px] sm:min-h-[366px]" aria-hidden="true">
+      <div className="space-y-6 min-h-[456px] sm:min-h-[366px]" aria-hidden="true">
         <div className="rounded-xl bg-base-200 border border-base-300 p-4">
           <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-300">
-                <div className="w-8 h-8 rounded-full bg-base-200" />
-                <div className="h-3 w-10 bg-base-200 rounded" />
+              <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-300 skel-shimmer">
+                <div className="w-8 h-8 rounded-full bg-base-200 skel-shimmer" />
+                <div className="h-3 w-10 bg-base-200 rounded skel-shimmer" />
               </div>
             ))}
           </div>
         </div>
         <div className="rounded-xl bg-base-200 border border-base-300 p-4 space-y-2">
-          <div className="h-3 bg-base-300 rounded w-32" />
-          <div className="h-3 bg-base-300 rounded w-48" />
-          <div className="h-3 bg-base-300 rounded w-40" />
+          <div className="h-3 bg-base-300 rounded w-32 skel-shimmer" />
+          <div className="h-3 bg-base-300 rounded w-48 skel-shimmer" />
+          <div className="h-3 bg-base-300 rounded w-40 skel-shimmer" />
         </div>
         <div className="rounded-xl bg-base-200 border border-base-300 p-4">
-          <div className="h-10 bg-base-300 rounded-lg w-full" />
+          <div className="h-10 bg-base-300 rounded-lg w-full skel-shimmer" />
         </div>
       </div>
     );

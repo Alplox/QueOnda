@@ -119,24 +119,24 @@ function SlotSkeleton() {
      *   footer 29,5 = py-1.5 + borde 1 + línea de 16,5 (`text-[11px]` con leading 1.5)
      * Si cambian esos paddings en `SlotCard`, cambian estos números con ellos.
      */
-    <div className="rounded-xl bg-base-200 border border-base-300 overflow-hidden h-full flex flex-col animate-pulse">
+    <div className="rounded-xl bg-base-200 border border-base-300 overflow-hidden h-full flex flex-col">
       <div className="px-3 py-2.5 border-b border-base-300 flex items-center gap-1.5 flex-shrink-0">
-        <div className="w-1.5 h-1.5 rounded-full bg-base-300 shrink-0" />
-        <div className="w-3.5 h-3.5 rounded-sm bg-base-300 shrink-0" />
-        <div className="h-3 w-24 bg-base-300 rounded" />
+        <div className="w-1.5 h-1.5 rounded-full bg-base-300 shrink-0 skel-shimmer" />
+        <div className="w-3.5 h-3.5 rounded-sm bg-base-300 shrink-0 skel-shimmer" />
+        <div className="h-3 w-24 bg-base-300 rounded skel-shimmer" />
         <div className="ml-auto flex items-center gap-1">
-          <div className="w-[26px] h-[26px] rounded-md bg-base-300/60" />
-          <div className="w-6 h-6 rounded-md bg-base-300/60" />
+          <div className="w-[26px] h-[26px] rounded-md bg-base-300/60 skel-shimmer" />
+          <div className="w-6 h-6 rounded-md bg-base-300/60 skel-shimmer" />
         </div>
       </div>
       <div className="h-[400px] p-4 space-y-3 overflow-hidden">
         {SKELETON_LINE_WIDTHS.map((width, j) => (
-          <div key={j} className={`h-3 bg-base-300 rounded ${width}`} />
+          <div key={j} className={`h-3 bg-base-300 rounded skel-shimmer ${width}`} />
         ))}
       </div>
       <div className="px-3 py-1.5 border-t border-base-300">
         <div className="h-[16.5px] flex items-center">
-          <div className="h-2.5 w-16 rounded bg-base-300" />
+          <div className="h-2.5 w-16 rounded bg-base-300 skel-shimmer" />
         </div>
       </div>
     </div>
@@ -156,21 +156,21 @@ function LoadingSkeleton({ count }: { count: number }) {
       <p className="sr-only" role="status">Cargando noticias…</p>
       <div aria-hidden="true" className="space-y-8">
         {/* Tendencias: una fila fija de 34 px, igual que la tira real */}
-        <div className="flex gap-2 overflow-hidden h-[34px] animate-pulse">
+        <div className="flex gap-2 overflow-hidden h-[34px]">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[34px] w-20 rounded-full bg-base-300 shrink-0" />
+            <div key={i} className="h-[34px] w-20 rounded-full bg-base-300 shrink-0 skel-shimmer" />
           ))}
         </div>
         <div>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 animate-pulse">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
-              <div className="h-4 w-32 rounded bg-base-300" />
-              <div className="h-4 w-8 rounded bg-base-300" />
-              <div className="h-6 w-14 rounded bg-base-300" />
+              <div className="h-4 w-32 rounded bg-base-300 skel-shimmer" />
+              <div className="h-4 w-8 rounded bg-base-300 skel-shimmer" />
+              <div className="h-6 w-14 rounded bg-base-300 skel-shimmer" />
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="h-[38px] sm:h-[34px] w-full sm:w-[220px] rounded-lg bg-base-300" />
-              <div className="h-[24.5px] w-full sm:w-40 rounded-lg bg-base-300/70" />
+              <div className="h-[38px] sm:h-[34px] w-full sm:w-[220px] rounded-lg bg-base-300 skel-shimmer" />
+              <div className="h-[24.5px] w-full sm:w-40 rounded-lg bg-base-300/70 skel-shimmer" />
             </div>
           </div>
           <div className={`flex gap-3 overflow-x-auto pb-2 sm:grid sm:overflow-visible sm:pb-0 scrollbar-hide-mobile ${slotGridCols(count)}`}>
@@ -183,10 +183,10 @@ function LoadingSkeleton({ count }: { count: number }) {
         </div>
         {/* Temas agrupados: mismo alto reservado que el slider real */}
         <div className="space-y-3">
-          <div className="h-4 w-36 rounded bg-base-300 animate-pulse" />
-          <div className="h-[360px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">
+          <div className="h-4 w-36 rounded bg-base-300 skel-shimmer" />
+          <div className="h-[360px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[0, 1, 2].map(i => (
-              <div key={i} className={`rounded-xl border border-base-300 bg-base-200 ${i > 0 ? 'hidden sm:block' : ''}`} />
+              <div key={i} className={`rounded-xl border border-base-300 bg-base-200 skel-shimmer ${i > 0 ? 'hidden sm:block' : ''}`} />
             ))}
           </div>
         </div>
@@ -542,7 +542,7 @@ export function NewsFeed({
             reserva con `min-h` igual que en el skeleton.
           */}
           {clusteringPending ? (
-            <div className="min-h-[360px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse" aria-hidden="true">
+            <div className="min-h-[360px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 skel-shimmer" aria-hidden="true">
               {[0, 1, 2].map(i => (
                 <div key={i} className={`rounded-xl border border-base-300 bg-base-200 ${i > 0 ? 'hidden sm:block' : ''}`} />
               ))}

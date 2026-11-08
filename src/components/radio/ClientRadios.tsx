@@ -25,6 +25,7 @@ async function fetchStationsApi(): Promise<{ stations: RadioStation[]; tags: str
 
 export function ClientRadios() {
   const [stations, setStations] = useState<RadioStation[]>([]);
+  const [stationsLoading, setStationsLoading] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [states, setStates] = useState<string[]>([]);
   const [stateCounts, setStateCounts] = useState<Record<string, number>>({});
@@ -44,20 +45,29 @@ export function ClientRadios() {
       setTags(cached.data.tags);
       setStates(cached.data.states);
       setStateCounts(cached.data.stateCounts);
+      setStationsLoading(false);
     });
 
     // Phase 1: background fetch → update (server-cached endpoint)
     fetchStationsApi()
       .then(data => {
-        if (cancelled || !data) return;
-        idbSet(IDB_KEY, data, IDB_TTL);
-        setStations(data.stations);
-        setTags(data.tags);
-        setStates(data.states);
-        setStateCounts(data.stateCounts);
+        if (cancelled) return;
+        if (data) {
+          idbSet(IDB_KEY, data, IDB_TTL);
+          setStations(data.stations);
+          setTags(data.tags);
+          setStates(data.states);
+          setStateCounts(data.stateCounts);
+        } else if (!resolved) {
+          setStations(FALLBACK_RADIOS);
+        }
+        setStationsLoading(false);
       })
       .catch(() => {
-        if (!cancelled && !resolved) setStations(FALLBACK_RADIOS);
+        if (!cancelled) {
+          if (!resolved) setStations(FALLBACK_RADIOS);
+          setStationsLoading(false);
+        }
       });
     return () => { cancelled = true; };
   }, []);
@@ -74,6 +84,7 @@ export function ClientRadios() {
   return (
     <RadioPlayer
       stations={stations}
+      stationsLoading={stationsLoading}
       tags={tags}
       states={states}
       stateCounts={stateCounts}

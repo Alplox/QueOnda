@@ -480,20 +480,20 @@ export function FootballTable() {
       {activeTab === 'standings' && loadingStandings && standings.length === 0 && (
         /* Misma rejilla que la tabla real: cabecera de 28 px + 16 filas de 41 px
            = 684.5 px, el alto medido del bloque cargado. */
-        <div className="animate-pulse" aria-hidden="true">
+        <div aria-hidden="true">
           <div className="flex h-7 items-center gap-3 border-b border-base-300 bg-base-300/30 px-4">
-            <div className="h-2.5 w-16 bg-base-300 rounded" />
+            <div className="h-2.5 w-16 bg-base-300 rounded skel-shimmer" />
           </div>
           {Array.from({ length: 16 }).map((_, i) => (
             <div key={i} className="flex h-[41px] items-center gap-3 border-b border-base-300 px-4">
-              <div className="h-4 w-4 bg-base-300 rounded" />
-              <div className="h-5 w-5 bg-base-300 rounded-full shrink-0" />
-              <div className="h-3 bg-base-300 rounded flex-1" />
-              <div className="h-3 w-6 bg-base-300 rounded" />
-              <div className="h-3 w-6 bg-base-300 rounded" />
-              <div className="h-3 w-6 bg-base-300 rounded" />
-              <div className="h-3 w-6 bg-base-300 rounded" />
-              <div className="h-4 w-8 bg-base-300 rounded" />
+              <div className="h-4 w-4 bg-base-300 rounded skel-shimmer" />
+              <div className="h-5 w-5 bg-base-300 rounded-full shrink-0 skel-shimmer" />
+              <div className="h-3 bg-base-300 rounded flex-1 skel-shimmer" />
+              <div className="h-3 w-6 bg-base-300 rounded skel-shimmer" />
+              <div className="h-3 w-6 bg-base-300 rounded skel-shimmer" />
+              <div className="h-3 w-6 bg-base-300 rounded skel-shimmer" />
+              <div className="h-3 w-6 bg-base-300 rounded skel-shimmer" />
+              <div className="h-4 w-8 bg-base-300 rounded skel-shimmer" />
             </div>
           ))}
         </div>
@@ -508,15 +508,15 @@ export function FootballTable() {
          * botón deja reintentar sin recargar.
          */
         <div className="relative flex min-h-[684px] flex-col items-center justify-center gap-2 p-6 text-center">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex flex-col opacity-20 animate-pulse">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex flex-col opacity-20">
             {Array.from({ length: 16 }).map((_, i) => (
               <div key={i} className="flex h-[41px] items-center gap-3 border-b border-base-300 px-4">
-                <div className="h-4 w-4 rounded bg-base-300" />
-                <div className="h-5 w-5 shrink-0 rounded-full bg-base-300" />
-                <div className="h-3 flex-1 rounded bg-base-300" />
-                <div className="h-3 w-6 rounded bg-base-300" />
-                <div className="h-3 w-6 rounded bg-base-300" />
-                <div className="h-4 w-8 rounded bg-base-300" />
+                <div className="h-4 w-4 rounded bg-base-300 skel-shimmer" />
+                <div className="h-5 w-5 shrink-0 rounded-full bg-base-300 skel-shimmer" />
+                <div className="h-3 flex-1 rounded bg-base-300 skel-shimmer" />
+                <div className="h-3 w-6 rounded bg-base-300 skel-shimmer" />
+                <div className="h-3 w-6 rounded bg-base-300 skel-shimmer" />
+                <div className="h-4 w-8 rounded bg-base-300 skel-shimmer" />
               </div>
             ))}
           </div>
@@ -535,12 +535,12 @@ export function FootballTable() {
         <>
         {loadingMatches && matches.length === 0 ? (
           <div className="p-4">
-            <div className="animate-pulse space-y-3">
+            <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <div className="h-3 bg-base-300 rounded flex-1" />
-                  <div className="h-5 w-12 bg-base-300 rounded" />
-                  <div className="h-3 bg-base-300 rounded flex-1" />
+                  <div className="h-3 bg-base-300 rounded flex-1 skel-shimmer" />
+                  <div className="h-5 w-12 bg-base-300 rounded skel-shimmer" />
+                  <div className="h-3 bg-base-300 rounded flex-1 skel-shimmer" />
                 </div>
               ))}
             </div>
@@ -658,12 +658,12 @@ export function FootballTable() {
         <>
         {loadingArticles && articles.length === 0 ? (
           <div className="p-4">
-            <div className="animate-pulse space-y-3">
+            <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="px-3 py-2">
-                  <div className="h-2 bg-base-300 rounded w-16 mb-1.5" />
-                  <div className="h-3 bg-base-300 rounded w-full mb-1" />
-                  <div className="h-2 bg-base-300 rounded w-3/4" />
+                  <div className="h-2 bg-base-300 rounded w-16 mb-1.5 skel-shimmer" />
+                  <div className="h-3 bg-base-300 rounded w-full mb-1 skel-shimmer" />
+                  <div className="h-2 bg-base-300 rounded w-3/4 skel-shimmer" />
                 </div>
               ))}
             </div>

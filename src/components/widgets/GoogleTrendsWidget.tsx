@@ -108,7 +108,7 @@ export function GoogleTrendsWidget() {
   }, [retryKey]);
 
   const skeleton = (
-    <div className="flex min-h-[1001px] flex-col animate-pulse sm:min-h-[881px]">
+    <div className="flex min-h-[1001px] flex-col sm:min-h-[881px]">
       <div aria-hidden="true" className="flex flex-1 flex-col space-y-1">
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="flex flex-1 items-center gap-3 p-2.5 rounded-xl">
@@ -116,10 +116,10 @@ export function GoogleTrendsWidget() {
               {String(i + 1).padStart(2, '0')}
             </span>
             <div className="min-w-0 flex-1 space-y-1">
-              <div className="h-3 bg-base-300 rounded w-full" />
-              <div className="h-2.5 bg-base-300 rounded w-2/3" />
+              <div className="h-3 bg-base-300 rounded w-full skel-shimmer" />
+              <div className="h-2.5 bg-base-300 rounded w-2/3 skel-shimmer" />
             </div>
-            <div className="h-5 w-12 bg-base-300 rounded-full shrink-0" />
+            <div className="h-5 w-12 bg-base-300 rounded-full shrink-0 skel-shimmer" />
           </div>
         ))}
       </div>

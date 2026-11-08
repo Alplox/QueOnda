@@ -24,7 +24,7 @@ type LoadSwapProps = {
  * El esqueleto NO se desmonta en el instante en que llegan los datos: se queda
  * montado, encima del contenido, y se apaga con opacidad mientras el contenido
  * aparece debajo. Desmontarlo de golpe dejaba un hueco del color del fondo
- * entre el último `animate-pulse` y el primer frame del contenido, que se lee
+ * entre el último `skel-shimmer` y el primer frame del contenido, que se lee
  * como un parpadeo (más notorio mientras más grande el bloque).
  *
  * Como es el mismo nodo durante carga y fundido, el pulso del esqueleto no se

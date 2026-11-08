@@ -393,9 +393,9 @@ export const SlotCard = memo(function SlotCard({
 
         <div className="relative flex-1">
           {loading ? (
-            <div className="p-4 space-y-3 animate-pulse">
+            <div className="p-4 space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className={`h-3 bg-base-300 rounded ${['w-full', 'w-4/5', 'w-3/4', 'w-5/6', 'w-2/3'][i] || 'w-full'}`} />
+                <div key={i} className={`h-3 bg-base-300 rounded skel-shimmer ${['w-full', 'w-4/5', 'w-3/4', 'w-5/6', 'w-2/3'][i] || 'w-full'}`} />
               ))}
             </div>
           ) : error && skipProgress ? (

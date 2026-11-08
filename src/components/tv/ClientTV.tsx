@@ -892,40 +892,40 @@ export function ClientTV() {
            móvil, sin contar la atribución de fuentes que va debajo): barra de
            playlists + reproductor 16:9 + card de filtros/canales. Antes faltaba
            el reproductor y la sección crecía ~770 px. */
-        <div className="flex flex-col space-y-1.5 animate-pulse min-h-[579px] sm:min-h-[1031px]" aria-hidden="true">
+        <div className="flex flex-col space-y-1.5 min-h-[579px] sm:min-h-[1031px]" aria-hidden="true">
           {/* Barra fija: playlists arriba, controles del reproductor abajo */}
           <div className="rounded-xl border border-base-300 bg-base-100 px-2 py-1.5 space-y-1.5">
             <div className="flex gap-1.5 flex-wrap">
-              <div className="h-6 w-16 bg-base-200 rounded-md" />
-              <div className="h-6 w-16 bg-base-200 rounded-md" />
-              <div className="h-6 w-16 bg-base-200 rounded-md" />
-              <div className="h-6 w-20 bg-base-200 rounded-md" />
+              <div className="h-6 w-16 bg-base-200 rounded-md skel-shimmer" />
+              <div className="h-6 w-16 bg-base-200 rounded-md skel-shimmer" />
+              <div className="h-6 w-16 bg-base-200 rounded-md skel-shimmer" />
+              <div className="h-6 w-20 bg-base-200 rounded-md skel-shimmer" />
             </div>
             <div className="h-px bg-base-300/70" />
             <div className="flex items-center gap-2">
-              <div className="h-6 w-24 bg-base-200 rounded-md" />
+              <div className="h-6 w-24 bg-base-200 rounded-md skel-shimmer" />
               <div className="ml-auto flex items-center gap-1.5">
-                <div className="h-6 w-6 bg-base-200 rounded" />
-                <div className="h-6 w-24 bg-base-200 rounded" />
+                <div className="h-6 w-6 bg-base-200 rounded skel-shimmer" />
+                <div className="h-6 w-24 bg-base-200 rounded skel-shimmer" />
               </div>
             </div>
           </div>
           {/* Reproductor: mismo aspect-video que el placeholder real */}
-          <div className="aspect-video shrink-0 rounded-xl bg-base-200/50 border border-base-300" />
+          <div className="aspect-video shrink-0 rounded-xl bg-base-200/50 border border-base-300 skel-shimmer" />
           {/* Filtros + canales, en la misma card (crece para llenar la reserva) */}
           <div className="flex flex-1 flex-col rounded-xl border border-base-300 bg-base-100 p-1.5 space-y-1.5">
-            <div className="h-8 bg-base-200 rounded-lg w-full" />
+            <div className="h-8 bg-base-200 rounded-lg w-full skel-shimmer" />
             <div className="flex gap-1.5">
-              <div className="h-6 w-20 bg-base-200 rounded-md" />
-              <div className="h-6 w-20 bg-base-200 rounded-md" />
-              <div className="h-6 w-20 bg-base-200 rounded-md" />
+              <div className="h-6 w-20 bg-base-200 rounded-md skel-shimmer" />
+              <div className="h-6 w-20 bg-base-200 rounded-md skel-shimmer" />
+              <div className="h-6 w-20 bg-base-200 rounded-md skel-shimmer" />
             </div>
             <div className="flex-1 border-t border-base-300/70 pt-1">
               <div className="flex gap-2 overflow-hidden pt-1">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-200 shrink-0 w-[84px] sm:w-24">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-base-300" />
-                    <div className="h-2.5 w-12 bg-base-300 rounded" />
+                  <div key={i} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-200 shrink-0 w-[84px] sm:w-24 skel-shimmer">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-base-300 skel-shimmer" />
+                    <div className="h-2.5 w-12 bg-base-300 rounded skel-shimmer" />
                   </div>
                 ))}
               </div>

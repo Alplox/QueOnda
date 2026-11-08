@@ -173,7 +173,7 @@ export function ClientJobList() {
         <div className="flex flex-wrap gap-1.5 px-3 pt-2" aria-hidden={loading || undefined}>
           {loading ? (
             Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-[21px] w-[92px] animate-pulse rounded-full bg-base-300/70" />
+              <div key={i} className="h-[21px] w-[92px] skel-shimmer rounded-full bg-base-300/70" />
             ))
           ) : (
             <>
@@ -212,10 +212,10 @@ export function ClientJobList() {
              ese mismo alto para que el bloque no crezca al llegar las ofertas. */
           <div className="flex min-h-[480px] flex-col gap-2" aria-hidden="true">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex-1 animate-pulse rounded-xl bg-base-300/50 p-3">
-                <div className="h-4 bg-base-300 rounded w-3/5" />
-                <div className="h-3 bg-base-300 rounded w-2/5 mt-2" />
-                <div className="h-3 bg-base-300 rounded w-1/3 mt-2" />
+              <div key={i} className="flex-1 skel-shimmer rounded-xl bg-base-300/50 p-3">
+                <div className="h-4 bg-base-300 rounded w-3/5 skel-shimmer" />
+                <div className="h-3 bg-base-300 rounded w-2/5 mt-2 skel-shimmer" />
+                <div className="h-3 bg-base-300 rounded w-1/3 mt-2 skel-shimmer" />
               </div>
             ))}
           </div>
