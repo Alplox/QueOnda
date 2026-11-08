@@ -298,7 +298,7 @@ export function ClientJobList() {
             href="https://mis-recursos-webdev.pages.dev/#chile-búsqueda-trabajo"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-base-content underline underline-offset-2 transition-colors"
+            className="inline-flex items-center gap-1 min-h-7 py-1 hover:text-base-content underline underline-offset-2 transition-colors"
           >
             <Emoji emoji="📋" /> Ir a lista con portales de empleo en Chile
           </a>

@@ -135,14 +135,18 @@ export function EmergencyAlertBar({ items, onClose, onOpenMap }: Props) {
       onBlur={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; pausedRef.current = false; }}
     >
       <div className="flex items-center h-9">
-        <div className={`shrink-0 flex items-center gap-2 pl-4 pr-3 h-full z-10 ${isCritical ? 'bg-error text-error-content' : 'bg-warning text-warning-content'}`}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="animate-pulse">
+        <a
+          href="#emergencia"
+          aria-label={isCritical ? 'Ir al bloque de emergencias' : 'Ir al bloque de sismos'}
+          className={`shrink-0 flex items-center gap-2 pl-4 pr-3 h-full z-10 cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-current ${isCritical ? 'bg-error text-error-content' : 'bg-warning text-warning-content'}`}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="animate-pulse" aria-hidden="true">
             <path d="M12 2L1 21h22L12 2zm0 4l7.5 13h-15L12 6zm-1 5v4h2v-4h-2zm0 6v2h2v-2h-2z" />
           </svg>
           <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">
             {isCritical ? 'Alerta' : 'Sismos'}
           </span>
-        </div>
+        </a>
 
         <div className="flex-1 overflow-hidden relative">
           <div

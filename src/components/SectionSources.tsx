@@ -19,7 +19,7 @@ export function SectionSources({ section, inline, only }: { section: string; inl
             href={s.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-base-content underline underline-offset-2 transition-colors"
+            className="inline-flex items-center min-h-6 py-0.5 hover:text-base-content underline underline-offset-2 transition-colors"
           >
             {s.name}
           </a>
@@ -30,7 +30,7 @@ export function SectionSources({ section, inline, only }: { section: string; inl
                 href={l.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-base-content underline underline-offset-2 transition-colors"
+                className="inline-flex items-center min-h-6 py-0.5 hover:text-base-content underline underline-offset-2 transition-colors"
               >
                 {l.label}
               </a>

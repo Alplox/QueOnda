@@ -162,6 +162,13 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
   const [alertsError, setAlertsError] = useState(false);
   const [powerCount, setPowerCount] = useState<number | null>(null);
   const [powerMeta, setPowerMeta] = useState<{ updatedAt: number | null; stale: boolean } | null>(null);
+  const handlePowerSummary = useCallback(
+    (s: { affected: number | null; updatedAt: number | null; stale: boolean } | null) => {
+      setPowerCount(s?.affected ?? null);
+      setPowerMeta(s?.updatedAt != null ? { updatedAt: s.updatedAt, stale: !!s.stale } : null);
+    },
+    [],
+  );
   // senapred no se cachea en IDB (solo items), así que mantiene su propio flag de carga
   const [alertsLoaded, setAlertsLoaded] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -724,7 +731,7 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
             className={`absolute top-3 right-3 z-10 inline-flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.96] ${
               docked
                 ? 'border-solid border-base-300 bg-base-100 text-base-content/80 shadow-sm'
-                : 'border-dashed border-warning/50 bg-base-300/40 text-base-content/45 shadow-[inset_0_1px_3px_rgba(0,0,0,0.12)] hover:border-warning/80 hover:text-base-content/65 hover:bg-base-300/55'
+                : 'border-dashed border-warning/60 bg-base-300/55 text-base-content/70 shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)] hover:border-warning/80 hover:text-base-content hover:bg-base-300/70'
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${docked ? 'bg-warning' : 'bg-warning/35'}`} />
@@ -735,10 +742,7 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
         <Suspense fallback={<div className={`mt-4 rounded-xl border border-base-300 shadow-sm ${initialBreakdown !== false ? 'min-h-[1210px] sm:min-h-[918px]' : 'min-h-[306px] sm:min-h-[277px]'}`} />}>
           <PowerOutageWidget
             initialBreakdown={initialBreakdown}
-            onSummary={(s) => {
-              setPowerCount(s?.affected ?? null);
-              setPowerMeta(s?.updatedAt != null ? { updatedAt: s.updatedAt, stale: !!s.stale } : null);
-            }}
+            onSummary={handlePowerSummary}
           />
         </Suspense>
       </section>

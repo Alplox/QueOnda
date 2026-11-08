@@ -121,7 +121,11 @@ export function EmergencyTicker() {
           });
         };
         setCollapsed(prev => {
-          if (!prev) { setTimeout(doMorph, 220); return true; }
+          if (!prev) {
+            if (morphTimer.current) window.clearTimeout(morphTimer.current);
+            morphTimer.current = window.setTimeout(doMorph, 220);
+            return true;
+          }
           doMorph();
           return prev;
         });
@@ -251,6 +255,7 @@ export function EmergencyTicker() {
             onClick={toggle}
             tabIndex={collapsed && !docked ? 0 : -1}
             aria-hidden={!collapsed || docked}
+            inert={!collapsed || docked || undefined}
             aria-expanded={!collapsed}
             aria-controls="emergency-alert-bar"
             aria-label={collapsed ? 'Mostrar alertas de emergencia' : 'Ocultar alertas de emergencia'}

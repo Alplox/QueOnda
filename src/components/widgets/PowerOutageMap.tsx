@@ -13,6 +13,7 @@ interface Comuna {
 interface Props {
   comunas: Comuna[];
   focusRegion?: string | null;
+  focusRequest?: number;
 }
 
 // severity bands as fraction of the max-affected comuna
@@ -34,10 +35,10 @@ const BAND_LABEL: Record<Band, string> = {
   low: '< 1%',
 };
 
-export function PowerOutageMap({ comunas, focusRegion }: Props) {
+export function PowerOutageMap({ comunas, focusRegion, focusRequest = 0 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<{ destroy: () => void; map: any } | null>(null);
-  const lastFocusRef = useRef<string | null>(null);
+  const lastFocusRequestRef = useRef(0);
   const groupRef = useRef<{ clearLayers: () => void } | null>(null);
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState(false);
@@ -87,13 +88,23 @@ export function PowerOutageMap({ comunas, focusRegion }: Props) {
           document.head.appendChild(link);
         }
 
-        map = L.map(containerRef.current, {
+        const container = containerRef.current;
+        // Recover from a leaked init (e.g. StrictMode/HMR race where L.map ran but
+        // cleanup didn't remove it): Leaflet throws "already initialized" otherwise.
+        if ((container as any)._leaflet_id) {
+          try { (L.DomUtil as any).get?.(container)?.remove?.(); } catch { /* ignore */ }
+          delete (container as any)._leaflet_id;
+          container.replaceChildren();
+        }
+
+        map = L.map(container, {
           zoomControl: true,
           attributionControl: true,
           minZoom: 1,
           maxBounds: [[-85, -180], [85, 180]],
           maxBoundsViscosity: 1,
         }).setView([-35.5, -71], 5);
+        if (destroyed) { try { map.remove(); } catch {} return; }
 
         const isDark = () => !document.documentElement.classList.contains('light-theme');
         let basemap: OpenFreeMapLayer | null = null;
@@ -109,9 +120,10 @@ export function PowerOutageMap({ comunas, focusRegion }: Props) {
         }
         if (destroyed) {
           try { basemap?.destroy(); } catch { /* already torn down */ }
-          map.remove();
+          try { map.remove(); } catch {}
           return;
         }
+        if (!containerRef.current) { try { basemap?.destroy(); } catch {} try { map.remove(); } catch {} return; }
 
         // swap vector basemap live on theme change (raster fallback stays as-is)
         let observer: MutationObserver | null = null;
@@ -127,17 +139,18 @@ export function PowerOutageMap({ comunas, focusRegion }: Props) {
           destroy: () => {
             try { observer?.disconnect(); } catch { /* already torn down */ }
             try { basemap?.destroy(); } catch { /* already torn down */ }
-            map?.remove();
+            try { map?.remove(); } catch {}
             mapRef.current = null;
           },
           map,
         };
         setMapError(false);
         setReady(true);
-      } catch {
+      } catch (err) {
         // Never leave a half-built map on the container: L.map() succeeded but a
         // later step threw → the div keeps _leaflet_id and every re-init would die
         // with "Map container is already initialized". Remove it so retry works.
+        console.error('PowerOutageMap init failed', err);
         try { map?.remove(); } catch { /* already torn down */ }
         mapRef.current = null;
         if (!destroyed) setMapError(true);
@@ -145,7 +158,10 @@ export function PowerOutageMap({ comunas, focusRegion }: Props) {
     })();
 
     return () => { destroyed = true; try { mapRef.current?.destroy(); } catch { /* already torn down */ } };
-  }, [comunas, retryKey]);
+    // Init una sola vez por contenedor/retry: no depende de `comunas` (los
+    // marcadores los actualiza el efecto de abajo) para no destruir/recrear el
+    // mapa WebGL en cada refresh de datos.
+  }, [retryKey]);
 
   // render circles whenever filters change
   useEffect(() => {
@@ -155,6 +171,7 @@ export function PowerOutageMap({ comunas, focusRegion }: Props) {
       groupRef.current?.clearLayers();
       const markers: L.CircleMarker[] = [];
       for (const c of filtered) {
+        if (!Number.isFinite(c.lat) || !Number.isFinite(c.lon)) continue;
         const ratio = c.affected / maxFiltered;
         const band = bandOf(ratio);
         if (hidden.has(band)) continue;
@@ -188,22 +205,59 @@ export function PowerOutageMap({ comunas, focusRegion }: Props) {
   }, [ready, filtered, maxFiltered, hidden]);
 
   // focus a region from the outside (pin button on a region row): filter to it
-  // and fly there once the map is ready — same pattern as EmergencyMap focusId
+  // and fly there once the map is ready — same pattern as EmergencyMap focusId+focusRequest
   useEffect(() => {
     if (!ready || !mapRef.current) return;
-    if (!focusRegion) { lastFocusRef.current = null; return; }
-    if (focusRegion === lastFocusRef.current) return;
-    lastFocusRef.current = focusRegion;
+    if (!focusRegion) return;
+    if (focusRequest === lastFocusRequestRef.current) return;
+    lastFocusRequestRef.current = focusRequest;
     setRegion(focusRegion);
     setComuna('');
-    const pts = comunas.filter((c) => c.region === focusRegion);
+    const pts = comunas
+      .filter((c) => c.region === focusRegion)
+      .map((c) => [Number(c.lat), Number(c.lon)] as [number, number])
+      .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180);
     if (pts.length === 0) return;
     (async () => {
-      const L = await import('leaflet');
-      const bounds = L.latLngBounds(pts.map((c) => [c.lat, c.lon] as [number, number]));
-      mapRef.current?.map.flyToBounds(bounds.pad(0.3), { duration: 0.8 });
+      try {
+        const L = await import('leaflet');
+        const bounds = L.latLngBounds(pts);
+        if (!bounds.isValid()) return;
+        const c = bounds.getCenter();
+        if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) return;
+        const map = mapRef.current?.map;
+        if (!map) return;
+        // El mapa puede estar abriéndose (grid 0fr→1fr, 300 ms): con tamaño 0
+        // getBoundsZoom/fit/fly calculan NaN y corrompen Leaflet/GL. Esperar un
+        // tamaño útil (tope ~450 ms) o abortar; nunca mover con tamaño 0.
+        let ok = false;
+        for (let i = 0; i < 30; i++) {
+          try { map.invalidateSize({ animate: false }); } catch {}
+          const s = map.getSize?.();
+          if (s && s.x > 0 && s.y > 0) { ok = true; break; }
+          await new Promise((r) => requestAnimationFrame(r));
+          if (focusRequest !== lastFocusRequestRef.current) return;
+        }
+        if (!ok || !mapRef.current?.map) return;
+        // Un solo punto (p. ej. Arica y Parinacota = 1 comuna) da bounds de área 0:
+        // pad(0.3) de 0 y el zoom de flyToBounds degeneran a NaN. Volar al punto.
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        const pointLike = pts.length === 1 || (Math.abs(sw.lat - ne.lat) < 1e-6 && Math.abs(sw.lng - ne.lng) < 1e-6);
+        if (pointLike) {
+          if (Number.isFinite(c.lat) && Number.isFinite(c.lng)) map.flyTo([c.lat, c.lng], 10, { duration: 0.8 });
+        } else {
+          const padded = bounds.pad(0.3);
+          const pc = padded.getCenter();
+          if (padded.isValid() && Number.isFinite(pc.lat) && Number.isFinite(pc.lng)) {
+            map.flyToBounds(padded, { duration: 0.8 });
+          }
+        }
+      } catch {
+        /* no romper el mapa por un foco inválido */
+      }
     })();
-  }, [ready, focusRegion, comunas]);
+  }, [ready, focusRegion, focusRequest, comunas]);
 
   if (comunas.length === 0) return null;
 

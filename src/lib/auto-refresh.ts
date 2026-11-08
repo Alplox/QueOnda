@@ -8,6 +8,8 @@ const listeners = new Set<Listener>();
 let lastRefresh = 0;
 const THROTTLE_MS = 60_000;
 const INTERVAL_MS = 5 * 60_000;
+let intervalId: ReturnType<typeof setInterval> | null = null;
+let started = false;
 
 function notify() {
   const now = Date.now();
@@ -22,12 +24,28 @@ function onVisibility() {
   if (!document.hidden) notify();
 }
 
-// ponytail: SSR guard — this module is evaluated on the server too, where there is no window
-if (typeof window !== 'undefined') {
-  setInterval(notify, INTERVAL_MS);
+function startAutoRefresh() {
+  if (started || typeof window === 'undefined') return;
+  started = true;
+  intervalId = setInterval(notify, INTERVAL_MS);
   window.addEventListener('focus', notify);
   document.addEventListener('visibilitychange', onVisibility);
 }
+
+export function disposeAutoRefresh() {
+  if (!started || typeof window === 'undefined') return;
+  if (intervalId !== null) clearInterval(intervalId);
+  window.removeEventListener('focus', notify);
+  document.removeEventListener('visibilitychange', onVisibility);
+  intervalId = null;
+  started = false;
+}
+
+// ponytail: SSR guard — this module is evaluated on the server too, where there is no window
+startAutoRefresh();
+
+const hot = (import.meta as { hot?: { dispose(cb: () => void): void } }).hot;
+hot?.dispose(disposeAutoRefresh);
 
 export function subscribeAutoRefresh(fn: Listener): () => void {
   listeners.add(fn);

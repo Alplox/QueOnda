@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { PowerOutageMap } from './PowerOutageMap';
-import { PowerEvolutionChart } from './PowerEvolutionChart';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { subscribeAutoRefresh } from '@/lib/auto-refresh';
 import { play } from '@/lib/sound';
 import { idbGet, idbSet } from '@/lib/idb-cache';
@@ -9,6 +7,9 @@ import { useErrorRetry } from '@/lib/retry';
 import { RetryHint } from '@/components/RetryHint';
 import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
+
+type PowerMapProps = { comunas: Comuna[]; focusRegion?: string | null; focusRequest?: number };
+type PowerChartProps = { series: SeriesPoint[] };
 
 interface Comuna {
   region: string;
@@ -133,12 +134,15 @@ export function PowerOutageWidget({
   const [showChart, setShowChart] = useState(false);
   const [mapMounted, setMapMounted] = useState(false);
   const [chartMounted, setChartMounted] = useState(false);
+  const [PowerMapComp, setPowerMapComp] = useState<ComponentType<PowerMapProps> | null>(null);
+  const [PowerChartComp, setPowerChartComp] = useState<ComponentType<PowerChartProps> | null>(null);
   const [tab, setTab] = useState<'regiones' | 'comunas'>('regiones');
   const [showBreakdown, setShowBreakdown] = useState(initialBreakdown ?? true);
   const [regionSort, setRegionSort] = useState<'pct' | 'affected' | 'ns'>('affected');
   const [scale, setScale] = useState<PowerScale>('zoom');
   const [comunaRegion, setComunaRegion] = useState<string | null>(null);
   const [mapFocusRegion, setMapFocusRegion] = useState<string | null>(null);
+  const [mapFocusRequest, setMapFocusRequest] = useState(0);
   const [forcing, setForcing] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [forceStatus, setForceStatus] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -193,6 +197,11 @@ export function PowerOutageWidget({
 
   const dataRef = useRef<PowerData | null>(null);
   const inflight = useRef<Promise<void> | null>(null);
+  // Ref para no depender de la identidad del callback del padre: un onSummary
+  // inline recreaba adopt→refresh→efecto de montaje en cada render y disparaba
+  // /api/power en bucle.
+  const onSummaryRef = useRef(onSummary);
+  onSummaryRef.current = onSummary;
   // Newest-wins: after a force refresh the origin cache is fresh, but the CDN
   // edge key of plain /api/power (and IDB) can still serve the older snapshot
   // on the next auto-refresh — never let an older fetchedAt overwrite newer data.
@@ -203,9 +212,9 @@ export function PowerOutageWidget({
     setData(d);
     idbSet(IDB_KEY, d, IDB_TTL);
     const stale = !!d.stale || (d.updatedAt != null && Date.now() - d.updatedAt > STALE_MS);
-    onSummary?.({ affected: d.affected, updatedAt: d.updatedAt ?? null, stale });
+    onSummaryRef.current?.({ affected: d.affected, updatedAt: d.updatedAt ?? null, stale });
     return true;
-  }, [onSummary]);
+  }, []);
 
   const refresh = useCallback(async () => {
     // One in-flight request at a time: the retry timer, the manual button and the
@@ -219,7 +228,7 @@ export function PowerOutageWidget({
       } else {
         // keep stale data visible but mark error so banner/retry shows
         setError(true);
-        onSummary?.(null);
+        onSummaryRef.current?.(null);
       }
       setLoading(false);
     })();
@@ -235,6 +244,7 @@ export function PowerOutageWidget({
   const openRegionMap = useCallback((regionName: string) => {
     play('interaction.toggle');
     setMapFocusRegion(regionName);
+    setMapFocusRequest((n) => n + 1);
     setShowMap(true);
   }, []);
 
@@ -296,10 +306,34 @@ export function PowerOutageWidget({
 
   useEffect(() => subscribeAutoRefresh(refresh), [refresh]);
 
-  // prefetch leaflet JS at idle so opening the map doesn't wait for the ~144 KB chunk
+  // Carga diferida (sin React.lazy): Chart.js es import estático en el módulo
+  // del gráfico y Leaflet/MapLibre son pesados; separarlos en chunks evita el
+  // JS sin usar que marcaba PSI y mantiene el mapa funcional al abrirlo.
   useEffect(() => {
-    const id = requestIdleCallback(() => { import('leaflet').catch(() => {}); });
-    return () => cancelIdleCallback(id);
+    if (!mapMounted || PowerMapComp) return;
+    let on = true;
+    import('./PowerOutageMap').then((m) => { if (on) setPowerMapComp(() => m.PowerOutageMap); }).catch(() => {});
+    return () => { on = false; };
+  }, [mapMounted, PowerMapComp]);
+
+  useEffect(() => {
+    if (!chartMounted || PowerChartComp) return;
+    let on = true;
+    import('./PowerEvolutionChart').then((m) => { if (on) setPowerChartComp(() => m.PowerEvolutionChart); }).catch(() => {});
+    return () => { on = false; };
+  }, [chartMounted, PowerChartComp]);
+
+  // Prefetch en idle para que la primera apertura no espere el chunk.
+  useEffect(() => {
+    const ric = (window as any).requestIdleCallback as ((cb: () => void) => number) | undefined;
+    const cic = (window as any).cancelIdleCallback as ((id: number) => void) | undefined;
+    const prefetch = () => { void import('./PowerOutageMap'); void import('./PowerEvolutionChart'); };
+    if (ric) {
+      const id = ric(prefetch);
+      return () => cic?.(id);
+    }
+    const id = window.setTimeout(prefetch, 1200);
+    return () => window.clearTimeout(id);
   }, []);
 
   // FLIP refs: glide region rows to their new positions on reorder instead of
@@ -333,13 +367,15 @@ export function PowerOutageWidget({
     rowPosRef.current = next;
   });
 
-  // Imperative staggered entrance for region rows: a CSS animation-delay tied
-  // to the row index restarts the animation on every reorder, so the cascade
-  // is played via WAAPI only on mount / tab switch / new data hour instead.
-  // (Sort toggles don't retrigger this effect, so only the FLIP glide runs.)
+  // Imperative staggered entrance for rows: a CSS animation-delay tied to the
+  // row index restarts the animation on every reorder, so the cascade is
+  // played via WAAPI only on mount / tab switch / new data hour (and comuna
+  // filter) instead. (Region sort toggles don't retrigger this effect, so
+  // only the FLIP glide runs.) Cap stagger delay: 248 comunas × 40ms would
+  // freeze the tail for ~10s, so delay is clamped to 400ms.
   useIsoLayoutEffect(() => {
     const list = listRef.current;
-    if (!list || tab !== 'regiones') return;
+    if (!list) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const anims = Array.from(list.querySelectorAll('[data-row]')).map((node, i) =>
       (node as HTMLElement).animate(
@@ -348,7 +384,7 @@ export function PowerOutageWidget({
       ),
     );
     return () => anims.forEach((a) => { try { a.cancel(); } catch { /* already finished */ } });
-  }, [tab, data?.updatedAt]);
+  }, [tab, data?.updatedAt, comunaRegion]);
 
   const visibleComunas = useMemo(() => {
     const list = data?.comunas ?? [];
@@ -807,7 +843,7 @@ export function PowerOutageWidget({
                 <div
                   key={key}
                   data-row={key}
-                  className={`group relative grid ${rowGrid} items-center gap-x-2 gap-y-1 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 transition-colors hover:bg-base-300/60`}
+                  className={`group grid ${rowGrid} items-center gap-x-2 gap-y-1 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60 transition-colors hover:bg-base-300/60`}
                 >
                   <button
                     type="button"
@@ -818,11 +854,10 @@ export function PowerOutageWidget({
                     aria-label={hasBase
                       ? `Ver comunas de ${name}: ${miles(r.affected)} clientes sin suministro, ${fmtPct(regionPct)} de ${miles(regionTotal)} clientes`
                       : `Ver comunas de ${name}`}
-                    className="absolute inset-0 rounded-md cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
-                  />
-                  <span className="pointer-events-none col-span-4 row-start-1 min-w-0 truncate text-base-content/80 group-hover:text-base-content sm:col-span-1 sm:row-start-auto">
+                    className="col-span-4 row-start-1 min-w-0 cursor-pointer truncate rounded text-left text-base-content/80 transition-colors hover:text-primary group-hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:col-span-1 sm:row-start-auto"
+                  >
                     {name}
-                  </span>
+                  </button>
                   <div className="pointer-events-none col-start-1 row-start-2 sm:col-start-auto sm:row-start-auto">{barTrack}</div>
                   <span className="pointer-events-none row-start-2 whitespace-nowrap text-right text-[11px] font-medium tabular-nums text-base-content/80 sm:row-start-auto">
                     {miles(r.affected)}
@@ -841,7 +876,7 @@ export function PowerOutageWidget({
                     title={`Ver mapa de ${name}`}
                     aria-label={`Ver mapa de ${name}`}
                     aria-expanded={showMap && mapFocusRegion === (r as RegionRow).region}
-                    className="relative z-10 col-start-5 row-start-1 justify-self-end shrink-0 rounded-md p-1.5 text-base-content/45 transition-colors hover:bg-primary/10 hover:text-primary active:scale-95 cursor-pointer sm:col-start-auto sm:row-start-auto"
+                    className="col-start-5 row-start-1 justify-self-end shrink-0 rounded-md p-1.5 text-base-content/45 transition-colors hover:bg-primary/10 hover:text-primary active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:col-start-auto sm:row-start-auto"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11z" />
@@ -852,6 +887,7 @@ export function PowerOutageWidget({
               ) : (
                 <div
                   key={key}
+                  data-row={key}
                   className={`grid ${rowGrid} items-center gap-x-2 rounded-md px-1.5 py-1 text-xs odd:bg-base-100/60`}
                 >
                   <span className="truncate text-base-content/80">{name}</span>
@@ -890,7 +926,9 @@ export function PowerOutageWidget({
         <div className="overflow-hidden min-h-0">
           {mapMounted && (
             <div className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
-              <PowerOutageMap comunas={data.comunas} focusRegion={mapFocusRegion} />
+              {PowerMapComp
+                ? <PowerMapComp comunas={data.comunas} focusRegion={mapFocusRegion} focusRequest={mapFocusRequest} />
+                : <div className="h-[340px] w-full rounded-xl skel-shimmer bg-base-300" aria-hidden="true" />}
             </div>
           )}
         </div>
@@ -912,7 +950,9 @@ export function PowerOutageWidget({
         <div className="overflow-hidden min-h-0">
           {chartMounted && (
             <div className="rounded-lg border border-base-300 overflow-hidden bg-base-100 p-3">
-              <PowerEvolutionChart series={data.series} />
+              {PowerChartComp
+                ? <PowerChartComp series={data.series} />
+                : <div className="h-40 skel-shimmer bg-base-300 rounded" aria-hidden="true" />}
             </div>
           )}
         </div>

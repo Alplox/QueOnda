@@ -55,6 +55,7 @@ const SEC_REGION_SLUGS: Record<string, string> = {
   nuble: 'nuble',
   biobio: 'biobio',
   araucania: 'araucania',
+  'la araucania': 'araucania',
   'los rios': 'los-rios',
   'los lagos': 'los-lagos',
   aysen: 'aysen',

@@ -10,6 +10,8 @@ let bodyEl: HTMLDivElement | null = null;
 let minBtn: HTMLButtonElement | null = null;
 let collapsed = false;
 const entries: string[] = [];
+let initialized = false;
+let probeIntervalId: ReturnType<typeof setInterval> | null = null;
 
 function setCollapsed(v: boolean) {
   collapsed = v;
@@ -67,10 +69,11 @@ export function dockDebug(label: string, detail?: () => string | string) {
 }
 
 export function initDockDebugOverlay() {
-  if (!enabled() || typeof document === 'undefined') return;
+  if (!enabled() || typeof document === 'undefined' || initialized) return;
+  initialized = true;
   // Periodic geometry probe: distinguishes a real DOM element occupying the
   // space (rect.top values) from a browser compositing ghost (nothing there)
-  setInterval(() => {
+  probeIntervalId = setInterval(() => {
     const sheet = document.getElementById('section-sheet');
     const dock = document.getElementById('bottom-nav');
     const btt = document.querySelector<HTMLButtonElement>('button[aria-label="Volver arriba"]');
