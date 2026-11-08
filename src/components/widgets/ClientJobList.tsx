@@ -295,7 +295,7 @@ export function ClientJobList() {
         <SectionSources section="jobs" inline />
         <div className="mt-1">
           <a
-            href="https://mis-recursos-webdev.pages.dev/#chile-búsqueda-trabajo"
+            href="https://github.com/Alplox/mis-recursos-webdev#chile-b%C3%BAsqueda-trabajo"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 min-h-7 py-1 hover:text-base-content underline underline-offset-2 transition-colors"
