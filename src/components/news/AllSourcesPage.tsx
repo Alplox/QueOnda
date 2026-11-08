@@ -115,14 +115,14 @@ export function AllSourcesPage() {
   const [failedPanelExpanded, setFailedPanelExpanded] = useState(false);
   const [addSourceRegion, setAddSourceRegion] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | '3d' | 'week'>('all');
-  const [mainOnly, setMainOnly] = useState(false);
+  const [mainOnly, setMainOnly] = useState(true);
   const [sortDir, setSortDir] = useState<SortDir>('az');
   const abortRef = useRef<AbortController | null>(null);
   const cancelledRef = useRef(false);
 
   // Preferencias de listado: se leen después de montar (localStorage no existe en SSR).
   useEffect(() => {
-    setMainOnly(loadJSON<boolean>(MAIN_ONLY_KEY, false));
+    setMainOnly(loadJSON<boolean>(MAIN_ONLY_KEY, true));
     setSortDir(loadJSON<SortDir>(SORT_KEY, 'az'));
   }, []);
 

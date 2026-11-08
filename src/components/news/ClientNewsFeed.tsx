@@ -372,7 +372,7 @@ export function ClientNewsFeed() {
   function getReplacements(failedIndices: number[], currentSlots: SlotData[], availableSources: SourceFeed[]): Map<number, SourceFeed> {
     const usedKeys = new Set(currentSlots.filter(s => s.source).map(s => s.source!.sourceKey));
     const usedOutlets = new Set(currentSlots.filter(s => s.source).map(s => outletKey(s.source!)));
-    const mainOnly = loadJSON<boolean>('news-main-only', false);
+    const mainOnly = loadJSON<boolean>('news-main-only', true);
 
     /*
      * Con «Solo principales por sitio» el reemplazo también tiene que ser el
@@ -526,7 +526,7 @@ export function ClientNewsFeed() {
       const usedOutlets = new Set(slots.filter(s => s.source).map(s => outletKey(s.source!)));
       // Mismo contrato que el selector: con «Solo principales por sitio» un
       // bloque nuevo tampoco puede arrancar en un subfeed.
-      const mainOnly = loadJSON<boolean>('news-main-only', false);
+      const mainOnly = loadJSON<boolean>('news-main-only', true);
       const pool = mainOnly ? orderByOutlet(flagshipFeeds(allSources), 'az') : allSources;
       newSource =
         pool.find(s => !seen.has(s.sourceKey) && !(mainOnly && usedOutlets.has(outletKey(s)))) ??

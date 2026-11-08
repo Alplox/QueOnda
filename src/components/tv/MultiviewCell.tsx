@@ -3,9 +3,6 @@ import type { Channel } from '../../types';
 import { play } from '@/lib/sound';
 import { SignalSelect } from './SignalSelect';
 
-const SIGNAL_LABEL: Record<string, string> = {
-  m3u8: 'HD', iframe: 'WEB', youtube: 'YT Live', 'youtube-vod': 'YT VOD', twitch: 'Twitch',
-};
 
 function isPlayable(type: string) {
   return type === 'm3u8' || type === 'iframe' || type === 'twitch' || type.startsWith('youtube');
@@ -197,30 +194,15 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
             <div className="flex w-full min-w-0 flex-col items-center gap-1 text-center">
               <p className="w-full truncate text-[11px] text-white">Señal no disponible</p>
               {hasMultipleSignals && (
-                <>
-                  {/* Celdas anchas: fila de chips (con wrap, nunca se sale).
-                      Celdas chicas: `SignalSelect`, porque la fila no cabe y el
-                      mensaje quedaba recortado por el `overflow-hidden` de la card. */}
-                  <div className="hidden @min-[230px]:flex max-w-full flex-wrap items-center justify-center gap-1">
-                    {signals.map((s, i) => (
-                      <button key={i} onClick={(e) => { e.stopPropagation(); play('interaction.tap'); onSignalChange(i); }}
-                        className={`text-[8px] px-1.5 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
-                          i === signalIndex ? 'bg-primary text-primary-content' : 'bg-white/15 text-white/60 hover:bg-white/25'
-                        }`}>
-                        {SIGNAL_LABEL[s.type] ?? s.type}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex @min-[230px]:hidden items-center gap-1">
-                    <span className="text-[9px] text-white/70">Señal</span>
-                    <SignalSelect
-                      signals={signals}
-                      signalIndex={signalIndex}
-                      onChange={onSignalChange}
-                      className="bg-white/15 text-white border-white/15"
-                    />
-                  </div>
-                </>
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-white/70">Señal</span>
+                  <SignalSelect
+                    signals={signals}
+                    signalIndex={signalIndex}
+                    onChange={onSignalChange}
+                    className="bg-white/15 text-white border-white/15"
+                  />
+                </div>
               )}
             </div>
           </div>

@@ -790,9 +790,9 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
               {current ? (
                 <>
                 {error && (
-                  <div className="mx-4 md:mx-6 mb-3 w-full flex items-start gap-2 bg-error/10 border border-error/20 rounded-xl px-3 py-2 animate-[radioIn_150ms_ease-out] motion-reduce:animate-none">
+                  <div className="mx-4 md:mx-6 mb-3 self-stretch min-w-0 max-w-full box-border flex items-start gap-2 bg-error/10 border border-error/20 rounded-xl px-3 py-2 animate-[radioIn_150ms_ease-out] motion-reduce:animate-none">
                     <span className="text-error shrink-0 mt-0.5 text-xs">⚠</span>
-                    <p className="text-[11px] text-error leading-snug flex-1">{error}</p>
+                    <p className="text-[11px] text-error leading-snug flex-1 min-w-0 break-words">{error}</p>
                     <button
                       onClick={() => { play('interaction.subtle'); setError(null); }}
                       aria-label="Cerrar error"

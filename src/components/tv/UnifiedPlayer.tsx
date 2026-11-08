@@ -35,13 +35,7 @@ function formatTime(s: number): string {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-const SIGNAL_LABEL: Record<string, string> = {
-  m3u8: 'HD',
-  iframe: 'WEB',
-  youtube: 'YT Live',
-  'youtube-vod': 'YT VOD',
-  twitch: 'Twitch',
-};
+
 
 function isPlayable(type: string) {
   return type === 'm3u8' || type === 'iframe' || type === 'twitch' || type.startsWith('youtube');
@@ -521,19 +515,14 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                 </div>
               </div>
               {hasMultipleSignals && (
-                <div className="flex flex-wrap items-center gap-1.5 px-2 sm:px-3 pb-2 pt-1.5 border-t border-base-300/50">
-                  <span className="text-[10px] font-medium text-base-content/70 self-center">Señales</span>
-                  {signals.map((s, i) => (
-                    <button key={i} onClick={() => { play('interaction.tap'); onSignalChange(i); }}
-                      className={`text-[8px] px-1.5 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
-                        i === signalIndex
-                          ? 'bg-primary text-primary-content'
-                          : 'bg-base-300/80 text-base-content/70 hover:text-base-content hover:bg-base-200'
-                      }`}
-                      title={`Cambiar a señal ${SIGNAL_LABEL[s.type] ?? s.type}`}>
-                      {SIGNAL_LABEL[s.type] ?? s.type}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-1.5 px-2 sm:px-3 pb-2 pt-1.5 border-t border-base-300/50">
+                  <span className="text-[10px] font-medium text-base-content/70 self-center">Señal</span>
+                  <SignalSelect
+                    signals={signals}
+                    signalIndex={signalIndex}
+                    onChange={onSignalChange}
+                    className="bg-base-200 text-base-content border-base-300 [color-scheme:light] dark:[color-scheme:dark]"
+                  />
                 </div>
               )}
             </>
@@ -596,30 +585,15 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
               <div className="flex w-full min-w-0 flex-col items-center gap-1.5 text-center">
                 <p className="w-full truncate text-xs text-white">Señal no disponible</p>
                 {hasMultipleSignals && (
-                  <>
-                    {/* Visor ancho (inline/escritorio): chips con wrap. Visor chico
-                        (miniplayer, móvil angosto): `SignalSelect`, que sí cabe y
-                        no deja el mensaje recortado. */}
-                    <div className="hidden @min-[260px]:flex max-w-full flex-wrap items-center justify-center gap-1.5">
-                      {signals.map((s, i) => (
-                        <button key={i} onClick={() => { play('interaction.tap'); onSignalChange(i); }}
-                          className={`text-[11px] px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
-                            i === signalIndex ? 'bg-primary text-primary-content' : 'bg-base-300/80 text-base-content/70 hover:bg-base-200'
-                          }`}>
-                          {SIGNAL_LABEL[s.type] ?? s.type}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex @min-[260px]:hidden items-center gap-1">
-                      <span className="text-[10px] text-white/70">Señal</span>
-                      <SignalSelect
-                        signals={signals}
-                        signalIndex={signalIndex}
-                        onChange={onSignalChange}
-                        className="bg-neutral/80 text-white border-white/15"
-                      />
-                    </div>
-                  </>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-white/70">Señal</span>
+                    <SignalSelect
+                      signals={signals}
+                      signalIndex={signalIndex}
+                      onChange={onSignalChange}
+                      className="bg-neutral/80 text-white border-white/15"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -667,33 +641,18 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
           )}
 
           {/* Signal selector (pip mode, hidden during error to avoid duplication with error overlay).
-              Con embeds sube bajo la cabecera y va como `select` compacto: el pie
-              lo ocupa la barra del player ajeno (YouTube) y la fila de chips le
-              robaba clics al progreso/mute. */}
+              Dropdown compacto unificado para todos los tipos: con >10 señales la fila de
+              chips rompe el layout, y en embeds el pie lo ocupa la barra del player ajeno. */}
           {mode === 'pip' && hasMultipleSignals && !error && (
-            isEmbedType ? (
-              <div className="absolute bottom-1 right-1 z-10 flex items-center gap-1 pointer-events-none">
-                <span className="text-[9px] text-white/70 pointer-events-none">Señales</span>
-                <SignalSelect
-                  signals={signals}
-                  signalIndex={signalIndex}
-                  onChange={onSignalChange}
-                  className="bg-neutral/80 text-white border-white/15 pointer-events-auto"
-                />
-              </div>
-            ) : (
-              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-neutral/70 rounded-lg px-1.5 py-0.5">
-                {signals.map((s, i) => (
-                  <button key={i} onClick={(e) => { e.stopPropagation(); play('interaction.tap'); onSignalChange(i); }}
-                    aria-pressed={i === signalIndex}
-                    className={`text-[7px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
-                      i === signalIndex ? 'bg-primary text-primary-content' : 'text-white/60 hover:text-white hover:bg-white/15'
-                    }`}>
-                    {SIGNAL_LABEL[s.type] ?? s.type}
-                  </button>
-                ))}
-              </div>
-            )
+            <div className="absolute bottom-1 right-1 z-10 flex items-center gap-1 pointer-events-none">
+              <span className="text-[9px] text-white/70 pointer-events-none">Señal</span>
+              <SignalSelect
+                signals={signals}
+                signalIndex={signalIndex}
+                onChange={onSignalChange}
+                className="bg-neutral/80 text-white border-white/15 pointer-events-auto"
+              />
+            </div>
           )}
 
           {/* Controls overlay — inline mode only (oculto en error: la celda muestra

@@ -68,7 +68,7 @@ export const SlotCard = memo(function SlotCard({
   const [readerArticle, setReaderArticle] = useState<Article | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
-  const [mainOnly, setMainOnly] = useState(false);
+  const [mainOnly, setMainOnly] = useState(true);
   const [sortDir, setSortDir] = useState<SortDir>('az');
   const [showGradient, setShowGradient] = useState(false);
   const [portalPos, setPortalPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
@@ -132,7 +132,7 @@ export const SlotCard = memo(function SlotCard({
     setDropdownOpen(true);
     setSearchQuery('');
     setRegionFilter(null);
-    setMainOnly(loadJSON<boolean>(MAIN_ONLY_KEY, false));
+    setMainOnly(loadJSON<boolean>(MAIN_ONLY_KEY, true));
     setSortDir(loadJSON<SortDir>(SORT_KEY, 'az'));
   }
 
