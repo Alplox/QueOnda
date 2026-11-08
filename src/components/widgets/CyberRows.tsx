@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import type { CyberAlert, CyberSeverity, KevEntry } from '@/lib/cyber';
 
 /** "hace 5 min" para fechas ISO, sin dependencias. */
@@ -89,7 +90,7 @@ function ReadIcon() {
  * El modal es la opción, no la puerta: el clic normal sigue abriendo el sitio
  * original en otra pestaña y este botón es para quien prefiere no salir.
  */
-function ReaderButton({ title, onClick }: { title: string; onClick: () => void }) {
+function ReaderButton({ title, onClick }: { title: string; onClick: (e: MouseEvent<HTMLButtonElement>) => void }) {
   return (
     <button
       type="button"
@@ -103,7 +104,7 @@ function ReaderButton({ title, onClick }: { title: string; onClick: () => void }
   );
 }
 
-export function CyberAlertRow({ alert, onOpen }: { alert: CyberAlert; onOpen?: (item: ReadableItem) => void }) {
+export function CyberAlertRow({ alert, onOpen }: { alert: CyberAlert; onOpen?: (item: ReadableItem, originRect: DOMRect) => void }) {
   return (
     <div className={`${ROW_SHELL} pr-1`}>
       <a href={alert.url} target="_blank" rel="noopener noreferrer" className={ROW_LINK}>
@@ -118,7 +119,7 @@ export function CyberAlertRow({ alert, onOpen }: { alert: CyberAlert; onOpen?: (
       {onOpen && (
         <ReaderButton
           title={alert.title}
-          onClick={() => onOpen({ title: alert.title, url: alert.url, published: alert.published, source: 'CSIRT Nacional' })}
+          onClick={(e) => onOpen({ title: alert.title, url: alert.url, published: alert.published, source: 'CSIRT Nacional' }, e.currentTarget.getBoundingClientRect())}
         />
       )}
     </div>

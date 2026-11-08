@@ -38,7 +38,7 @@ function formatPubDate(pubDate: string): string {
 }
 
 export function NewsClusterCard({ cluster, openDirect }: Props) {
-  const [readerArticle, setReaderArticle] = useState<Article | null>(null);
+  const [readerArticle, setReaderArticle] = useState<{ article: Article; originRect: DOMRect } | null>(null);
   const [openSource, setOpenSource] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -52,7 +52,7 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
     play('interaction.tap');
     if (!openDirect) {
       e.preventDefault();
-      setReaderArticle(mainArticle);
+      setReaderArticle({ article: mainArticle, originRect: e.currentTarget.getBoundingClientRect() });
     }
   }
 
@@ -60,7 +60,7 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
     play('interaction.tap');
     if (!openDirect) {
       e.preventDefault();
-      setReaderArticle(article);
+      setReaderArticle({ article, originRect: e.currentTarget.getBoundingClientRect() });
     }
   }
 
@@ -153,7 +153,7 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
               </h3>
             </a>
             <button
-              onClick={() => setReaderArticle(mainArticle)}
+              onClick={(e) => setReaderArticle({ article: mainArticle, originRect: e.currentTarget.getBoundingClientRect() })}
               className="shrink-0 p-1.5 mt-0.5 rounded-md hover:bg-base-300 active:scale-95 text-base-content/70 hover:text-base-content transition-[color,background-color,transform] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
               title="Leer en ventana flotante"
               aria-label={`Leer el titular de ${mainArticle.source} en modal`}
@@ -222,7 +222,7 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
                                 {article.title}
                               </a>
                               <button
-                                onClick={() => setReaderArticle(article)}
+                                onClick={(e) => setReaderArticle({ article, originRect: e.currentTarget.getBoundingClientRect() })}
                                 className="shrink-0 p-1.5 rounded-md hover:bg-base-200 active:scale-95 text-base-content/70 hover:text-base-content transition-[color,background-color,transform] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
                                 title="Leer en ventana flotante"
                                 aria-label={`Leer artículo de ${source} en modal`}
@@ -245,7 +245,7 @@ export function NewsClusterCard({ cluster, openDirect }: Props) {
         </div>
       </div>
       {readerArticle && (
-        <ArticleReader url={readerArticle.link} initialArticle={readerArticle} onClose={() => setReaderArticle(null)} />
+        <ArticleReader url={readerArticle.article.link} initialArticle={readerArticle.article} originRect={readerArticle.originRect} onClose={() => setReaderArticle(null)} />
       )}
     </>
   );

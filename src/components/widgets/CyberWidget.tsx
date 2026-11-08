@@ -42,7 +42,7 @@ export function CyberWidget() {
   const [criticalOnly, setCriticalOnly] = useState(false);
   const [ransomwareOnly, setRansomwareOnly] = useState(false);
   const [kevLimit, setKevLimit] = useState(KEV_BATCH);
-  const [reader, setReader] = useState<Article | null>(null);
+  const [reader, setReader] = useState<{ article: Article; originRect: DOMRect } | null>(null);
   const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ alertas: null, kev: null });
 
   const load = useCallback(async () => {
@@ -158,15 +158,18 @@ export function CyberWidget() {
   // Las alertas del CSIRT son HTML normal, así que el lector de artículos que
   // ya usa Noticias las puede extraer igual. NVD queda fuera: no es un
   // artículo, es una ficha.
-  const openReader = useCallback((item: ReadableItem) => {
+  const openReader = useCallback((item: ReadableItem, originRect: DOMRect) => {
     play('interaction.tap');
     setReader({
-      title: item.title,
-      link: item.url,
-      description: item.description ?? '',
-      pubDate: item.published ?? new Date().toISOString(),
-      source: item.source ?? 'Ciberseguridad',
-      sourceKey: 'cyber',
+      article: {
+        title: item.title,
+        link: item.url,
+        description: item.description ?? '',
+        pubDate: item.published ?? new Date().toISOString(),
+        source: item.source ?? 'Ciberseguridad',
+        sourceKey: 'cyber',
+      },
+      originRect,
     });
   }, []);
 
@@ -458,7 +461,7 @@ export function CyberWidget() {
       <SectionSources section="cyber" />
 
       {reader && (
-        <ArticleReader url={reader.link} initialArticle={reader} onClose={() => setReader(null)} />
+        <ArticleReader url={reader.article.link} initialArticle={reader.article} originRect={reader.originRect} onClose={() => setReader(null)} />
       )}
     </>
   );

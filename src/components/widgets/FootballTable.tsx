@@ -196,7 +196,7 @@ export function FootballTable() {
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('standings');
-  const [readerUrl, setReaderUrl] = useState<string | null>(null);
+  const [readerUrl, setReaderUrl] = useState<{ url: string; originRect: DOMRect } | null>(null);
   const [standingsFetchedAt, setStandingsFetchedAt] = useState<number | null>(null);
   const [matchesFetchedAt, setMatchesFetchedAt] = useState<number | null>(null);
   const [articlesFetchedAt, setArticlesFetchedAt] = useState<number | null>(null);
@@ -692,7 +692,7 @@ export function FootballTable() {
                   )}
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderUrl(article.link); }}
+                  onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderUrl({ url: article.link, originRect: e.currentTarget.getBoundingClientRect() }); }}
                   className="shrink-0 p-1 mr-2 rounded-md hover:bg-base-300 text-base-content/70 hover:text-base-content/80 transition-colors cursor-pointer"
                   title="Leer en ventana flotante"
                   aria-label="Leer en modal"
@@ -712,7 +712,7 @@ export function FootballTable() {
     </div>
     <SectionSources section="football" />
     {readerUrl && (
-      <ArticleReader url={readerUrl} onClose={() => setReaderUrl(null)} />
+      <ArticleReader url={readerUrl.url} originRect={readerUrl.originRect} onClose={() => setReaderUrl(null)} />
     )}
     </>);
 }

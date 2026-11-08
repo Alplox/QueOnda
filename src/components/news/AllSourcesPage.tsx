@@ -103,7 +103,7 @@ export function AllSourcesPage() {
   const [fetchProgress, setFetchProgress] = useState({ loaded: 0, total: 0, failed: 0 });
   const [clusteringMod, setClusteringMod] = useState<{ clusterArticles: (a: Article[]) => NewsCluster[]; extractTrendingFromArticles: (a: Article[]) => string[] } | null>(null);
   const [cachedTimestamp, setCachedTimestamp] = useState<string | null>(null);
-  const [readerArticle, setReaderArticle] = useState<Article | null>(null);
+  const [readerArticle, setReaderArticle] = useState<{ article: Article; originRect: DOMRect } | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [resultsSearch, setResultsSearch] = useState('');
   const [showAddSource, setShowAddSource] = useState(false);
@@ -879,7 +879,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
                   key={sr.name}
                   sourceResult={sr}
                   articles={searchedBySource.get(sr.name) ?? []}
-                  onOpenArticle={setReaderArticle}
+                  onOpenArticle={(article, originRect) => setReaderArticle({ article, originRect })}
                   onRemove={handleRemoveSource}
                   hasActiveFilter={hasActiveFilter}
                 />
@@ -988,7 +988,7 @@ showMap ? 'bg-primary text-primary-content' : 'bg-base-content/10 text-base-cont
       </div>
 
       {readerArticle && (
-        <ArticleReader url={readerArticle.link} initialArticle={readerArticle} onClose={() => setReaderArticle(null)} />
+        <ArticleReader url={readerArticle.article.link} initialArticle={readerArticle.article} originRect={readerArticle.originRect} onClose={() => setReaderArticle(null)} />
       )}
     </div>
   );
@@ -1080,7 +1080,7 @@ function FailedSourcesPanel({ failedSources, allSources, retryingSources, expand
 function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActiveFilter }: {
   sourceResult: SourceResult;
   articles: Article[];
-  onOpenArticle: (a: Article) => void;
+  onOpenArticle: (a: Article, originRect: DOMRect) => void;
   onRemove: (name: string) => void;
   hasActiveFilter: boolean;
 }) {
@@ -1121,7 +1121,7 @@ function SourceCard({ sourceResult, articles, onOpenArticle, onRemove, hasActive
                     </p>
                   </a>
                   <button
-                    onClick={(e) => { play('interaction.tap'); e.stopPropagation(); onOpenArticle(a); }}
+                    onClick={(e) => { play('interaction.tap'); e.stopPropagation(); onOpenArticle(a, e.currentTarget.getBoundingClientRect()); }}
                     className="shrink-0 p-1 mr-1 rounded-md hover:bg-base-300 text-base-content/70 hover:text-base-content/80 transition-colors cursor-pointer"
                     title="Leer en ventana flotante"
                     aria-label="Leer en modal"

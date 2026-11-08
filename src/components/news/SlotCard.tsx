@@ -65,7 +65,7 @@ export const SlotCard = memo(function SlotCard({
 }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [closingDropdown, setClosingDropdown] = useState(false);
-  const [readerArticle, setReaderArticle] = useState<Article | null>(null);
+  const [readerArticle, setReaderArticle] = useState<{ article: Article; originRect: DOMRect } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
   const [mainOnly, setMainOnly] = useState(true);
@@ -338,7 +338,7 @@ export const SlotCard = memo(function SlotCard({
           document.body
         )}
         {readerArticle && (
-          <ArticleReader url={readerArticle.link} initialArticle={readerArticle} onClose={() => setReaderArticle(null)} />
+          <ArticleReader url={readerArticle.article.link} initialArticle={readerArticle.article} originRect={readerArticle.originRect} onClose={() => setReaderArticle(null)} />
         )}
       </>
     );
@@ -472,7 +472,7 @@ export const SlotCard = memo(function SlotCard({
                       </p>
                     </a>
                     <button
-                      onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderArticle(article); }}
+                      onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setReaderArticle({ article, originRect: e.currentTarget.getBoundingClientRect() }); }}
                       className="shrink-0 inline-flex items-center justify-center p-1.5 mr-1 rounded-md hover:bg-base-300 text-base-content/70 hover:text-base-content/80 transition-colors cursor-pointer"
                       title="Leer en ventana flotante"
                       aria-label="Leer en modal"
@@ -580,7 +580,7 @@ export const SlotCard = memo(function SlotCard({
         document.body
       )}
       {readerArticle && (
-        <ArticleReader url={readerArticle.link} initialArticle={readerArticle} onClose={() => setReaderArticle(null)} />
+        <ArticleReader url={readerArticle.article.link} initialArticle={readerArticle.article} originRect={readerArticle.originRect} onClose={() => setReaderArticle(null)} />
       )}
     </>
   );
