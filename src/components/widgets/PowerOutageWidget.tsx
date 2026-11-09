@@ -260,7 +260,11 @@ export function PowerOutageWidget({
       setError(false);
       try { localStorage.setItem(FORCE_AT_KEY, String(Date.now())); } catch {}
       setCooldownLeft(Math.ceil(FORCE_COOLDOWN_MS / 1000));
-      showForceStatus(true, `Datos actualizados a las ${new Date(d.fetchedAt ?? Date.now()).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`);
+      const dStale = !!d.stale || (d.updatedAt != null && Date.now() - d.updatedAt > STALE_MS);
+      const at = new Date(d.fetchedAt ?? Date.now()).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+      showForceStatus(!dStale, dStale
+        ? `Actualizado a las ${at} — la SEC aún no publica datos nuevos.`
+        : `Datos actualizados a las ${at}`);
     } else if (retryAfter != null) {
       try { localStorage.setItem(FORCE_AT_KEY, String(Date.now())); } catch {}
       setCooldownLeft(retryAfter);
@@ -305,6 +309,16 @@ export function PowerOutageWidget({
   }, [refresh, adopt]);
 
   useEffect(() => subscribeAutoRefresh(refresh), [refresh]);
+
+  const dataIsStale = !!data?.stale || (data?.updatedAt != null && Date.now() - data.updatedAt > STALE_MS);
+  const staleAutoRef = useRef(false);
+  useEffect(() => {
+    if (dataIsStale && !staleAutoRef.current) {
+      staleAutoRef.current = true;
+      void forceRefresh();
+    }
+    if (!dataIsStale) staleAutoRef.current = false;
+  }, [dataIsStale, forceRefresh]);
 
   // Carga diferida (sin React.lazy): Chart.js es import estático en el módulo
   // del gráfico y Leaflet/MapLibre son pesados; separarlos en chunks evita el
@@ -566,7 +580,7 @@ export function PowerOutageWidget({
     // ancho fijo —nada de `auto`— para que el riel de la barra termine siempre en
     // la misma x y los números de cada fila arranquen/terminen alineados.
     : 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_3rem_1.5rem] sm:grid-cols-[8rem_minmax(0,1fr)_4rem_5.25rem_3.5rem_1.5rem]';
-  const isStale = !!data.stale || (data.updatedAt != null && Date.now() - data.updatedAt > STALE_MS);
+  const isStale = dataIsStale;
   const isWarn = !isStale && data.updatedAt != null && Date.now() - data.updatedAt > WARN_MS;
   const absTime = new Date(data.updatedAt).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const rel = fmtRelative(data.updatedAt);
@@ -578,81 +592,70 @@ export function PowerOutageWidget({
   // what the tint means without a detached legend.
   const nextHour = new Date(data.updatedAt + 3600000).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 
+  const refreshTitle = forcing
+    ? 'Actualizando…'
+    : cooldownLeft > 0
+      ? `Reintenta en ${cooldownLeft}s`
+      : 'Forzar actualización (SEC, máx. 1 vez cada 2 min)';
+  const infoTip = [
+    `Reporte SEC: ${absTime}.`,
+    `Actualizado ${relFetch}.`,
+    isStale ? `Desactualizado (sin actualizar ${rel}).` : isWarn ? `Esperando las ${nextHour}.` : 'Al día.',
+    forceStatus?.msg ? forceStatus.msg : null,
+    'La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada.',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className="mt-4 rounded-xl p-4 border shadow-sm border-base-300 bg-base-200">
+    <div className={`relative mt-4 rounded-xl p-4 border shadow-sm border-base-300 bg-base-200 ${
+      showBreakdown ? 'min-h-[1210px] sm:min-h-[918px]' : 'min-h-[306px] sm:min-h-[277px]'
+    }`}>
       <div className="flex items-start justify-between gap-2 pb-1.5 mb-1.5 border-b border-base-300">
         <p className="em-subhead !mb-0 !pb-0 !border-b-0">
           <span className="inline-flex items-center gap-1.5"><svg className="h-5 w-5" width="1em" height="1em" viewBox="0 0 512 512" aria-hidden="true"><title>power-supply</title><path fill="currentColor" fillRule="evenodd" d="M213.333 128V42.667h-42.666V128h-64v128c0 67.648 44.981 124.79 106.665 143.149l.001 70.184h85.333l.023-70.19C360.362 380.777 405.333 323.64 405.333 256V128h-64V42.667h-42.667V128zm64 106.667l25.817-64h-78.507L202.667 256h42.666l-32 106.667l117.333-128z" clipRule="evenodd"/></svg>Clientes sin suministro eléctrico</span>
         </p>
-      {isStale && (
-        <button
-          type="button"
-          onClick={forceRefresh}
-          disabled={forcing || cooldownLeft > 0}
-          title={cooldownLeft > 0 ? `Reintenta en ${cooldownLeft}s` : 'Pide datos frescos directo a la SEC (máx. 1 vez cada 2 min)'}
-          aria-live="off"
-          className="shrink-0 mt-0.5 px-2.5 py-1 min-w-[20ch] text-center rounded-md bg-base-100 border text-[11px] font-semibold hover:bg-base-200 transition-colors cursor-pointer active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ borderColor: `color-mix(in srgb, var(--color-warning) ${Math.round(Math.min(1, ((Date.now() - data.updatedAt) / 60000) / 15) * 100)}%, transparent)` }}
-        >
-          {forcing ? 'Actualizando…' : cooldownLeft > 0 ? (<>Reintentar en <span className="inline-block w-[5ch] text-right tabular-nums">{cooldownLeft}s</span></>) : 'Forzar actualización'}
-        </button>
-      )}
-      </div>
-      <div className="mt-0.5 flex items-center gap-1.5">
-        <p className={`text-[11px] ${isStale ? 'text-warning font-semibold' : 'text-base-content/70'}`}>
-          {absTime} · actualizado {relFetch}
-          {isStale ? ' · desactualizado' : isWarn ? ` · esperando las ${nextHour}` : ''}
-        </p>
-        <span className="group relative inline-flex">
+        <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+          <span className="text-[11px] text-base-content/70 tabular-nums">{absTime}</span>
+          <span className="group relative inline-flex">
+            <button
+              type="button"
+              aria-label={infoTip}
+              className="inline-flex h-4 w-4 items-center justify-center text-base-content/70 hover:text-base-content transition-colors cursor-help focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <svg className="h-4 w-4" viewBox="-0.0 -0.0 233.0 233.0" fill="currentColor" aria-hidden="true">
+                <g transform="translate(0.000000,233.000000) scale(0.100000,-0.100000)">
+                  <path d="M990 2139 c-93 -14 -246 -69 -336 -120 -97 -55 -222 -179 -301 -297 -152 -226 -205 -509 -148 -784 44 -215 197 -442 388 -578 77 -55 226 -125 323 -152 116 -32 381 -32 507 0 343 86 602 356 698 728 34 130 32 308 -5 457 -51 211 -109 319 -245 460 -123 127 -295 226 -465 268 -95 23 -317 33 -416 18z m248 -325 c74 -37 106 -93 100 -173 -11 -160 -194 -234 -315 -128 -99 87 -81 238 36 299 67 35 112 35 179 2z m47 -499 l25 -24 0 -281 c0 -267 1 -281 20 -300 11 -11 29 -20 41 -20 35 0 58 -19 68 -56 13 -47 -7 -100 -44 -114 -37 -14 -438 -13 -468 1 -65 29 -60 135 7 159 17 6 42 17 56 24 l25 12 3 197 c1 109 -2 205 -6 214 -5 8 -31 23 -58 32 -58 19 -80 53 -69 107 4 25 16 41 38 54 28 18 51 20 185 20 149 0 154 -1 177 -25z" />
+                </g>
+              </svg>
+            </button>
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute right-0 top-full z-[800] mt-1.5 hidden w-72 rounded-lg border border-base-300 bg-base-100 p-2.5 text-left text-[11px] leading-snug text-base-content shadow-lg group-hover:block group-focus-within:block"
+            >
+              <span className="block"><b>Reporte SEC:</b> {absTime}</span>
+              <span className="block mt-1"><b>Actualizado:</b> {relFetch}</span>
+              <span className={`block mt-1 ${isStale ? 'text-warning' : ''}`}>
+                {isStale ? `Desactualizado — sin actualizar ${rel}.` : isWarn ? `Esperando las ${nextHour}.` : 'Al día.'}
+              </span>
+              {forceStatus?.msg && <span className={`block mt-1 ${forceStatus.ok ? 'text-success' : 'text-error'}`}>{forceStatus.msg}</span>}
+              <span className="block mt-1 text-base-content/70">La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada.</span>
+            </span>
+          </span>
           <button
             type="button"
-            aria-label="La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada."
-            className="inline-flex h-4 w-4 items-center justify-center text-base-content/70 hover:text-base-content transition-colors cursor-help"
+            onClick={forceRefresh}
+            disabled={forcing || cooldownLeft > 0}
+            title={refreshTitle}
+            aria-label={refreshTitle}
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <svg className="h-4 w-4" viewBox="-0.0 -0.0 233.0 233.0" fill="currentColor" aria-hidden="true">
-              <g transform="translate(0.000000,233.000000) scale(0.100000,-0.100000)">
-                <path d="M990 2139 c-93 -14 -246 -69 -336 -120 -97 -55 -222 -179 -301 -297 -152 -226 -205 -509 -148 -784 44 -215 197 -442 388 -578 77 -55 226 -125 323 -152 116 -32 381 -32 507 0 343 86 602 356 698 728 34 130 32 308 -5 457 -51 211 -109 319 -245 460 -123 127 -295 226 -465 268 -95 23 -317 33 -416 18z m248 -325 c74 -37 106 -93 100 -173 -11 -160 -194 -234 -315 -128 -99 87 -81 238 36 299 67 35 112 35 179 2z m47 -499 l25 -24 0 -281 c0 -267 1 -281 20 -300 11 -11 29 -20 41 -20 35 0 58 -19 68 -56 13 -47 -7 -100 -44 -114 -37 -14 -438 -13 -468 1 -65 29 -60 135 7 159 17 6 42 17 56 24 l25 12 3 197 c1 109 -2 205 -6 214 -5 8 -31 23 -58 32 -58 19 -80 53 -69 107 4 25 16 41 38 54 28 18 51 20 185 20 149 0 154 -1 177 -25z" />
-              </g>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={forcing ? 'animate-spin' : ''}>
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
             </svg>
           </button>
-          <span className="pointer-events-none absolute left-1/2 top-full z-[800] mt-1.5 -translate-x-1/2 max-w-[260px] whitespace-normal rounded-lg border border-base-300 bg-base-100 px-2.5 py-1.5 text-center text-[11px] leading-snug text-base-content shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-            <span className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-base-300 bg-base-100" aria-hidden="true" />
-            La SEC publica por hora, pero puede corregir los datos de esa hora sin cambiar la hora publicada.
-          </span>
-        </span>
+        </div>
       </div>
-      {forceStatus && (
-        <p role="status" aria-live="polite" className={`mt-1 text-[11px] font-medium ${forceStatus.ok ? 'text-success' : 'text-error'}`}>
-          {forceStatus.msg}
-        </p>
-      )}
 
-      {isStale && (
-        <div className="mt-2 rounded-lg px-3 py-2 text-xs bg-warning/15 border border-warning/30 text-warning" role="status" aria-live="polite">
-          <span className="leading-snug">
-            {`Datos desactualizados — SEC sin actualizar ${rel} (último reporte ${absTime}). Este número puede no reflejar cortes actuales.`}
-          </span>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-2 rounded-lg px-3 py-2 text-[11px] bg-warning/10 border border-warning/25 text-warning flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="leading-snug">
-            {isStale
-              ? 'No se pudo actualizar — los datos siguen sin refrescarse.'
-              : 'No se pudo actualizar — mostrando último dato disponible.'}
-          </span>
-          <RetryHint retrying={retrying} retryIn={retryIn} />
-          <button
-            type="button"
-            onClick={retryNow}
-            disabled={retrying}
-            className="underline underline-offset-2 hover:text-base-content transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {retrying ? 'Reintentando…' : 'Reintentar ahora'}
-          </button>
-        </div>
-      )}
 
       <div className="flex items-baseline gap-3 mt-2">
         <span className="text-3xl font-bold text-base-content tabular-nums">{miles(data.affected)}</span>
@@ -961,6 +964,71 @@ export function PowerOutageWidget({
 
       <div className="mt-2 flex flex-wrap items-end justify-end gap-x-3 gap-y-1 text-[11px] text-base-content/70">
         <SectionSources section="power" inline />
+      </div>
+
+      <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${(forceStatus || isStale || error) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className="overflow-hidden min-h-0" aria-live="polite">
+          <div className="flex flex-col mt-3 border-t border-base-300/70 pt-2">
+            {error ? (
+              <div role="status" className="rounded-lg bg-warning/10 px-2.5 py-1.5 text-[11px] text-warning flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="leading-snug flex-1 min-w-[12rem]">
+                  {isStale ? 'No se pudo actualizar — datos siguen desactualizados.' : 'No se pudo actualizar — mostrando último dato disponible.'}
+                </span>
+                <RetryHint retrying={retrying} retryIn={retryIn} />
+                <button
+                  type="button"
+                  onClick={retryNow}
+                  disabled={retrying}
+                  className="underline underline-offset-2 hover:text-base-content transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {retrying ? 'Reintentando…' : 'Reintentar ahora'}
+                </button>
+                {cooldownLeft > 0 && !forcing ? (
+                  <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center tabular-nums text-[11px] font-medium text-warning/80" aria-label={`Reintento disponible en ${cooldownLeft} segundos`} title={`Reintento disponible en ${cooldownLeft}s`}>{cooldownLeft}s</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={forceRefresh}
+                    disabled={forcing}
+                    title={refreshTitle}
+                    aria-label={refreshTitle}
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-warning hover:bg-warning/15 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={forcing ? 'animate-spin' : ''}>
+                      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ) : forceStatus ? (
+              <div role="status" className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug ${
+                forceStatus.msg.includes('aún no publica') ? 'bg-warning/10 text-warning' : forceStatus.ok ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+              }`}>
+                <span className="flex-1">{forceStatus.msg}</span>
+              </div>
+            ) : isStale ? (
+              <div role="status" className="flex items-center gap-2 rounded-lg bg-warning/10 px-2.5 py-1.5 text-[11px] leading-snug text-warning">
+                <span className="flex-1">{`Desactualizado — sin actualizar ${rel} (${absTime}). Puede no reflejar cortes actuales.`}</span>
+                {cooldownLeft > 0 && !forcing ? (
+                  <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center tabular-nums text-[11px] font-medium text-warning/80" aria-label={`Reintento disponible en ${cooldownLeft} segundos`} title={`Reintento disponible en ${cooldownLeft}s`}>{cooldownLeft}s</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={forceRefresh}
+                    disabled={forcing}
+                    title={refreshTitle}
+                    aria-label={refreshTitle}
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-warning hover:bg-warning/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={forcing ? 'animate-spin' : ''}>
+                      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );

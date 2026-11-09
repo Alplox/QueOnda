@@ -58,54 +58,59 @@ function readableTextOn(hex: string): string {
 function MetroGrid({ lines, source, updatedAt }: { lines: MetroLine[]; source: string | null; updatedAt?: number }) {
   if (lines.length === 0) {
     return (
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-base-content mb-3">Metro de Santiago</h3>
-        <div className="rounded-xl bg-base-200 border border-base-300 p-4">
-          <p className="text-xs text-base-content/70 text-center">
-            Información no disponible en este momento.{' '}
-            <a href="https://www.metro.cl/el-viaje/estado-red" target="_blank" rel="noopener noreferrer"
-              className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">
-              Ver en Metro.cl →
-            </a>
+      <div className="mb-4 rounded-xl bg-base-200 border border-base-300 p-4">
+        <div className="flex items-start justify-between gap-2 pb-1.5 mb-3 border-b border-base-300">
+          <p className="em-subhead !mb-0 !pb-0 !border-b-0">
+            <span>Metro de Santiago</span>
           </p>
+          {updatedAt && (
+            <span className="text-[11px] text-base-content/70 shrink-0 pt-0.5">
+              {new Date(updatedAt).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
         </div>
+        <p className="text-xs text-base-content/70 text-center">
+          Información no disponible en este momento.{' '}
+          <a href="https://www.metro.cl/el-viaje/estado-red" target="_blank" rel="noopener noreferrer"
+            className="text-base-content/70 hover:text-base-content underline underline-offset-2 transition-colors">
+            Ver en Metro.cl →
+          </a>
+        </p>
       </div>
     );
   }
   return (
-    <div className="mb-4">
-      <h3 className="text-sm font-semibold text-base-content mb-3">
-        Metro de Santiago
+    <div className="mb-4 rounded-xl bg-base-200 border border-base-300 p-4">
+      <div className="flex items-start justify-between gap-2 pb-1.5 mb-3 border-b border-base-300">
+        <p className="em-subhead !mb-0 !pb-0 !border-b-0">
+          <span>Metro de Santiago</span>
+        </p>
         {updatedAt && (
-          <span className="text-[11px] text-base-content/70 ml-2 font-normal">
-            {new Date(updatedAt).toLocaleString('es-CL', {
-              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-            })}
+          <span className="text-[11px] text-base-content/70 shrink-0 pt-0.5">
+            {new Date(updatedAt).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
           </span>
         )}
-      </h3>
-      <div className="rounded-xl bg-base-200 border border-base-300 p-4">
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-          {lines.map((line) => {
-            const status = (line.status || 'Normal').toLowerCase();
-            const colorClass = STATUS_COLORS[status] || 'text-base-content/70';
-            return (
-              <div key={line.name} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-300">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold [text-shadow:0_1px_2px_rgb(0_0_0/0.45)]"
-                  style={{ backgroundColor: line.color, color: readableTextOn(line.color) }}
-                >
-                  {line.name.replace('L', '')}
-                </div>
-                <span className={colorClass}>
-                  {line.status || 'Normal'}
-                </span>
-              </div>
-            );
-          })}
-        </div>
       </div>
-      <div className="mt-2 text-right text-[11px] text-base-content/70">
+      <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+        {lines.map((line) => {
+          const status = (line.status || 'Normal').toLowerCase();
+          const colorClass = STATUS_COLORS[status] || 'text-base-content/70';
+          return (
+            <div key={line.name} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-base-300">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold [text-shadow:0_1px_2px_rgb(0_0_0/0.45)]"
+                style={{ backgroundColor: line.color, color: readableTextOn(line.color) }}
+              >
+                {line.name.replace('L', '')}
+              </div>
+              <span className={colorClass}>
+                {line.status || 'Normal'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 text-right text-[11px] text-base-content/70">
         <SectionSources section="transport" only={['Metro.cl']} inline />
         {(source && source !== 'metro.cl') && (
           <>
@@ -693,7 +698,7 @@ export function TransportWidget() {
 
   return (
     <div className="space-y-6">
-      {data.metro && <MetroGrid lines={data.metro.lines} source={data.metro.source} updatedAt={data.updatedAt} />}
+      <MetroGrid lines={data.metro?.lines ?? []} source={data.metro?.source ?? null} updatedAt={data.updatedAt} />
       <StopCombobox />
       <div className="mt-2 text-right text-[11px] text-base-content/70">
         {cachedTimestamp && <p className="mb-0.5">Datos desde las {cachedTimestamp}</p>}

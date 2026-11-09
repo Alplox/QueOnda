@@ -384,7 +384,7 @@ export function FootballTable() {
         </div>
       )}
 
-      <div className="flex gap-1 px-4 pb-4 border-b border-base-300">
+      <div className="flex gap-1 p-4 border-b border-base-300">
         {tabs.map((t) => (
           <button
             key={t.key}

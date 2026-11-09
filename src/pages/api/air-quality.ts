@@ -132,15 +132,22 @@ export const GET: APIRoute = async () => {
   const data = await dedupeFetch('air-quality', async (): Promise<AirData> => {
     try {
       const res = await fetch(SINCA_URL, {
-        headers: { 'User-Agent': BROWSER_UA },
+        headers: {
+          'User-Agent': BROWSER_UA,
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'Referer': 'https://sinca.mma.gob.cl/',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         signal: AbortSignal.timeout(12000),
       });
       if (!res.ok) throw new Error(`sinca ${res.status}`);
       const stations = parseSinca(await res.json());
       if (stations.length === 0) throw new Error('sinca empty');
       return { source: 'sinca', updatedAt: Date.now(), stations };
-    } catch {
-      // ponytail: SINCA down → Open-Meteo CAMS model for reference cities; stale CDN cache covers the gap between both
+    } catch (err) {
+      // SINCA caído/bloqueado (p. ej. 403 WAF) → Open-Meteo CAMS (modelo, 18 ciudades de referencia).
+      // stale edge cache cubre la brecha entre ambos.
+      console.warn('[air-quality] SINCA falló, usando Open-Meteo:', err);
       return { source: 'open-meteo', updatedAt: Date.now(), stations: await fetchOpenMeteo() };
     }
   });

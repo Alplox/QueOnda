@@ -568,34 +568,50 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
         </div>
 
         <div className="relative mt-4 rounded-xl p-4 border border-base-300 shadow bg-base-200 animate-[fadeInUp_0.3s_ease-out]">
-          <p className="em-subhead">
-            <span className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5">
-                <svg className="h-5 w-5 scale-125" width="1em" height="1em" viewBox="0 0 30 30" aria-hidden="true">
-                  <title>earthquake</title>
-                  <path fill="currentColor" d="M5.25 15.3c0 .16.06.29.17.4s.25.16.4.16H8.8c.14 0 .27-.04.38-.13s.17-.2.2-.34l.9-5.27L11.9 23.3c.02.14.09.26.19.36c.1.09.22.14.36.14c.15 0 .28-.05.38-.14s.17-.21.2-.36l1.25-9.67l1.04 2.8c.04.11.1.2.2.27s.2.1.32.1h.05c.12-.01.23-.05.32-.13c.1-.08.16-.18.19-.31l1.53-6.86l.71 13.18c.01.14.06.27.15.37s.21.16.36.17c.14.01.27-.02.38-.1a.6.6 0 0 0 .22-.33l1.65-6.94h2.77c.16 0 .29-.05.4-.16s.17-.24.17-.4s-.06-.29-.17-.4a.56.56 0 0 0-.4-.17h-3.23c-.13 0-.25.04-.35.12s-.17.18-.2.31l-.83 3.54l-.72-13.36a.57.57 0 0 0-.16-.37a.5.5 0 0 0-.36-.16c-.14-.01-.27.02-.39.11s-.19.2-.22.34l-2 8.97l-1.16-3.16c-.04-.12-.12-.21-.24-.28s-.24-.1-.36-.08c-.13.01-.24.07-.33.16s-.15.21-.17.34l-.98 7.51l-1.53-12.56a.64.64 0 0 0-.19-.35a.6.6 0 0 0-.36-.15a.53.53 0 0 0-.38.12c-.11.09-.18.2-.2.35l-1.48 8.61H5.82c-.16 0-.29.06-.4.17s-.17.24-.17.4" />
-                </svg>
-                Sismos
+          <div className="flex items-center justify-between gap-2 pb-1.5 mb-1.5 border-b border-base-300">
+            <p className="em-subhead !mb-0 !pb-0 !border-b-0">
+              <span className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5">
+                  <svg className="h-5 w-5 scale-125" width="1em" height="1em" viewBox="0 0 30 30" aria-hidden="true">
+                    <title>earthquake</title>
+                    <path fill="currentColor" d="M5.25 15.3c0 .16.06.29.17.4s.25.16.4.16H8.8c.14 0 .27-.04.38-.13s.17-.2.2-.34l.9-5.27L11.9 23.3c.02.14.09.26.19.36c.1.09.22.14.36.14c.15 0 .28-.05.38-.14s.17-.21.2-.36l1.25-9.67l1.04 2.8c.04.11.1.2.2.27s.2.1.32.1h.05c.12-.01.23-.05.32-.13c.1-.08.16-.18.19-.31l1.53-6.86l.71 13.18c.01.14.06.27.15.37s.21.16.36.17c.14.01.27-.02.38-.1a.6.6 0 0 0 .22-.33l1.65-6.94h2.77c.16 0 .29-.05.4-.16s.17-.24.17-.4s-.06-.29-.17-.4a.56.56 0 0 0-.4-.17h-3.23c-.13 0-.25.04-.35.12s-.17.18-.2.31l-.83 3.54l-.72-13.36a.57.57 0 0 0-.16-.37a.5.5 0 0 0-.36-.16c-.14-.01-.27.02-.39.11s-.19.2-.22.34l-2 8.97l-1.16-3.16c-.04-.12-.12-.21-.24-.28s-.24-.1-.36-.08c-.13.01-.24.07-.33.16s-.15.21-.17.34l-.98 7.51l-1.53-12.56a.64.64 0 0 0-.19-.35a.6.6 0 0 0-.36-.15a.53.53 0 0 0-.38.12c-.11.09.18.2-.2.35l-1.48 8.61H5.82c-.16 0-.29.06-.4.17s-.17.24-.17.4" />
+                  </svg>
+                  Sismos
+                </span>
+                <span className="group relative inline-flex">
+                <button
+                  type="button"
+                  aria-label="Máximo 10 sismos más recientes"
+                  className="inline-flex h-5 w-5 items-center justify-center text-base-content/70 hover:text-base-content transition-colors cursor-help"
+                >
+                  <svg className="h-5 w-5" viewBox="-0.0 -0.0 233.0 233.0" fill="currentColor" aria-hidden="true">
+                    <g transform="translate(0.000000,233.000000) scale(0.100000,-0.100000)">
+                      <path d="M990 2139 c-93 -14 -246 -69 -336 -120 -97 -55 -222 -179 -301 -297 -152 -226 -205 -509 -148 -784 44 -215 197 -442 388 -578 77 -55 226 -125 323 -152 116 -32 381 -32 507 0 343 86 602 356 698 728 34 130 32 308 -5 457 -51 211 -109 319 -245 460 -123 127 -295 226 -465 268 -95 23 -317 33 -416 18z m248 -325 c74 -37 106 -93 100 -173 -11 -160 -194 -234 -315 -128 -99 87 -81 238 36 299 67 35 112 35 179 2z m47 -499 l25 -24 0 -281 c0 -267 1 -281 20 -300 11 -11 29 -20 41 -20 35 0 58 -19 68 -56 13 -47 -7 -100 -44 -114 -37 -14 -438 -13 -468 1 -65 29 -60 135 7 159 17 6 42 17 56 24 l25 12 3 197 c1 109 -2 205 -6 214 -5 8 -31 23 -58 32 -58 19 -80 53 -69 107 4 25 16 41 38 54 28 18 51 20 185 20 149 0 154 -1 177 -25z" />
+                    </g>
+                  </svg>
+                </button>
+                <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 max-w-[90vw] whitespace-nowrap rounded-lg border border-base-300 bg-base-100 px-2.5 py-1.5 text-left text-[11px] leading-snug text-base-content shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <span className="absolute -top-1.5 left-2 h-3 w-3 rotate-45 border-l border-t border-base-300 bg-base-100" aria-hidden="true" />
+                  Máximo 10 sismos más recientes
+                </span>
+                </span>
               </span>
-              <span className="group relative inline-flex">
-              <button
-                type="button"
-                aria-label="Máximo 10 sismos más recientes"
-                className="inline-flex h-5 w-5 items-center justify-center text-base-content/70 hover:text-base-content transition-colors cursor-help"
-              >
-                <svg className="h-5 w-5" viewBox="-0.0 -0.0 233.0 233.0" fill="currentColor" aria-hidden="true">
-                  <g transform="translate(0.000000,233.000000) scale(0.100000,-0.100000)">
-                    <path d="M990 2139 c-93 -14 -246 -69 -336 -120 -97 -55 -222 -179 -301 -297 -152 -226 -205 -509 -148 -784 44 -215 197 -442 388 -578 77 -55 226 -125 323 -152 116 -32 381 -32 507 0 343 86 602 356 698 728 34 130 32 308 -5 457 -51 211 -109 319 -245 460 -123 127 -295 226 -465 268 -95 23 -317 33 -416 18z m248 -325 c74 -37 106 -93 100 -173 -11 -160 -194 -234 -315 -128 -99 87 -81 238 36 299 67 35 112 35 179 2z m47 -499 l25 -24 0 -281 c0 -267 1 -281 20 -300 11 -11 29 -20 41 -20 35 0 58 -19 68 -56 13 -47 -7 -100 -44 -114 -37 -14 -438 -13 -468 1 -65 29 -60 135 7 159 17 6 42 17 56 24 l25 12 3 197 c1 109 -2 205 -6 214 -5 8 -31 23 -58 32 -58 19 -80 53 -69 107 4 25 16 41 38 54 28 18 51 20 185 20 149 0 154 -1 177 -25z" />
-                  </g>
-                </svg>
-              </button>
-              <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 max-w-[90vw] whitespace-nowrap rounded-lg border border-base-300 bg-base-100 px-2.5 py-1.5 text-left text-[11px] leading-snug text-base-content shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                <span className="absolute -top-1.5 left-2 h-3 w-3 rotate-45 border-l border-t border-base-300 bg-base-100" aria-hidden="true" />
-                Máximo 10 sismos más recientes
-              </span>
-              </span>
-            </span>
-          </p>
+            </p>
+            <button
+              type="button"
+              onClick={toggleDock}
+              data-dock-slot
+              aria-label={docked ? 'Devolver la barra al modo flotante' : 'Acoplar la barra a esta sección'}
+              className={`inline-flex shrink-0 items-center gap-2 rounded-full border-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.96] ${
+                docked
+                  ? 'border-solid border-base-300 bg-base-100 text-base-content/80 shadow-sm'
+                  : 'border-dashed border-warning/60 bg-base-300/55 text-base-content/70 shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)] hover:border-warning/80 hover:text-base-content hover:bg-base-300/70'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${docked ? 'bg-warning' : 'bg-warning/35'}`} />
+              <span>{docked ? 'Liberar alertas' : 'Acoplar alertas'}</span>
+            </button>
+          </div>
           <LoadSwap
             loading={loading}
             label="Cargando sismos…"
@@ -722,21 +738,7 @@ export function EmergencyWidget({ initialBreakdown }: { initialBreakdown?: boole
             />
           )}
 
-          {/* Pill-shaped dock slot: morph target for the floating ticker */}
-          <button
-            type="button"
-            onClick={toggleDock}
-            data-dock-slot
-            aria-label={docked ? 'Devolver la barra al modo flotante' : 'Acoplar la barra a esta sección'}
-            className={`absolute top-3 right-3 z-10 inline-flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.96] ${
-              docked
-                ? 'border-solid border-base-300 bg-base-100 text-base-content/80 shadow-sm'
-                : 'border-dashed border-warning/60 bg-base-300/55 text-base-content/70 shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)] hover:border-warning/80 hover:text-base-content hover:bg-base-300/70'
-            }`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${docked ? 'bg-warning' : 'bg-warning/35'}`} />
-            <span>{docked ? 'Liberar alertas' : 'Acoplar alertas'}</span>
-          </button>
+
         </div>
 
         <Suspense fallback={<div className={`mt-4 rounded-xl border border-base-300 shadow-sm ${initialBreakdown !== false ? 'min-h-[1210px] sm:min-h-[918px]' : 'min-h-[306px] sm:min-h-[277px]'}`} />}>

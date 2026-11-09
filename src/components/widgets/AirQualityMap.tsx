@@ -1,32 +1,37 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import leafletCssUrl from 'leaflet/dist/leaflet.css?url';
-import { AIR_STATUS, orderedRegions } from '@/lib/air-quality';
+import { AIR_STATUS } from '@/lib/air-quality';
 import type { AirStation } from '@/lib/air-quality';
 import { addOpenFreeMapLayer } from './openfreemap-layer';
 
 interface Props {
   stations: AirStation[];
+  /** Lista completa para poblar los filtros del mapa cuando `stations` viene acotada por el padre. */
+  allStations?: AirStation[];
+  /** Región fijada por el filtro de la sección (bloquea el selector de región del mapa). */
+  lockedRegion?: string;
+  center?: { lat: number; lon: number; name: string } | null;
 }
 
 const BANDS = [1, 2, 3, 4, 5] as const;
 
-export function AirQualityMap({ stations }: Props) {
+export function AirQualityMap({ stations, allStations, lockedRegion, center }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<{ destroy: () => void } | null>(null);
+  const mapInstanceRef = useRef<any>(null);
   const groupRef = useRef<{ clearLayers: () => void } | null>(null);
   const [ready, setReady] = useState(false);
 
-  const regions = useMemo(() => orderedRegions(stations), [stations]);
-
-  const [region, setRegion] = useState('');
+  const optionSource = allStations ?? stations;
+  const activeRegion = lockedRegion || '';
   const [comuna, setComuna] = useState('');
   const [hidden, setHidden] = useState<Set<number>>(new Set());
   const filtered = useMemo(() => {
     let list = stations;
-    if (region) list = list.filter((s) => s.region === region);
+    if (activeRegion) list = list.filter((s) => s.region === activeRegion);
     if (comuna) list = list.filter((s) => s.comuna === comuna);
     return list;
-  }, [stations, region, comuna]);
+  }, [stations, activeRegion, comuna]);
 
   const presentBands = useMemo(() => {
     const set = new Set<number>();
@@ -85,11 +90,13 @@ export function AirQualityMap({ stations }: Props) {
 
       const group = L.layerGroup().addTo(map);
       groupRef.current = group;
+      mapInstanceRef.current = map;
       mapRef.current = {
         destroy: () => {
           observer.disconnect();
           basemap.destroy();
           map.remove();
+          mapInstanceRef.current = null;
           mapRef.current = null;
         },
       };
@@ -99,13 +106,11 @@ export function AirQualityMap({ stations }: Props) {
     return () => { destroyed = true; mapRef.current?.destroy(); };
   }, []);
 
-  // if the section-level filter removed our selected region/comuna from the
-  // incoming stations, drop the stale internal selection
+  // Si el alcance externo dejó inválida la comuna seleccionada, límpiala.
   useEffect(() => {
-    if (region && !stations.some((s) => s.region === region)) setRegion('');
-    if (comuna && !stations.some((s) => s.comuna === comuna)) setComuna('');
+    if (comuna && !optionSource.some((s) => s.comuna === comuna && (!activeRegion || s.region === activeRegion))) setComuna('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stations]);
+  }, [optionSource, activeRegion]);
 
   // render circles whenever filters change
   useEffect(() => {
@@ -159,42 +164,47 @@ export function AirQualityMap({ stations }: Props) {
         marker.on('popupopen', () => marker.closeTooltip());
         markers.push(marker);
       }
+      if (center) {
+        const you = L.circleMarker([center.lat, center.lon], {
+          radius: 6,
+          fillColor: '#2563eb',
+          color: '#ffffff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.95,
+        });
+        you.bindTooltip(`Tu ubicación: ${center.name}`, { sticky: true });
+        markers.push(you);
+      }
       L.featureGroup(markers).addTo(groupRef.current as any);
     })();
-  }, [ready, filtered, hidden]);
+  }, [ready, filtered, hidden, center]);
+
+  // Centra el mapa en la ubicación compartida (p. ej. fijada desde Clima).
+  useEffect(() => {
+    if (!ready || !center) return;
+    mapInstanceRef.current?.flyTo?.([center.lat, center.lon], 10, { duration: 0.6 });
+  }, [ready, center]);
 
   if (stations.length === 0) return null;
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <select
-          value={region}
-          onChange={(e) => { setRegion(e.target.value); setComuna(''); }}
-          className="select select-xs select-bordered w-full min-w-0 truncate"
-          aria-label="Filtrar estaciones por región"
-        >
-          <option value="">Todas las regiones</option>
-          {regions.map((r) => (
-            <option key={r} value={r}>{r}</option>
+      <select
+        value={comuna}
+        onChange={(e) => setComuna(e.target.value)}
+        className="select select-xs select-bordered w-full min-w-0 truncate"
+        aria-label="Filtrar estaciones por comuna"
+      >
+        <option value="">Todas las comunas</option>
+        {(activeRegion ? optionSource.filter((s) => s.region === activeRegion) : optionSource)
+          .map((s) => s.comuna)
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .sort((a, b) => a.localeCompare(b, 'es'))
+          .map((c) => (
+            <option key={c} value={c}>{c}</option>
           ))}
-        </select>
-        <select
-          value={comuna}
-          onChange={(e) => setComuna(e.target.value)}
-          className="select select-xs select-bordered w-full min-w-0 truncate"
-          aria-label="Filtrar estaciones por comuna"
-        >
-          <option value="">Todas las comunas</option>
-          {(region ? stations.filter((s) => s.region === region) : stations)
-            .map((s) => s.comuna)
-            .filter((v, i, a) => a.indexOf(v) === i)
-            .sort((a, b) => a.localeCompare(b, 'es'))
-            .map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-        </select>
-      </div>
+      </select>
 
       <div ref={containerRef} className="h-[340px] w-full rounded-xl border border-base-300 overflow-hidden" />
 

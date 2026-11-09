@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import stopsDb from '../../lib/stops-database.json';
 import { BROWSER_UA } from '../../lib/rss';
-import { getCached, setCache, edgeCacheHeaders } from '../../lib/cache';
+import { getCached, setCache, setLastGood, getStaleCached, edgeCacheHeaders } from '../../lib/cache';
 import { LINE_COLORS, fetchStopPredictions } from '../../lib/transport';
 import { checkRateLimit } from '../../lib/rate-limit';
 
@@ -35,7 +35,10 @@ async function fetchMetroCl(): Promise<{ lines: MetroLine[]; source: string } | 
       headers: { 'User-Agent': BROWSER_UA },
       signal: AbortSignal.timeout(8000),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn('[transport] metro.cl status', response.status);
+      return null;
+    }
 
     const html = await response.text();
     const iconRegex = /\/images\/ico-(l\d+[a-z]?)\.svg/g;
@@ -46,6 +49,10 @@ async function fetchMetroCl(): Promise<{ lines: MetroLine[]; source: string } | 
 
     while ((match = iconRegex.exec(html)) !== null) lineIds.push(match[1]);
     while ((match = statusRegex.exec(html)) !== null) statuses.push(match[1].trim().toLowerCase());
+
+    if (lineIds.length === 0) {
+      console.warn('[transport] metro.cl parse vacío', { len: html.length, snippet: html.slice(0, 180) });
+    }
 
     const statusLabels: Record<string, string> = {
       disponible: 'Normal',
@@ -60,7 +67,8 @@ async function fetchMetroCl(): Promise<{ lines: MetroLine[]; source: string } | 
     }));
 
     return lines.length > 0 ? { lines, source: 'metro.cl' } : null;
-  } catch {
+  } catch (err) {
+    console.warn('[transport] metro.cl fetch error', err);
     return null;
   }
 }
@@ -69,10 +77,11 @@ export const GET: APIRoute = async ({ url, request }) => {
   const rateLimited = checkRateLimit(request, 'transport', 60);
   if (rateLimited) return rateLimited;
 
-  const allowedParams = new Set(['city', 'mode', 'route', 'stop']);
+  const allowedParams = new Set(['city', 'mode', 'route', 'stop', 'fresh']);
   if ([...url.searchParams.keys()].some(param => !allowedParams.has(param))) {
     return jsonError('Unsupported query parameter', 400);
   }
+  const forceFresh = url.searchParams.get('fresh') === '1';
 
   const mode = url.searchParams.get('mode');
   if (mode && mode !== 'route-names') return jsonError('Invalid mode', 400);
@@ -95,11 +104,13 @@ export const GET: APIRoute = async ({ url, request }) => {
         ? `transport:route=${routeId}`
         : `transport:city=${cityId}`;
 
-  const cached = await getCached<Record<string, unknown>>(cacheKey);
-  if (cached) {
-    return new Response(JSON.stringify(cached), {
-      headers: edgeCacheHeaders(mode === 'route-names' ? 3600 : 300),
-    });
+  if (!forceFresh) {
+    const cached = await getCached<Record<string, unknown>>(cacheKey);
+    if (cached) {
+      return new Response(JSON.stringify(cached), {
+        headers: edgeCacheHeaders(mode === 'route-names' ? 3600 : 300),
+      });
+    }
   }
 
   if (mode === 'route-names') {
@@ -150,7 +161,7 @@ export const GET: APIRoute = async ({ url, request }) => {
   }
   await Promise.allSettled(promises);
 
-  const data = {
+  let data: Record<string, unknown> = {
     city: cityId,
     name: 'Santiago',
     metro: metroResult,
@@ -159,6 +170,18 @@ export const GET: APIRoute = async ({ url, request }) => {
     predictionError,
     routeStops,
   };
+
+  // Metro no tiene cadena de fallback: si el scrape falla, sirve el último
+  // snapshot bueno (evita cachear metro:null 5 min por un fallo puntual en dev/prod).
+  const isMetroRequest = !routeId && !stopId;
+  if (isMetroRequest && metroResult?.lines?.length) {
+    await setLastGood(cacheKey, data, 6 * 60 * 60 * 1000);
+  } else if (isMetroRequest && !metroResult?.lines?.length) {
+    const stale = await getStaleCached<Record<string, unknown>>(cacheKey);
+    const staleMetro = stale?.metro as { lines?: unknown[] } | null | undefined;
+    if (staleMetro?.lines?.length) data = { ...data, metro: stale.metro, staleMetro: true };
+  }
+
   await setCache(cacheKey, data, 5 * 60 * 1000);
 
   return new Response(JSON.stringify(data), {

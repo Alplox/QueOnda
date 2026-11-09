@@ -3,6 +3,15 @@ import { idbGet, idbSet } from '../../lib/idb-cache';
 import { play } from '@/lib/sound';
 import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
+import {
+  distanceKm,
+  geoErrorMessage,
+  getUserLocation,
+  onUserLocationChange,
+  requestPosition,
+  reverseGeocodeName,
+  setUserLocation,
+} from '../../lib/user-location';
 
 const IDB_KEY = 'weather-default';
 const IDB_TTL = 10 * 60 * 1000; // 10 min
@@ -163,16 +172,7 @@ function normalize(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-/** Distancia en km (haversine) — para reutilizar el nombre de una ciudad base cercana. */
-function distanceKm(aLat: number, aLon: number, bLat: number, bLon: number) {
-  const R = 6371;
-  const dLat = ((bLat - aLat) * Math.PI) / 180;
-  const dLon = ((bLon - aLon) * Math.PI) / 180;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((aLat * Math.PI) / 180) * Math.cos((bLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
+
 
 /** Ubicación elegida por el usuario — se persiste para que sobreviva al reload. */
 const USER_CITY_KEY = 'weather-user-city';
@@ -197,28 +197,11 @@ function saveUserCity(name: string, lat: number, lon: number, data: CityWeather)
   } catch {
     /* quota / modo privado: la tarjeta sigue funcionando en esta sesión */
   }
+  // Canonical key + event so other widgets (Calidad del Aire) pick it up.
+  setUserLocation({ name, lat, lon });
 }
 
-/**
- * Nombre del lugar a partir de coordenadas.
- * Open-Meteo NO tiene geocodificación inversa (`/v1/reverse` devuelve 404), así que
- * usamos BigDataCloud (gratis, sin key, CORS abierto). Si falla, el clima se pide
- * igual por coordenadas y la tarjeta se llama "Mi ubicación".
- */
-async function reverseGeocodeName(lat: number, lon: number): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`,
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const name = data.city || data.locality || data.principalSubdivision;
-    return typeof name === 'string' && name.trim() ? name.trim() : null;
-  } catch {
-    return null;
-  }
-}
+
 
 function WeatherCard({ data, isUser, onRemove, isPinned, onTogglePin, forecast, isExpanded, onToggle }: {
   data: CityWeather;
@@ -362,15 +345,7 @@ export function WeatherWidget() {
     setGeoError(null);
     setGeoLoading(true);
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        // 15 s: el prompt de permiso del navegador cuenta dentro del timeout, así que
-        // 5 s cortaba a quien tardaba en pulsar «Permitir».
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          timeout: 15000,
-          maximumAge: 5 * 60 * 1000,
-          enableHighAccuracy: false,
-        });
-      });
+      const pos = await requestPosition();
       const { latitude, longitude } = pos.coords;
 
       // Ciudad base cercana (≤25 km) → su nombre, así hereda pronóstico DMC y mapa.
@@ -398,14 +373,7 @@ export function WeatherWidget() {
 
       setGeoError('No se pudo obtener el clima de tu ubicación. Reintenta en unos segundos.');
     } catch (err) {
-      const code = (err as GeolocationPositionError | undefined)?.code;
-      setGeoError(
-        code === 1
-          ? 'Permiso de ubicación bloqueado. Actívalo en el candado de la barra de direcciones y reintenta.'
-          : code === 3
-            ? 'Tu ubicación tardó demasiado en responder. Reintenta.'
-            : 'No se pudo obtener tu ubicación. Reintenta.'
-      );
+      setGeoError(geoErrorMessage(err));
     } finally {
       setGeoLoading(false);
     }
@@ -446,22 +414,48 @@ export function WeatherWidget() {
     return () => { cancelled = true; };
   }, [reloadKey]);
 
-  // La ciudad del usuario se pinta desde localStorage (arriba, en el estado inicial)
-  // y se refresca en segundo plano: sin esto, al recargar se quedaba con el clima
-  // del día en que se pulsó el botón, o desaparecía si el usuario limpiaba el sitio.
+  // Refresca el clima de la ubicación del usuario (localStorage / canónica).
+  // La ubicación canónica la puede haber fijado otra sección (Calidad del Aire),
+  // así que partimos de getUserLocation() y resolvemos el clima por coords.
   useEffect(() => {
-    const stored = readStoredUserCity();
-    if (!stored) return;
     let cancelled = false;
-    (async () => {
-      const fresh = await fetchOpenMeteoDirect([{ name: stored.name, lat: stored.lat, lon: stored.lon }]);
-      const w = fresh?.[stored.name];
-      if (!cancelled && w) {
+    const refresh = async (loc: { name: string; lat: number; lon: number }) => {
+      // Encaja a ciudad base cercana (≤25 km) para heredar pronóstico DMC y mapa,
+      // igual que el botón — evita problemas cuando la ubicación viene de otra sección.
+      const near = DEFAULT_CITIES_COORDS.find(c => distanceKm(c.lat, c.lon, loc.lat, loc.lon) <= 25);
+      const name = near?.name ?? loc.name ?? 'Mi ubicación';
+      // Eco/settle: si ya tenemos clima guardado para este punto con este nombre, solo refresca datos.
+      const cur = readStoredUserCity();
+      const samePoint = !!cur && Math.abs(cur.lat - loc.lat) < 0.0001 && Math.abs(cur.lon - loc.lon) < 0.0001;
+      const sameResolved = samePoint && cur?.data?.city === name;
+
+      const fresh = await fetchOpenMeteoDirect([{ name, lat: loc.lat, lon: loc.lon }]);
+      const w = fresh?.[name];
+      if (cancelled) return;
+      if (w) {
+        // Si nada cambió (mismo punto, nombre resuelto y datos equivalentes), evita re-emitir.
+        if (sameResolved && cur?.data && Math.round(cur.data.temp) === Math.round(w.temp) && cur.data.weatherCode === w.weatherCode) {
+          return;
+        }
         setUserCity(w);
-        saveUserCity(stored.name, stored.lat, stored.lon, w);
+        saveUserCity(name, loc.lat, loc.lon, w);
+        return;
       }
-    })();
-    return () => { cancelled = true; };
+      // Fallback servidor por nombre (mismo camino que el botón).
+      const serverRes = await fetchServerWeather(`q=${encodeURIComponent(name)}`);
+      const fallback = serverRes ? Object.values(serverRes)[0] : null;
+      if (!cancelled && fallback) {
+        const data = { ...fallback, city: name };
+        setUserCity(data);
+        saveUserCity(name, loc.lat, loc.lon, data);
+      }
+    };
+
+    const loc = getUserLocation();
+    if (loc) void refresh(loc);
+
+    const unsub = onUserLocationChange(next => { void refresh(next); });
+    return () => { cancelled = true; unsub(); };
   }, []);
 
   // Load DMC forecast data
