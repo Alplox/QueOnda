@@ -51,8 +51,15 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
   }, []);
 
   if (channels.length === 0) {
+    const emptyMinH = wrap
+      ? 'min-h-[440px]'
+      : rowCount >= 5 ? 'min-h-[560px] sm:min-h-[600px]'
+        : rowCount === 4 ? 'min-h-[450px] sm:min-h-[484px]'
+          : rowCount === 3 ? 'min-h-[340px] sm:min-h-[368px]'
+            : rowCount === 2 ? 'min-h-[230px] sm:min-h-[252px]'
+              : 'min-h-[120px] sm:min-h-[136px]';
     return (
-      <div className="text-center py-8 rounded-xl bg-base-100 border border-base-300">
+      <div className={`flex flex-col items-center justify-center text-center rounded-xl bg-base-100 border border-base-300 ${emptyMinH}`}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mx-auto mb-2 text-base-content/70">
           <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8" /><path d="M12 17v4" />
         </svg>
@@ -138,7 +145,7 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
   if (wrap) {
     return (
       <div
-        className="grid grid-cols-3 gap-1.5 p-0.5 max-h-[440px] overflow-y-auto overflow-x-hidden overscroll-contain"
+        className="grid grid-cols-3 content-start items-start gap-1.5 p-0.5 min-h-[440px] max-h-[440px] overflow-y-auto overflow-x-hidden overscroll-contain"
         style={{ scrollbarWidth: 'thin' }}
       >
         {channels.map(renderChannel)}
@@ -166,7 +173,13 @@ export function ChannelGrid({ channels, selectedIds, favorites, onSelect, onTogg
         {/* Inner padded wrapper — pushes content away from clip edges.
             1 row = flex row; >1 rows = column-flow grid so items fill down then wrap right. */}
         <div
-          className={multiRow ? 'grid grid-flow-col gap-2 py-1.5 px-1.5' : 'flex gap-2 py-1.5 px-1.5'}
+          className={`${multiRow ? 'grid grid-flow-col content-start items-start gap-2 py-1.5 px-1.5' : 'flex items-start gap-2 py-1.5 px-1.5'} ${
+            rowCount >= 5 ? 'min-h-[560px] sm:min-h-[600px]'
+              : rowCount === 4 ? 'min-h-[450px] sm:min-h-[484px]'
+                : rowCount === 3 ? 'min-h-[340px] sm:min-h-[368px]'
+                  : rowCount === 2 ? 'min-h-[230px] sm:min-h-[252px]'
+                    : 'min-h-[120px] sm:min-h-[136px]'
+          }`}
           style={multiRow ? { gridTemplateRows: `repeat(${rowCount}, auto)` } : undefined}
         >
           {channels.map(renderChannel)}

@@ -54,17 +54,7 @@ const WARN_LIVE = 3 * 60 * 1000;
 const STALE_ARTICLES = 45 * 60 * 1000;
 const WARN_ARTICLES = 30 * 60 * 1000;
 
-function fmtRelative(ms: number): string {
-  const diff = Date.now() - ms;
-  const mins = Math.round(diff / 60000);
-  if (mins < 1) return 'ahora';
-  if (mins < 60) return `hace ${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h < 24) return m ? `hace ${h}h ${m}min` : `hace ${h}h`;
-  const d = Math.floor(h / 24);
-  return `hace ${d}d`;
-}
+
 
 function formatAbs(ms: number): string {
   return new Date(ms).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -363,11 +353,8 @@ export function FootballTable() {
         <div className="flex items-center gap-2">
           {activeFetchedAt && (
             <p className={`text-[11px] ${activeIsStale ? 'text-warning font-semibold' : activeIsWarn ? 'text-warning/80' : 'text-base-content/70'}`} title={new Date(activeFetchedAt).toISOString()}>
-              {formatAbs(activeFetchedAt)} · {fmtRelative(activeFetchedAt)}{activeIsStale ? ' · desactualizado' : activeIsWarn ? ' · puede estar desactualizado' : ''}
+              {formatAbs(activeFetchedAt)}
             </p>
-          )}
-          {standings.length > 0 && activeTab === 'standings' && (
-            <p className="text-[11px] text-base-content/70 hidden sm:inline">{totalTeams} equipos</p>
           )}
         </div>
       </div>
@@ -375,10 +362,16 @@ export function FootballTable() {
         <div className={`mx-3 mt-3 rounded-lg px-3 py-2 text-xs flex items-start justify-between gap-3 ${activeIsStale ? 'bg-warning/15 border border-warning/30 text-warning' : 'bg-warning/10 border border-warning/20 text-base-content/80'}`} role="status" aria-live="polite">
           <span className="leading-snug">
             {activeTab === 'standings'
-              ? activeIsStale ? `⚠️ Tabla desactualizada — sin actualizar ${fmtRelative(activeFetchedAt)} (último ${formatAbs(activeFetchedAt)}). Puede no reflejar la fecha actual.` : `Tabla de ${fmtRelative(activeFetchedAt)} — standings cambian 1-2× por fecha.`
+              ? activeIsStale
+                ? `⚠️ Tabla desactualizada — datos obtenidos ${formatAbs(activeFetchedAt)}. Puede no reflejar la fecha actual.`
+                : `Datos obtenidos ${formatAbs(activeFetchedAt)}. Los standings cambian 1–2 veces por fecha.`
               : activeTab === 'matches'
-                ? activeIsStale ? `⚠️ Partidos desactualizados — último refresco ${fmtRelative(activeFetchedAt)} (último ${formatAbs(activeFetchedAt)}). Marcadores en vivo pueden estar desfasados.` : `Partidos de ${fmtRelative(activeFetchedAt)} — en vivo se actualiza cada 30s.`
-                : activeIsStale ? `⚠️ Noticias desactualizadas — último refresco ${fmtRelative(activeFetchedAt)}.` : `Noticias de ${fmtRelative(activeFetchedAt)}.`}
+                ? activeIsStale
+                  ? `⚠️ Partidos desactualizados — datos obtenidos ${formatAbs(activeFetchedAt)}. Los marcadores en vivo pueden estar desfasados.`
+                  : `Datos obtenidos ${formatAbs(activeFetchedAt)}. En vivo se actualiza cada 30 s.`
+                : activeIsStale
+                  ? `⚠️ Noticias desactualizadas — datos obtenidos ${formatAbs(activeFetchedAt)}.`
+                  : `Datos obtenidos ${formatAbs(activeFetchedAt)}.`}
           </span>
           <button type="button" onClick={handleRefreshActive} className="shrink-0 px-2.5 py-1 rounded-md bg-base-100 border border-base-300 text-[11px] font-semibold hover:bg-base-200 transition-colors cursor-pointer active:scale-[0.97]">Actualizar</button>
         </div>

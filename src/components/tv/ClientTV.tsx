@@ -686,23 +686,47 @@ export function ClientTV() {
   const filterFields = (
     <div className="space-y-1.5">
       {/* Búsqueda */}
-      <div className="relative">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-base-content/70 pointer-events-none">
-          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-        </svg>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar canales..."
-          aria-label="Buscar canales"
-          className="w-full bg-base-200/60 border border-base-300 rounded-lg pl-8 pr-8 py-1.5 text-base sm:text-sm text-base-content placeholder:text-base-content/70 outline-none focus:border-primary/40 transition-colors"
-        />
-        {search && (
-          <button onClick={() => { play('interaction.subtle'); setSearch(''); }} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-base-content/70 hover:text-base-content transition-colors cursor-pointer">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        )}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (filtered.length === 0) return;
+            const pick = filtered[Math.floor(Math.random() * filtered.length)];
+            play('interaction.confirm');
+            handleSelect(pick);
+          }}
+          disabled={filtered.length === 0}
+          aria-label="Reproducir un canal al azar"
+          title="Reproducir un canal al azar"
+          className="shrink-0 flex items-center gap-1.5 text-sm bg-base-200 border border-base-300 text-base-content/80 rounded-lg px-3 py-1.5 hover:bg-base-300 hover:text-base-content transition-colors active:scale-[0.96] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="16 3 21 3 21 8" />
+            <line x1="4" y1="20" x2="21" y2="3" />
+            <polyline points="21 16 21 21 16 21" />
+            <line x1="15" y1="15" x2="21" y2="21" />
+            <line x1="4" y1="4" x2="9" y2="9" />
+          </svg>
+          <span className="hidden sm:inline">Aleatorio</span>
+        </button>
+        <div className="relative flex-1 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-base-content/70 pointer-events-none">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar canales..."
+            aria-label="Buscar canales"
+            className="w-full bg-base-200/60 border border-base-300 rounded-lg pl-8 pr-8 py-1.5 text-base sm:text-sm text-base-content placeholder:text-base-content/70 outline-none focus:border-primary/40 transition-colors"
+          />
+          {search && (
+            <button onClick={() => { play('interaction.subtle'); setSearch(''); }} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-base-content/70 hover:text-base-content transition-colors cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Categorías */}

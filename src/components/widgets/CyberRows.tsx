@@ -1,19 +1,16 @@
 import type { MouseEvent } from 'react';
 import type { CyberAlert, CyberSeverity, KevEntry } from '@/lib/cyber';
 
-/** "hace 5 min" para fechas ISO, sin dependencias. */
-export function fmtRelative(iso: string): string {
+/** Fecha/hora estándar de obtención/publicación (sin abreviar a "hace X"). */
+export function fmtAbsolute(iso: string): string {
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return '';
-  const diff = Date.now() - ms;
-  const mins = Math.round(diff / 60000);
-  if (mins < 1) return 'ahora';
-  if (mins < 60) return `hace ${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h < 24) return m ? `hace ${h}h ${m}min` : `hace ${h}h`;
-  const d = Math.floor(h / 24);
-  return d === 1 ? 'ayer' : `hace ${d}d`;
+  return new Date(ms).toLocaleString('es-CL', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 /** "2026-10-21" (fecha de CISA, sin hora) → "21 oct". */
@@ -113,7 +110,7 @@ export function CyberAlertRow({ alert, onOpen }: { alert: CyberAlert; onOpen?: (
           <SeverityChip severity={alert.severity} />
           {alert.vendor && <span className="max-w-[45%] truncate">{alert.vendor}</span>}
           <span aria-hidden="true">·</span>
-          <time dateTime={alert.published}>{fmtRelative(alert.published)}</time>
+          <time dateTime={alert.published}>{fmtAbsolute(alert.published)}</time>
         </div>
       </a>
       {onOpen && (

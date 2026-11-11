@@ -893,7 +893,7 @@ export function RadioPlayer({ stations, stationsLoading, tags, states, stateCoun
                 <button
                   onClick={handleRandomPlay}
                   disabled={baseStations.length === 0 && stations.length === 0}
-                  className="shrink-0 flex items-center gap-1.5 text-sm bg-primary text-primary-content rounded-xl px-3 py-2 hover:bg-primary/90 transition-colors active:scale-[0.96] disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="shrink-0 flex items-center gap-1.5 text-sm bg-base-200 border border-base-300 text-base-content/80 rounded-xl px-3 py-2 hover:bg-base-300 hover:text-base-content transition-colors active:scale-[0.96] disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Reproducir una radio al azar"
                   aria-label="Reproducir una radio al azar"
                 >

@@ -8,7 +8,7 @@ import { useErrorRetry } from '@/lib/retry';
 import { foldAccents } from '@/lib/sources';
 import { ArticleReader } from '../news/ArticleReader';
 import { RetryHint } from '../RetryHint';
-import { CyberAlertRow, CyberKevRow, fmtRelative, type ReadableItem } from './CyberRows';
+import { CyberAlertRow, CyberKevRow, fmtAbsolute, type ReadableItem } from './CyberRows';
 import { SectionSources } from '../SectionSources';
 
 const IDB_KEY = 'cyber';
@@ -174,7 +174,7 @@ export function CyberWidget() {
   }, []);
 
   const isStale = fetchedAt != null && Date.now() - fetchedAt > STALE_MS;
-  const updatedLabel = payload ? fmtRelative(payload.updatedAt) : '';
+  const updatedLabel = payload ? fmtAbsolute(payload.updatedAt) : '';
 
   if (!payload) {
     return (
@@ -247,38 +247,38 @@ export function CyberWidget() {
     <>
       <div className="overflow-hidden rounded-xl border border-base-300 bg-base-200 shadow-sm">
         <div className="border-b border-base-300 p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <p className="text-xs uppercase tracking-wider text-base-content/70">Ciberseguridad · Chile</p>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-base-content/70">
-              <span>
-                <strong className="font-semibold text-base-content">{alerts.length}</strong> alertas
-                {criticalCount > 0 && (
-                  <>
-                    {' · '}
-                    <button
-                      type="button"
-                      onClick={toggleCriticalFromSummary}
-                      aria-pressed={tab === 'alertas' && criticalOnly}
-                      title="Ver solo las alertas de severidad crítica"
-                      className={`rounded-sm font-semibold text-error underline-offset-2 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                        tab === 'alertas' && criticalOnly ? 'underline' : ''
-                      }`}
-                    >
-                      {criticalCount} críticas
-                    </button>
-                  </>
-                )}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>
-                <strong className="font-semibold text-base-content">{payload.kev.total}</strong> explotadas ({payload.kev.days} d)
-              </span>
-              <span aria-hidden="true">·</span>
-              <span className={isStale ? 'font-semibold text-warning' : undefined} title={payload.updatedAt}>
-                {updatedLabel}
-                {isStale ? ' · desactualizado' : ''}
-              </span>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-wider text-base-content/70">Ciberseguridad · Chile</p>
+              <p className="mt-1 text-[11px] text-base-content/70">
+                <span>
+                  <strong className="font-semibold text-base-content">{alerts.length}</strong> alertas
+                  {criticalCount > 0 && (
+                    <>
+                      {' · '}
+                      <button
+                        type="button"
+                        onClick={toggleCriticalFromSummary}
+                        aria-pressed={tab === 'alertas' && criticalOnly}
+                        title="Ver solo las alertas de severidad crítica"
+                        className={`rounded-sm font-semibold text-error underline-offset-2 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                          tab === 'alertas' && criticalOnly ? 'underline' : ''
+                        }`}
+                      >
+                        {criticalCount} críticas
+                      </button>
+                    </>
+                  )}
+                </span>
+                <span aria-hidden="true"> · </span>
+                <span>
+                  <strong className="font-semibold text-base-content">{payload.kev.total}</strong> explotadas ({payload.kev.days} d)
+                </span>
+              </p>
             </div>
+            <span className={`shrink-0 pt-0.5 text-[11px] text-base-content/70 ${isStale ? 'font-semibold text-warning' : ''}`} title={payload.updatedAt}>
+              {updatedLabel}
+            </span>
           </div>
         </div>
 
@@ -290,7 +290,7 @@ export function CyberWidget() {
           >
             <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
               <span className="font-semibold text-warning">⚠ Datos sin actualizar</span>
-              <span>Última lectura {fetchedAt ? fmtRelative(new Date(fetchedAt).toISOString()) : 'desconocida'}.</span>
+              <span>Última lectura: {fetchedAt ? fmtAbsolute(new Date(fetchedAt).toISOString()) : 'desconocida'}.</span>
               <RetryHint retrying={retrying} retryIn={retryIn} />
             </span>
             <button
