@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { play } from '@/lib/sound';
 import { LoadSwap } from '@/components/LoadSwap';
 import { SectionSources } from '../SectionSources';
@@ -78,18 +79,45 @@ export function GoogleTrendsWidget() {
   const [error, setError] = useState('');
   const [retryKey, setRetryKey] = useState(0);
   const [openSearch, setOpenSearch] = useState<number | null>(null);
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const searchBtnRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const updatePopupPos = useCallback(() => {
+    if (openSearch === null) return;
+    const btn = searchBtnRefs.current[openSearch];
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const gap = 8;
+    const width = Math.min(256, window.innerWidth - gap * 2);
+    const left = Math.max(gap, Math.min(rect.left, window.innerWidth - gap - width));
+    setPopupPos({ top: rect.bottom + 4, left, width });
+  }, [openSearch]);
 
   useEffect(() => {
-    if (openSearch === null) return;
-    const handler = (e: MouseEvent) => {
+    if (openSearch === null) {
+      setPopupPos(null);
+      return;
+    }
+    updatePopupPos();
+    const onReposition = () => updatePopupPos();
+    const onPointerDown = (e: MouseEvent) => {
       const target = e.target as Node | null;
-      if (target && rootRef.current?.contains(target)) return;
+      if (!target) return;
+      if (popupRef.current?.contains(target)) return;
+      if (rootRef.current?.contains(target)) return;
       setOpenSearch(null);
     };
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
-  }, [openSearch]);
+    window.addEventListener('scroll', onReposition, { passive: true, capture: true });
+    window.addEventListener('resize', onReposition);
+    document.addEventListener('mousedown', onPointerDown);
+    return () => {
+      window.removeEventListener('scroll', onReposition, { capture: true } as EventListenerOptions);
+      window.removeEventListener('resize', onReposition);
+      document.removeEventListener('mousedown', onPointerDown);
+    };
+  }, [openSearch, updatePopupPos]);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,7 +182,7 @@ export function GoogleTrendsWidget() {
     <div ref={rootRef} className="flex min-h-[1001px] flex-col sm:min-h-[881px]">
       <div className="space-y-1">
       {trends.map((trend, i) => (
-        <div key={i} className={`relative opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards] ${openSearch === i ? 'z-20' : ''}`} style={{ animationDelay: `${i * 50}ms` }}>
+        <div key={i} className="relative opacity-0 animate-[fadeSlideIn_0.35s_ease-out_forwards]" style={{ animationDelay: `${i * 50}ms` }}>
         <div
           className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-base-200 hover:ring-1 hover:ring-inset hover:ring-base-content/[0.05] transition-colors"
         >
@@ -175,9 +203,10 @@ export function GoogleTrendsWidget() {
               <p className="text-[11px] text-base-content/70 line-clamp-1 mt-0.5" title={trend.snippet}>{trend.snippet}</p>
             )}
             <div className="mt-1.5">
-              <div className="relative md:hidden">
+              <div className="md:hidden">
                 <button
                   type="button"
+                  ref={(el) => { searchBtnRefs.current[i] = el; }}
                   onClick={(e) => { e.stopPropagation(); play('interaction.tap'); setOpenSearch(openSearch === i ? null : i); }}
                   className="flex min-h-11 w-fit cursor-pointer select-none items-center gap-2 rounded-lg border border-base-300 bg-base-200 px-3 text-xs font-medium text-base-content hover:bg-base-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
@@ -187,27 +216,6 @@ export function GoogleTrendsWidget() {
                   </svg>
                   Buscar
                 </button>
-                {openSearch === i && (
-                  <div className="absolute left-0 top-full z-30 mt-1 grid max-h-64 min-w-64 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-2 shadow-xl">
-                    {SEARCH_ENGINES.map((se) => (
-                      <a
-                        key={se.key}
-                        href={se.url + encodeURIComponent(trend.title)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => {
-                          play('interaction.tap');
-                          e.stopPropagation();
-                          setOpenSearch(null);
-                        }}
-                        className="flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs text-base-content/80 hover:bg-base-200 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                      >
-                        <span className="h-4 w-4 shrink-0 text-base-content/70" aria-hidden="true">{se.icon}</span>
-                        <span className="truncate">{se.name}</span>
-                      </a>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="hidden flex-wrap gap-1 md:flex">
                 {SEARCH_ENGINES.map((se) => (
@@ -235,6 +243,32 @@ export function GoogleTrendsWidget() {
         </div>
       ))}
       </div>
+      {openSearch !== null && popupPos && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={popupRef}
+          className="fixed z-[9999] grid max-h-64 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-2 shadow-xl animate-[fadeSlideIn_0.15s_ease-out]"
+          style={{ top: popupPos.top, left: popupPos.left, width: popupPos.width }}
+        >
+          {SEARCH_ENGINES.map((se) => (
+            <a
+              key={se.key}
+              href={se.url + encodeURIComponent(trends[openSearch]?.title ?? '')}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                play('interaction.tap');
+                e.stopPropagation();
+                setOpenSearch(null);
+              }}
+              className="flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs text-base-content/80 hover:bg-base-200 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <span className="h-4 w-4 shrink-0 text-base-content/70" aria-hidden="true">{se.icon}</span>
+              <span className="truncate">{se.name}</span>
+            </a>
+          ))}
+        </div>,
+        document.body
+      )}
       <SectionSources section="google-trends" />
     </div>
   );
