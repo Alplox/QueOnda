@@ -544,12 +544,23 @@ export function UnifiedPlayer({ channel, signalIndex, onSignalChange, mode, onMo
                     </a>
                   )}
                   {!isEmbedType && (
-                    <button onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-                      className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/15 transition-colors"
-                      aria-label={muted ? 'Activar sonido' : 'Silenciar'}
-                      title={muted ? 'Activar sonido' : 'Silenciar'}>
-                      {muted ? <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 4.5v3h2l3 3V1.5L3 4.5H1zM8 4l4 4M12 4l-4 4" /></svg> : <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 4.5v3h2l3 3V1.5L3 4.5H1zM8 4c.4.6.7 1.3.7 2s-.3 1.4-.7 2M9.5 2.5c.8 1 .9 2.3.9 3.5s-.1 2.5-.9 3.5" /></svg>}
-                    </button>
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+                        className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+                        aria-label={muted ? 'Activar sonido' : 'Silenciar'}
+                        title={muted ? 'Activar sonido' : 'Silenciar'}>
+                        {muted ? <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 4.5v3h2l3 3V1.5L3 4.5H1zM8 4l4 4M12 4l-4 4" /></svg> : <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 4.5v3h2l3 3V1.5L3 4.5H1zM8 4c.4.6.7 1.3.7 2s-.3 1.4-.7 2M9.5 2.5c.8 1 .9 2.3.9 3.5s-.1 2.5-.9 3.5" /></svg>}
+                      </button>
+                      <input
+                        type="range" min="0" max="1" step="0.05"
+                        value={muted ? 0 : volume}
+                        onChange={handleVolume}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Volumen"
+                        title="Volumen"
+                        className="w-12 h-0.5 accent-primary cursor-pointer"
+                      />
+                    </>
                   )}
                   <button onClick={(e) => { e.stopPropagation(); handleExpand(); }}
                     className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/15 transition-colors"

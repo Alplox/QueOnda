@@ -19,12 +19,16 @@ interface Props {
 
 export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, onFocus, onRemove }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(!focused);
+  const [volume, setVolume] = useState(1);
   const [showControls, setShowControls] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const signals = channel.signals.filter(s => isPlayable(s.type));
@@ -53,6 +57,8 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
     setLoading(true);
     setError(false);
     setPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
 
     if (prevHls) prevHls.destroy();
     video.removeAttribute('src');
@@ -67,12 +73,20 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
 
     const onPlay = () => { setPlaying(true); setError(false); };
     const onPause = () => setPlaying(false);
-    const onLoadedMetadata = () => setLoading(false);
+    const onTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+      if (Number.isFinite(video.duration)) setDuration(video.duration);
+    };
+    const onLoadedMetadata = () => {
+      if (Number.isFinite(video.duration)) setDuration(video.duration);
+      setLoading(false);
+    };
     const onCanPlay = () => { setLoading(false); setError(false); };
     const onError = () => { setError(true); setLoading(false); };
 
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
+    video.addEventListener('timeupdate', onTimeUpdate);
     video.addEventListener('loadedmetadata', onLoadedMetadata);
     video.addEventListener('canplay', onCanPlay);
     video.addEventListener('error', onError);
@@ -103,6 +117,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
       if (hlsInstance) hlsInstance.destroy();
       video.removeEventListener('play', onPlay);
       video.removeEventListener('pause', onPause);
+      video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('loadedmetadata', onLoadedMetadata);
       video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('error', onError);
@@ -120,6 +135,32 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
     if (video.paused) video.play().catch(() => {}); else video.pause();
   }, []);
 
+  // Las señales HD (HLS) también llevan barra de progreso, igual que el player
+  // individual. En directos `duration` puede ser Infinity: ahí el riel se pinta
+  // pero no se puede buscar, para no mandar un currentTime infinito al video.
+  const seekable = Number.isFinite(duration) && duration > 0;
+  const progress = seekable ? (currentTime / duration) * 100 : 0;
+
+  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const video = videoRef.current;
+    const bar = progressRef.current;
+    if (!video || !bar || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    const rect = bar.getBoundingClientRect();
+    video.currentTime = ((e.clientX - rect.left) / rect.width) * video.duration;
+    play('interaction.tap');
+  }, []);
+
+  const handleSeekKey = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const video = videoRef.current;
+    if (!video || !seekable) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    e.stopPropagation();
+    video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + (e.key === 'ArrowRight' ? 5 : -5)));
+    play('interaction.subtle');
+  }, [seekable]);
+
   const toggleMute = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     play('interaction.toggle');
@@ -127,8 +168,24 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
     if (!video) return;
     video.muted = !video.muted;
     setMuted(video.muted);
-    if (!video.muted) onFocus();
-  }, [onFocus]);
+    // `onFocus` alterna el foco, así que sólo se llama al activar el audio de una
+    // celda que aún no lo tiene: si ya estaba enfocada, llamarlo la desenfocaría
+    // y el efecto de sincronía la volvería a silenciar.
+    if (!focused && !video.muted) onFocus();
+  }, [focused, onFocus]);
+
+  // Sólo la celda enfocada tiene audio y muestra este slider, así que aquí no
+  // hay que tocar el foco: llamar a `onFocus` (que alterna) lo apagaría, muted
+  // volvería a true y el slider desaparecería al primer movimiento.
+  const handleVolume = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const v = parseFloat(e.target.value);
+    const video = videoRef.current;
+    if (video) { video.volume = v; video.muted = v === 0; }
+    setVolume(v);
+    setMuted(v === 0);
+    play('interaction.subtle');
+  }, []);
 
   const handleFullscreen = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -162,8 +219,8 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
 
   return (
     <div
-      className={`relative rounded-xl overflow-hidden bg-neutral group cursor-pointer transition-[box-shadow] ${
-        focused ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : 'ring-1 ring-base-300 hover:ring-base-content/20'
+      className={`relative rounded-xl overflow-hidden bg-neutral group cursor-pointer ${
+        focused ? 'ring-2 ring-primary' : 'ring-1 ring-base-300 hover:ring-base-content/20'
       }`}
       onClick={() => { play('interaction.tap'); onFocus(); }}
       onMouseMove={handleMouseMove}
@@ -175,7 +232,7 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
           <img src={channel.logo} alt="" className="mt-0.5 w-4 h-4 rounded object-contain shrink-0" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         )}
         <span className="mt-0.5 text-[11px] text-white font-medium truncate flex-1 min-w-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">{channel.name}</span>
-        {focused && <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />}
+        {focused && <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
         <button onClick={handleClose} aria-label={`Quitar ${channel.name} del multiview`} className="pointer-events-auto shrink-0 inline-flex min-w-[28px] min-h-[28px] items-center justify-center rounded-md bg-black/35 text-white shadow-sm ring-1 ring-white/15 transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/55 hover:text-white active:scale-95" title="Quitar del multiview">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
@@ -222,7 +279,22 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
           En error tampoco se pintan: la celda muestra sólo el overlay de
           «Señal no disponible», evitando dos selectores y saturar el bloque. */}
       {isHlsType && !error && (
-        <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/90 from-0% via-neutral/45 via-[55%] to-transparent to-100% px-1.5 pb-1 pt-8 transition-opacity duration-200 ease-out ${controlsVisible ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-neutral/90 from-0% via-neutral/45 via-[55%] to-transparent to-100% px-1.5 pb-1 pt-8 transition-opacity duration-200 ease-out ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <div
+            ref={progressRef}
+            className={`relative w-full h-0.5 bg-base-content/20 rounded-full mb-1 group/progress focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${seekable ? 'cursor-pointer' : ''}`}
+            onClick={seekable ? handleSeek : undefined}
+            onKeyDown={seekable ? handleSeekKey : undefined}
+            role={seekable ? 'slider' : undefined}
+            aria-label="Progreso del video"
+            aria-valuemin={seekable ? 0 : undefined}
+            aria-valuemax={seekable ? Math.round(duration) : undefined}
+            aria-valuenow={seekable ? Math.round(currentTime) : undefined}
+            tabIndex={seekable ? 0 : undefined}
+          >
+            <div className="absolute left-0 top-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
+            <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full shadow transition-opacity ${seekable ? 'opacity-0 group-hover/progress:opacity-100' : 'opacity-100'}`} style={{ left: `${progress}%`, marginLeft: '-4px' }} />
+          </div>
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-0.5">
               <button onClick={(e) => { e.stopPropagation(); togglePlay(e); }}
@@ -239,6 +311,17 @@ export function MultiviewCell({ channel, signalIndex, focused, onSignalChange, o
                   : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
                 }
               </button>
+              {focused && (
+                <input
+                  type="range" min="0" max="1" step="0.05"
+                  value={muted ? 0 : volume}
+                  onChange={handleVolume}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`Volumen de ${channel.name}`}
+                  title="Volumen"
+                  className="w-10 sm:w-14 h-0.5 accent-primary cursor-pointer"
+                />
+              )}
               <button onClick={handleFullscreen}
                 className="p-1 rounded text-white/80 hover:text-white hover:bg-white/15 transition-colors" title="Pantalla completa">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
