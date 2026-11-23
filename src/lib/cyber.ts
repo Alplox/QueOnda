@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { BROWSER_UA } from './ua';
+import { getCached, setCache } from './cache';
 
 /**
  * Ciberseguridad — capa de datos de /api/cyber.
@@ -31,6 +32,19 @@ export interface KevEntry {
   added: string;
   due: string;
   ransomware: boolean;
+  /** Enriquecimiento opcional (EPSS + NVD). Ausente si la fuente falló: nunca bloquea la fila. */
+  epss?: number;
+  epssPercentile?: number;
+  cvss?: number;
+  cvssSeverity?: string;
+  cwe?: string;
+  descriptionEs?: string;
+}
+
+export interface CyberEnrichmentStatus {
+  epssOk: boolean;
+  nvdOk: boolean;
+  nvdCount: number;
 }
 
 export interface CyberBlockSource {
@@ -57,6 +71,8 @@ export interface CyberPayload {
     ransomwareRecent: KevEntry[];
     ransomwareDays: number;
     byVendor: Array<{ vendor: string; count: number }>;
+    /** Estado del enriquecimiento opcional (EPSS + NVD), observable vía /api/cyber. */
+    enrichment: CyberEnrichmentStatus;
   };
   blocks: {
     alerts: CyberBlock;
@@ -83,12 +99,21 @@ const MAX_ALERTS = 25;
 
 export const CSIRT_SITE = 'https://www.csirt.gob.cl/alertas/';
 export const KEV_SITE = 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog';
-
 export const CYBER_ALERT_SOURCES = [
   { name: 'CSIRT Nacional', url: 'https://www.csirt.gob.cl/rss/alertas' },
 ] as const;
 
 const KEV_URL = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
+const EPSS_URL = 'https://api.first.org/data/v1/epss';
+const NVD_URL = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
+const EPSS_TIMEOUT = 8000;
+const NVD_TIMEOUT = 8000;
+const EPSS_CHUNK = 100;
+// NVD sin key permite 5 peticiones en 30 s y no acepta varios cveId por llamada.
+// Enriquecemos sólo el top 5 y cacheamos cada CVE 24 h: en builds sucesivos son
+// cache hits (0 requests). Un 429 aquí sólo deja filas sin enriquecer.
+const NVD_MAX = 5;
+const NVD_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -322,7 +347,122 @@ const EMPTY_KEV = {
   ransomwareRecent: [] as KevEntry[],
   ransomwareDays: KEV_RW_DAYS,
   byVendor: [] as Array<{ vendor: string; count: number }>,
+  enrichment: { epssOk: false, nvdOk: false, nvdCount: 0 },
 };
+
+interface EpssRow {
+  cve?: string;
+  epss?: string;
+  percentile?: string;
+}
+
+interface NvdEnrichment {
+  cvss?: number;
+  cvssSeverity?: string;
+  cwe?: string;
+  descriptionEs?: string;
+}
+
+/** EPSS admite varias CVEs por llamada: un solo request para todo el catálogo recortado. */
+async function fetchEpss(cves: string[]): Promise<Map<string, { epss: number; percentile: number }>> {
+  const scores = new Map<string, { epss: number; percentile: number }>();
+  if (cves.length === 0) return scores;
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < cves.length; i += EPSS_CHUNK) chunks.push(cves.slice(i, i + EPSS_CHUNK));
+
+  // Un fallo parcial deja puntuadas las CVEs que sí respondieron; nunca lanza.
+  await Promise.allSettled(chunks.map(async (chunk) => {
+    const url = `${EPSS_URL}?cve=${chunk.map(encodeURIComponent).join(',')}`;
+    const res = await fetchWithTimeout(url, EPSS_TIMEOUT);
+    if (!res.ok) {
+      console.warn('[cyber] EPSS HTTP', res.status, (await res.text()).slice(0, 200));
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const json = await res.json() as { data?: EpssRow[] };
+    for (const row of json.data ?? []) {
+      const cve = cleanText(row.cve, 24);
+      const epss = Number(row.epss);
+      if (!cve || !Number.isFinite(epss)) continue;
+      const percentile = Number(row.percentile);
+      scores.set(cve, { epss, percentile: Number.isFinite(percentile) ? percentile : 0 });
+    }
+  }));
+
+  return scores;
+}
+
+/** NVD por CVE con caché larga: un extra opcional, nunca tumba el bloque KEV. */
+async function fetchNvdOne(cve: string): Promise<NvdEnrichment | null> {
+  const key = `nvd:${cve}`;
+  const cached = await getCached<NvdEnrichment>(key);
+  if (cached) return cached;
+
+  try {
+    const res = await fetchWithTimeout(`${NVD_URL}?cveId=${encodeURIComponent(cve)}`, NVD_TIMEOUT);
+    if (!res.ok) return null;
+    const json = await res.json() as {
+      vulnerabilities?: Array<{
+        cve?: {
+          descriptions?: Array<{ lang?: string; value?: string }>;
+          metrics?: Record<string, Array<{ cvssData?: { baseScore?: number; baseSeverity?: string } }>>;
+          weaknesses?: Array<{ description?: Array<{ lang?: string; value?: string }> }>;
+        };
+      }>;
+    };
+    const record = json.vulnerabilities?.[0]?.cve;
+    if (!record) return null;
+
+    const metric = Object.values(record.metrics ?? {}).flat().find((m) => m?.cvssData?.baseScore != null);
+    const cwe = record.weaknesses
+      ?.flatMap((w) => w.description ?? [])
+      .find((d) => d?.lang === 'en' && /^CWE-\d+$/.test((d.value ?? '').trim()))?.value;
+    const descriptionEs = record.descriptions?.find((d) => d?.lang === 'es')?.value;
+
+    const enrichment: NvdEnrichment = {
+      cvss: metric?.cvssData?.baseScore,
+      cvssSeverity: metric?.cvssData?.baseSeverity,
+      cwe: cwe ? cleanText(cwe, 16) : undefined,
+      descriptionEs: descriptionEs ? cleanText(descriptionEs, 260) : undefined,
+    };
+    await setCache(key, enrichment, NVD_CACHE_TTL_MS);
+    return enrichment;
+  } catch {
+    return null;
+  }
+}
+
+/** Aplica EPSS a todo el catálogo y NVD al top 5. Nunca lanza: es un extra. */
+async function enrichKev(kev: CyberPayload['kev']): Promise<CyberEnrichmentStatus> {
+  const all = [...kev.items, ...kev.ransomwareRecent];
+  const cves = [...new Set(all.map((k) => k.cve).filter(Boolean))];
+
+  const epss = await fetchEpss(cves);
+  for (const item of all) {
+    const score = epss.get(item.cve);
+    if (!score) continue;
+    item.epss = score.epss;
+    item.epssPercentile = score.percentile;
+  }
+
+  const ranked = [...kev.items].sort((a, b) => (b.epss ?? 0) - (a.epss ?? 0));
+  const targets = ranked.slice(0, NVD_MAX).map((k) => k.cve).filter(Boolean);
+  const results = await Promise.all(targets.map(fetchNvdOne));
+  const byCve = new Map(targets.map((cve, i) => [cve, results[i]] as const));
+
+  let nvdCount = 0;
+  for (const item of all) {
+    const data = byCve.get(item.cve);
+    if (!data) continue;
+    item.cvss = data.cvss;
+    item.cvssSeverity = data.cvssSeverity;
+    item.cwe = data.cwe;
+    item.descriptionEs = data.descriptionEs;
+    nvdCount += 1;
+  }
+
+  return { epssOk: epss.size > 0, nvdOk: nvdCount > 0, nvdCount };
+}
 
 export async function fetchKev(): Promise<{
   kev: CyberPayload['kev'];
@@ -380,19 +520,23 @@ export async function fetchKev(): Promise<{
     source.count = items.length;
     if (!ok) source.error = 'Sin entradas en la ventana';
 
+    const kev: CyberPayload['kev'] = {
+      catalogVersion: cleanText(data.catalogVersion, 32),
+      total: inWindow.length,
+      days,
+      items,
+      ransomwareRecent,
+      ransomwareDays: KEV_RW_DAYS,
+      byVendor: [...vendorCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([vendor, count]) => ({ vendor, count })),
+      enrichment: { epssOk: false, nvdOk: false, nvdCount: 0 },
+    };
+    const enrichment = await enrichKev(kev);
+
     return {
-      kev: {
-        catalogVersion: cleanText(data.catalogVersion, 32),
-        total: inWindow.length,
-        days,
-        items,
-        ransomwareRecent,
-        ransomwareDays: KEV_RW_DAYS,
-        byVendor: [...vendorCounts.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 8)
-          .map(([vendor, count]) => ({ vendor, count })),
-      },
+      kev: { ...kev, enrichment },
       block: { ok, sources: [source] },
       fetchedAt: new Date().toISOString(),
     };

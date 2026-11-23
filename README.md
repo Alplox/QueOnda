@@ -45,6 +45,7 @@ pnpm run sync-credits         # regenera fuentes en AGENTS.md + tabla en README.
 - **Trabajos**: ofertas laborales desde múltiples fuentes
 - **Feriados**: calendario de feriados chilenos vía nager.at client-side, bundled fallback, IDB cache (1 año)
 - **Fiestas Patrias**: cuenta regresiva para el 18 de septiembre
+- **Adopción**: mascotas buscando hogar vía API pública de Huachitos (CORS abierto, sin key), baraja tipo Tinder de 5 tarjetas con swipe/flechas de teclado, filtro por tipo, «Deshacer» y CTA a la ficha externa, IDB cache (30 min)
 
 ## Fuentes de datos
 
@@ -124,12 +125,14 @@ pnpm run sync-credits         # regenera fuentes en AGENTS.md + tabla en README.
 
 ### Ciberseguridad (/api/cyber)
 
-*Bloques independientes en paralelo; TTL 15 min (3 min si algún bloque falló)*
+*Bloques independientes en paralelo; TTL 15 min (3 min si algún bloque falló). Enriquecimiento opcional: EPSS en una llamada agrupada y NVD del top 5 con caché individual de 24 h*
 
 | Fuente | Rol en la cadena | Licencia | Detalle / Enlace |
 | ------ | ---------------- | -------- | ---------------- |
 | [CSIRT Nacional](https://www.csirt.gob.cl/alertas/) | Merge | Sitio oficial público — sin licencia explícita | RSS de alertas + severidad |
 | [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) | Merge | Dominio público (obra del Gobierno de EE. UU.) | catálogo JSON recortado a 30/90 días |
+| [FIRST EPSS](https://www.first.org/epss/) | Merge | Uso libre sin registro — FIRST pide atribución en publicaciones | probabilidad de explotación a 30 días + percentil; una llamada para todas las CVEs del catálogo |
+| [NVD (NIST)](https://nvd.nist.gov/developers/vulnerabilities) | Merge | Dominio público (obra del Gobierno de EE. UU.) | CVSS, CWE y descripción en español del top 5; 5 req/30 s sin key, caché 24 h por CVE |
 
 ### Finanzas (/api/finance)
 

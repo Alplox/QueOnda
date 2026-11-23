@@ -74,6 +74,47 @@ function SeverityChip({ severity }: { severity: CyberSeverity }) {
   );
 }
 
+function pct(value: number): string {
+  // EPSS nunca llega a 1 (0,99999 es lo máximo observable): redondearlo a 100 %
+  // sugeriría certeza absoluta. El percentil sí puede ser 1 y se muestra tal cual.
+  const shown = value < 1 ? Math.min(value, 0.999) : value;
+  return `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 }).format(shown * 100)} %`;
+}
+
+function cvssLabel(value: number): string {
+  return new Intl.NumberFormat('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
+}
+
+/** EPSS: probabilidad de explotación en 30 días. El color escala con el riesgo. */
+function EpssChip({ epss, percentile }: { epss: number; percentile?: number }) {
+  const className =
+    epss >= 0.5
+      ? 'border-error/35 bg-error/5 text-error'
+      : epss >= 0.1
+        ? 'border-warning/35 bg-warning/5 text-warning'
+        : 'border-base-300 bg-base-300/60 text-base-content/70';
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-1.5 py-px text-[10px] font-semibold ${className}`}
+      title={`EPSS: probabilidad de explotación en 30 días ${pct(epss)}${percentile != null ? ` · percentil ${pct(percentile)}` : ''}`}
+    >
+      EPSS {pct(epss)}
+    </span>
+  );
+}
+
+/** CVSS de NVD. El título lleva la severidad y el CWE para no sumar otra chip. */
+function CvssChip({ cvss, severity, cwe }: { cvss: number; severity?: string; cwe?: string }) {
+  return (
+    <span
+      className="inline-flex items-center rounded-full border border-base-300 bg-base-300/60 px-1.5 py-px text-[10px] font-semibold text-base-content/70"
+      title={`CVSS ${cvssLabel(cvss)} · ${severity ?? 'sin severidad'}${cwe ? ` · ${cwe}` : ''}`}
+    >
+      CVSS {cvssLabel(cvss)}
+    </span>
+  );
+}
+
 function ReadIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -144,6 +185,16 @@ export function CyberKevRow({ entry }: { entry: KevEntry }) {
           <span className="ml-auto shrink-0 text-[10px] text-base-content/70 transition-colors group-hover:text-primary">NVD ↗</span>
         </div>
         <p className="mt-0.5 text-sm font-medium leading-snug text-base-content text-pretty">{entry.name}</p>
+        {(entry.epss != null || entry.cvss != null || entry.cwe) && (
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {entry.epss != null && <EpssChip epss={entry.epss} percentile={entry.epssPercentile} />}
+            {entry.cvss != null && <CvssChip cvss={entry.cvss} severity={entry.cvssSeverity} cwe={entry.cwe} />}
+            {entry.cwe && <span className="text-[10px] text-base-content/70">{entry.cwe}</span>}
+          </div>
+        )}
+        {entry.descriptionEs && (
+          <p className="mt-1 line-clamp-2 text-xs leading-snug text-base-content/70 text-pretty">{entry.descriptionEs}</p>
+        )}
         <div className={META}>
           <span className="max-w-[50%] truncate">{entry.vendor}</span>
           {entry.product && (

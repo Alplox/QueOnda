@@ -224,9 +224,9 @@
     },
     "cyber": {
       "title": "Ciberseguridad (/api/cyber)",
-      "strategy": "Bloques independientes en paralelo; TTL 15 min (3 min si algún bloque falló)",
+      "strategy": "Bloques independientes en paralelo; TTL 15 min (3 min si algún bloque falló). Enriquecimiento opcional: EPSS en una llamada agrupada y NVD del top 5 con caché individual de 24 h",
       "role": "merge",
-      "note": "CSIRT Nacional y CISA KEV",
+      "note": "CSIRT Nacional y CISA KEV + EPSS/NVD como extra no bloqueante",
       "sources": [
         {
           "name": "CSIRT Nacional",
@@ -241,6 +241,20 @@
           "role": "merge",
           "license": "Dominio público (obra del Gobierno de EE. UU.)",
           "note": "catálogo JSON recortado a 30/90 días"
+        },
+        {
+          "name": "FIRST EPSS",
+          "url": "https://www.first.org/epss/",
+          "role": "merge",
+          "license": "Uso libre sin registro — FIRST pide atribución en publicaciones",
+          "note": "probabilidad de explotación a 30 días + percentil; una llamada para todas las CVEs del catálogo"
+        },
+        {
+          "name": "NVD (NIST)",
+          "url": "https://nvd.nist.gov/developers/vulnerabilities",
+          "role": "merge",
+          "license": "Dominio público (obra del Gobierno de EE. UU.)",
+          "note": "CVSS, CWE y descripción en español del top 5; 5 req/30 s sin key, caché 24 h por CVE"
         }
       ]
     },

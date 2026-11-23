@@ -97,9 +97,12 @@ export function CyberWidget() {
     // El flag de ransomware es raro: la ventana de 30 días casi siempre da 0,
     // así que el filtro cambia a la ventana amplia que expone el servidor.
     const base = ransomwareOnly ? (payload?.kev.ransomwareRecent ?? []) : kevItems;
-    return base.filter((k) => {
+    // EPSS primero: las explotadas con mayor probabilidad suben arriba. El sort
+    // es estable, así que las que no tienen score conservan el orden por fecha.
+    const ordered = [...base].sort((a, b) => (b.epss ?? 0) - (a.epss ?? 0));
+    return ordered.filter((k) => {
       if (!q) return true;
-      return foldAccents(`${k.cve} ${k.vendor} ${k.product} ${k.name} ${k.description}`).includes(q);
+      return foldAccents(`${k.cve} ${k.vendor} ${k.product} ${k.name} ${k.descriptionEs ?? k.description ?? ''}`).includes(q);
     });
   }, [payload, kevItems, ransomwareOnly, q]);
 
